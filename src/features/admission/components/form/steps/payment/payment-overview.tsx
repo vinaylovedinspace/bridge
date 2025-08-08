@@ -47,7 +47,7 @@ export const PaymentOverview = ({ discountInfo, paymentCheckboxes }: PaymentOver
   const isCheckboxChecked = Object.values(paymentCheckboxes).some((checkbox) => checkbox.isChecked);
 
   return (
-    <Card className="p-6 flex flex-col pt-10 min-h-[32rem]">
+    <Card className="p-6 flex flex-col pt-10 min-h-[32rem] h-full">
       <div className="space-y-3">
         <TypographyLarge className="text-primary text-4xl text-center">
           {formattedTotalAfterDiscount}

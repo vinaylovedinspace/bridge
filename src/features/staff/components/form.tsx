@@ -392,8 +392,8 @@ export function StaffForm({ staff }: { staff?: Staff }) {
           <div className="grid grid-cols-12 w-full">
             <TypographyP className="col-span-3 font-medium">Vehicle Assignment</TypographyP>
 
-            <div className="col-span-9 w-full grid grid-cols-12">
-              <div className="col-span-12">
+            <div className="col-span-9 gap-6 w-full grid grid-cols-12">
+              <div className="col-span-6">
                 <FormField
                   control={form.control}
                   name="assignedVehicleId"
@@ -525,7 +525,7 @@ export function StaffForm({ staff }: { staff?: Staff }) {
                 />
               </div>
 
-              <div className="col-span-12">
+              <div className="col-span-6">
                 <FormField
                   control={form.control}
                   name="phone"

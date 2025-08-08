@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { format, addDays, addMinutes, startOfWeek, endOfWeek } from 'date-fns';
+import { useState, useMemo, useCallback } from 'react';
+import { format, addDays, startOfWeek, endOfWeek } from 'date-fns';
 import {
   Select,
   SelectContent,
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Calendar, Trash2 } from 'lucide-react';
 import { useVehicles } from '@/hooks/vehicles';
 import { useSessions } from '../hooks/sessions';
+import { useBranchSettings } from '@/features/settings/hooks/settings';
 import { updateSession, cancelSession, assignSessionToSlot } from '@/server/actions/sessions';
 import type { Session } from '@/server/db/sessions';
 import { dateToString, formatDateForDisplay } from '@/lib/date-utils';
@@ -23,6 +24,15 @@ import { cn } from '@/lib/utils';
 import { SessionTimeEditor } from './session-time-editor';
 import { SessionAssignmentModal } from './session-assignment-modal';
 import {
+  generateTimeSlots,
+  getAvatarColor,
+  getStatusStyles,
+  calculateEndTime,
+  formatTimeSlot,
+  WEEK_START_DAY,
+  DAYS_IN_WEEK,
+} from '../lib/utils';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -30,89 +40,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-// Generate time slots from 6:00 AM to 8:00 PM in 30-minute intervals
-const timeSlots = Array.from({ length: 28 }, (_, i) => {
-  const startTime = new Date();
-  startTime.setHours(6, 0, 0, 0);
-  const time = addMinutes(startTime, i * 30);
-  return {
-    time: format(time, 'h:mm a'),
-    hour: time.getHours(),
-    minute: time.getMinutes(),
-  };
-});
+interface CalendarViewProps {
+  branchId: string;
+}
 
-// Generate avatar colors for clients
-const getAvatarColor = (name: string) => {
-  const colors = [
-    'bg-blue-500',
-    'bg-green-500',
-    'bg-purple-500',
-    'bg-orange-500',
-    'bg-red-500',
-    'bg-teal-500',
-    'bg-indigo-500',
-    'bg-pink-500',
-  ];
-  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return colors[hash % colors.length];
-};
-
-// Get session status color and icon
-const getStatusStyles = (status: string) => {
-  switch (status) {
-    case 'COMPLETED':
-      return {
-        color: 'bg-green-500',
-        borderColor: 'border-green-500',
-        textColor: 'text-green-700',
-        label: 'Completed',
-        dotColor: 'bg-green-500',
-      };
-    case 'IN_PROGRESS':
-      return {
-        color: 'bg-orange-500',
-        borderColor: 'border-orange-500',
-        textColor: 'text-orange-700',
-        label: 'In Progress',
-        dotColor: 'bg-orange-500',
-      };
-    case 'NO_SHOW':
-      return {
-        color: 'bg-red-500',
-        borderColor: 'border-red-500',
-        textColor: 'text-red-700',
-        label: 'No Show',
-        dotColor: 'bg-red-500',
-      };
-    case 'CANCELLED':
-      return {
-        color: 'bg-gray-400',
-        borderColor: 'border-gray-400',
-        textColor: 'text-gray-700',
-        label: 'Cancelled',
-        dotColor: 'bg-gray-400',
-      };
-    case 'RESCHEDULED':
-      return {
-        color: 'bg-blue-400',
-        borderColor: 'border-blue-400',
-        textColor: 'text-blue-700',
-        label: 'Rescheduled',
-        dotColor: 'bg-blue-400',
-      };
-    default: // SCHEDULED
-      return {
-        color: 'bg-blue-500',
-        borderColor: 'border-blue-500',
-        textColor: 'text-blue-700',
-        label: 'Scheduled',
-        dotColor: 'bg-blue-500',
-      };
-  }
-};
-
-export const CalendarView = () => {
+export const CalendarView = ({ branchId }: CalendarViewProps) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedVehicle, setSelectedVehicle] = useState<string>('');
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -129,95 +61,62 @@ export const CalendarView = () => {
 
   const { data: vehicles, isLoading } = useVehicles();
   const { data: sessions = [], mutate } = useSessions(selectedVehicle);
+  const { data: branchSettings, isLoading: isLoadingSettings } = useBranchSettings(branchId);
 
-  // Debug logging
-  console.log('Calendar - Selected vehicle:', selectedVehicle);
-  console.log('Calendar - Sessions data:', sessions);
+  // Generate time slots based on branch settings
+  const timeSlots = useMemo(() => {
+    if (!branchSettings) return [];
 
-  // Generate week dates for week view
-  const getWeekDates = () => {
-    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 }); // Sunday start
-    return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  };
+    const [startHour, startMinute] = branchSettings.operatingHours.start.split(':').map(Number);
+    const [endHour, endMinute] = branchSettings.operatingHours.end.split(':').map(Number);
+    return generateTimeSlots(startHour, startMinute, endHour, endMinute);
+  }, [branchSettings]);
 
-  const getSessionForSlot = (timeSlot: { hour: number; minute: number }, date?: Date) => {
-    const targetDate = date || selectedDate;
-    const selectedDateStr = format(targetDate, 'yyyy-MM-dd');
+  // Generate week dates for week view - memoized for performance
+  const weekDates = useMemo(() => {
+    const weekStart = startOfWeek(selectedDate, { weekStartsOn: WEEK_START_DAY });
+    return Array.from({ length: DAYS_IN_WEEK }, (_, i) => addDays(weekStart, i));
+  }, [selectedDate]);
 
-    // Format the time slot in the same format as stored in the database (HH:MM:00)
-    // Ensure hours and minutes are padded with leading zeros
-    const formattedHour = timeSlot.hour.toString().padStart(2, '0');
-    const formattedMinute = timeSlot.minute.toString().padStart(2, '0');
-    const formattedTimeSlot = `${formattedHour}:${formattedMinute}:00`;
+  const getSessionForSlot = useCallback(
+    (timeSlot: { hour: number; minute: number }, date?: Date) => {
+      const targetDate = date || selectedDate;
+      const selectedDateStr = format(targetDate, 'yyyy-MM-dd');
+      const formattedTimeSlot = `${formatTimeSlot(timeSlot.hour, timeSlot.minute)}:00`;
+      const formattedTimeSlotShort = formatTimeSlot(timeSlot.hour, timeSlot.minute);
 
-    console.log(
-      `Looking for sessions on ${selectedDateStr} at formatted time: ${formattedTimeSlot}`
-    );
+      // Find the session that matches both date and time
+      return sessions.find((session) => {
+        const dateMatch = session.sessionDate === selectedDateStr;
+        const timeMatch =
+          session.startTime === formattedTimeSlot || session.startTime === formattedTimeSlotShort;
+        return dateMatch && timeMatch;
+      });
+    },
+    [sessions, selectedDate]
+  );
 
-    // Find sessions for the selected date
-    const sessionsForSelectedDate = sessions.filter((session) => {
-      // Use string comparison directly since sessionDate is already YYYY-MM-DD format
-      return session.sessionDate === selectedDateStr;
-    });
-
-    if (sessionsForSelectedDate.length > 0) {
-      console.log(
-        'Sessions for this date:',
-        sessionsForSelectedDate.map((s) => ({
-          id: s.id,
-          startTime: s.startTime,
-          clientName: s.clientName,
-        }))
-      );
-    }
-
-    // Find the session that matches both date and time
-    const foundSession = sessions.find((session) => {
-      // Direct string comparison since sessionDate is already YYYY-MM-DD format
-      const dateMatch = session.sessionDate === selectedDateStr;
-
-      // Compare the formatted time slot with the session's startTime
-      // The session.startTime might already be in HH:MM:00 format from the database
-      const timeMatch =
-        session.startTime === formattedTimeSlot ||
-        // Also check without seconds in case it's stored differently
-        session.startTime === `${formattedHour}:${formattedMinute}`;
-
-      if (dateMatch) {
-        console.log(`Session ${session.id} time comparison:`, {
-          sessionStartTime: session.startTime,
-          formattedTimeSlot,
-          timeMatch,
-          overall: dateMatch && timeMatch,
-        });
-      }
-
-      return dateMatch && timeMatch;
-    });
-
-    return foundSession;
-  };
-
-  const handleSessionClick = (session: Session) => {
+  const handleSessionClick = useCallback((session: Session) => {
     setSelectedSession(session);
-  };
+  }, []);
 
-  const handleDeleteSession = async (session: Session) => {
-    console.log('Deleting session:', session);
-    try {
-      const result = await cancelSession(session.id);
+  const handleDeleteSession = useCallback(
+    async (session: Session) => {
+      try {
+        const result = await cancelSession(session.id);
 
-      if (!result.error) {
-        // Refresh the sessions data
-        mutate();
-        setSelectedSession(null);
-      } else {
-        console.error('Failed to cancel session:', result.message);
+        if (!result.error) {
+          mutate();
+          setSelectedSession(null);
+        } else {
+          console.error('Failed to cancel session:', result.message);
+        }
+      } catch (error) {
+        console.error('Error cancelling session:', error);
       }
-    } catch (error) {
-      console.error('Error cancelling session:', error);
-    }
-  };
+    },
+    [mutate]
+  );
 
   const closeSessionModal = () => {
     setSelectedSession(null);
@@ -267,43 +166,45 @@ export const CalendarView = () => {
     setIsAssignmentModalOpen(true);
   };
 
-  const handleSessionAssignment = async (clientId: string) => {
-    if (!selectedTimeSlot || !selectedVehicle) return;
+  const handleSessionAssignment = useCallback(
+    async (clientId: string) => {
+      if (!selectedTimeSlot || !selectedVehicle) return;
 
-    try {
-      // Calculate end time (default 30 minutes)
-      const startTime = `${selectedTimeSlot.hour.toString().padStart(2, '0')}:${selectedTimeSlot.minute.toString().padStart(2, '0')}`;
-      const endMinutes = selectedTimeSlot.minute + 30;
-      const endHour = endMinutes >= 60 ? selectedTimeSlot.hour + 1 : selectedTimeSlot.hour;
-      const adjustedEndMinutes = endMinutes >= 60 ? endMinutes - 60 : endMinutes;
-      const endTime = `${endHour.toString().padStart(2, '0')}:${adjustedEndMinutes.toString().padStart(2, '0')}`;
+      try {
+        const startTime = formatTimeSlot(selectedTimeSlot.hour, selectedTimeSlot.minute);
+        const endTime = calculateEndTime(selectedTimeSlot.hour, selectedTimeSlot.minute).formatted;
 
-      const result = await assignSessionToSlot(
-        clientId,
-        selectedVehicle,
-        dateToString(selectedTimeSlot.date || selectedDate),
-        startTime,
-        endTime
-      );
+        const result = await assignSessionToSlot(
+          clientId,
+          selectedVehicle,
+          dateToString(selectedTimeSlot.date || selectedDate),
+          startTime,
+          endTime
+        );
 
-      if (!result.error) {
-        // Refresh the sessions data
-        mutate();
-        setIsAssignmentModalOpen(false);
-        setSelectedTimeSlot(null);
-      } else {
-        alert(result.message);
+        if (!result.error) {
+          mutate();
+          setIsAssignmentModalOpen(false);
+          setSelectedTimeSlot(null);
+        } else {
+          alert(result.message);
+        }
+      } catch (error) {
+        console.error('Error assigning session:', error);
+        alert('Failed to assign session');
       }
-    } catch (error) {
-      console.error('Error assigning session:', error);
-      alert('Failed to assign session');
-    }
-  };
+    },
+    [selectedTimeSlot, selectedVehicle, selectedDate, mutate]
+  );
 
   const closeAssignmentModal = () => {
     setIsAssignmentModalOpen(false);
     setSelectedTimeSlot(null);
   };
+
+  const isSessionEditable =
+    selectedSession &&
+    (selectedSession.status === 'SCHEDULED' || selectedSession.status === 'RESCHEDULED');
 
   return (
     <div>
@@ -399,7 +300,13 @@ export const CalendarView = () => {
 
       {/* Calendar Grid */}
       <div className="border overflow-hidden bg-white">
-        {!selectedVehicle ? (
+        {isLoadingSettings ? (
+          <div className="p-8 text-center text-gray-500">
+            <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <h3 className="text-lg font-medium mb-2">Loading Schedule</h3>
+            <p>Loading branch settings...</p>
+          </div>
+        ) : !selectedVehicle ? (
           <div className="p-8 text-center text-gray-500">
             <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <h3 className="text-lg font-medium mb-2">Select a Vehicle</h3>
@@ -482,7 +389,7 @@ export const CalendarView = () => {
             <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
               <div className="flex">
                 <div className="w-20 p-2 text-sm font-medium text-gray-600 border-r"></div>
-                {getWeekDates().map((date, dayIndex) => (
+                {weekDates.map((date, dayIndex) => (
                   <div
                     key={dayIndex}
                     className="flex-1 p-2 text-center border-r border-gray-100 last:border-r-0"
@@ -503,7 +410,7 @@ export const CalendarView = () => {
                 </div>
 
                 {/* Day Columns */}
-                {getWeekDates().map((date, dayIndex) => {
+                {weekDates.map((date, dayIndex) => {
                   const session = getSessionForSlot(timeSlot, date);
                   return (
                     <div
@@ -634,7 +541,7 @@ export const CalendarView = () => {
             </div>
           )}
 
-          {selectedSession && selectedSession.status === 'SCHEDULED' && (
+          {isSessionEditable && (
             <DialogFooter className="flex jusitfy-between items-center w-full gap-2">
               <Button variant="outline" className="flex-1" onClick={handleEditTime}>
                 Edit Time

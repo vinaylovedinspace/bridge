@@ -22,7 +22,7 @@ export default async function StaffDetailPage({ params }: { params: Promise<{ id
   return (
     <div className="space-y-10">
       <div className="flex gap-4 items-center pb-14">
-        <Link href="/vehicles">
+        <Link href="/staff">
           <ArrowLeft className="size-5 text-gray-700" />
         </Link>
         <TypographyH4>Edit Staff Member</TypographyH4>

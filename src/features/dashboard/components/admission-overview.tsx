@@ -21,7 +21,7 @@ type AdmissionOverviewProps = {
 // Empty state component for when there's insufficient data
 function InsufficientDataState() {
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
+    <div className="flex flex-col items-center justify-center text-center">
       <div className="rounded-full bg-gray-100 p-4 mb-4">
         <Calendar className="h-8 w-8 text-gray-400" />
       </div>
@@ -70,7 +70,7 @@ export default function AdmissionOverview({ initialData, initialMonths }: Admiss
   const maxValue = Math.max(...admissionData.map((item) => item.users), 10);
   const yAxisMax = Math.ceil((maxValue * 1.2) / 10) * 10; // Round up to nearest 10 with 20% padding
   return (
-    <Card className="w-full">
+    <Card className="w-full h-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-xl font-semibold">Admission Overview</CardTitle>
         <div className="flex items-center gap-3">
@@ -96,11 +96,13 @@ export default function AdmissionOverview({ initialData, initialMonths }: Admiss
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="flex flex-col h-full">
         {hasInsufficientData ? (
-          <InsufficientDataState />
+          <div className="flex-1 flex items-center justify-center">
+            <InsufficientDataState />
+          </div>
         ) : isLoading ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="flex-1 flex flex-col items-center justify-center text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
             <p className="text-sm text-gray-500">Loading admission data...</p>
           </div>
