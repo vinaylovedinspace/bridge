@@ -57,6 +57,7 @@ export const getRTOService = async (id: string): Promise<RTOServiceWithClient | 
         requiresClientPresence: RTOServicesTable.requiresClientPresence,
         createdAt: RTOServicesTable.createdAt,
         updatedAt: RTOServicesTable.updatedAt,
+        deletedAt: RTOServicesTable.deletedAt,
         rtoClient: {
           id: RTOClientTable.id,
           clientCode: RTOClientTable.clientCode,
@@ -116,6 +117,7 @@ export const getRTOServices = async (
         requiresClientPresence: RTOServicesTable.requiresClientPresence,
         createdAt: RTOServicesTable.createdAt,
         updatedAt: RTOServicesTable.updatedAt,
+        deletedAt: RTOServicesTable.deletedAt,
         rtoClient: {
           id: RTOClientTable.id,
           clientCode: RTOClientTable.clientCode,

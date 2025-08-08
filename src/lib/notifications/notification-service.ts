@@ -35,14 +35,14 @@ export class NotificationService {
     paymentId: string;
   }) {
     return this.create({
-      tenantId: params.tenantId,
-      branchId: params.branchId,
+      tenantId: parseInt(params.tenantId),
+      branchId: parseInt(params.branchId),
       userId: params.userId,
       type: NOTIFICATION_TYPES.PAYMENT_RECEIVED,
       title: 'Payment Received',
       message: `Payment of ₹${params.amount} received from ${params.clientName}`,
       entityType: ENTITY_TYPES.PAYMENT,
-      entityId: params.paymentId,
+      entityId: parseInt(params.paymentId),
       isRead: false,
     });
   }
@@ -57,8 +57,8 @@ export class NotificationService {
     isOverdue?: boolean;
   }) {
     return this.create({
-      tenantId: params.tenantId,
-      branchId: params.branchId,
+      tenantId: parseInt(params.tenantId),
+      branchId: parseInt(params.branchId),
       userId: params.userId,
       type: params.isOverdue
         ? NOTIFICATION_TYPES.INSTALLMENT_OVERDUE
@@ -66,7 +66,7 @@ export class NotificationService {
       title: params.isOverdue ? 'Installment Overdue' : 'Installment Due Today',
       message: `${params.clientName} has an installment of ₹${params.amount} ${params.isOverdue ? 'overdue' : 'due today'}`,
       entityType: ENTITY_TYPES.CLIENT,
-      entityId: params.clientId,
+      entityId: parseInt(params.clientId),
       isRead: false,
     });
   }
@@ -80,14 +80,14 @@ export class NotificationService {
     clientId: string;
   }) {
     return this.create({
-      tenantId: params.tenantId,
-      branchId: params.branchId,
+      tenantId: parseInt(params.tenantId),
+      branchId: parseInt(params.branchId),
       userId: params.userId,
       type: NOTIFICATION_TYPES.LEARNING_TEST_TODAY,
       title: 'Learning Test Scheduled',
       message: `${params.clientName} has a learning test scheduled for today`,
       entityType: ENTITY_TYPES.CLIENT,
-      entityId: params.clientId,
+      entityId: parseInt(params.clientId),
       isRead: false,
     });
   }
@@ -100,14 +100,14 @@ export class NotificationService {
     clientId: string;
   }) {
     return this.create({
-      tenantId: params.tenantId,
-      branchId: params.branchId,
+      tenantId: parseInt(params.tenantId),
+      branchId: parseInt(params.branchId),
       userId: params.userId,
       type: NOTIFICATION_TYPES.ELIGIBLE_FOR_DRIVING_TEST,
       title: 'Eligible for Driving Test',
       message: `${params.clientName} is now eligible for the driving test`,
       entityType: ENTITY_TYPES.CLIENT,
-      entityId: params.clientId,
+      entityId: parseInt(params.clientId),
       isRead: false,
     });
   }
@@ -123,14 +123,14 @@ export class NotificationService {
     vehicleId: string;
   }) {
     return this.create({
-      tenantId: params.tenantId,
-      branchId: params.branchId,
+      tenantId: parseInt(params.tenantId),
+      branchId: parseInt(params.branchId),
       userId: params.userId,
       type: NOTIFICATION_TYPES.VEHICLE_DOCUMENT_EXPIRING,
       title: `${params.documentType} Expiring Soon`,
       message: `Vehicle ${params.vehicleNumber} ${params.documentType} expires in ${params.daysUntilExpiry} days`,
       entityType: ENTITY_TYPES.VEHICLE,
-      entityId: params.vehicleId,
+      entityId: parseInt(params.vehicleId),
       isRead: false,
     });
   }
@@ -145,14 +145,14 @@ export class NotificationService {
     sessionId: string;
   }) {
     return this.create({
-      tenantId: params.tenantId,
-      branchId: params.branchId,
+      tenantId: parseInt(params.tenantId),
+      branchId: parseInt(params.branchId),
       userId: params.userId,
       type: NOTIFICATION_TYPES.SESSION_TODAY,
       title: 'Training Session Today',
       message: `Training session with ${params.clientName} scheduled at ${params.sessionTime}`,
       entityType: ENTITY_TYPES.SESSION,
-      entityId: params.sessionId,
+      entityId: parseInt(params.sessionId),
       isRead: false,
     });
   }
@@ -167,14 +167,14 @@ export class NotificationService {
     rtoServiceId: string;
   }) {
     return this.create({
-      tenantId: params.tenantId,
-      branchId: params.branchId,
+      tenantId: parseInt(params.tenantId),
+      branchId: parseInt(params.branchId),
       userId: params.userId,
       type: NOTIFICATION_TYPES.RTO_STATUS_UPDATED,
       title: 'RTO Service Update',
       message: `${params.serviceName} status updated to ${params.status}`,
       entityType: ENTITY_TYPES.RTO_SERVICE,
-      entityId: params.rtoServiceId,
+      entityId: parseInt(params.rtoServiceId),
       isRead: false,
     });
   }
@@ -188,14 +188,14 @@ export class NotificationService {
     clientId: string;
   }) {
     return this.create({
-      tenantId: params.tenantId,
-      branchId: params.branchId,
+      tenantId: parseInt(params.tenantId),
+      branchId: parseInt(params.branchId),
       userId: params.userId,
       type: NOTIFICATION_TYPES.NEW_CLIENT_ADMISSION,
       title: 'New Client Admission',
       message: `New client ${params.clientName} has been admitted`,
       entityType: ENTITY_TYPES.CLIENT,
-      entityId: params.clientId,
+      entityId: parseInt(params.clientId),
       isRead: false,
     });
   }

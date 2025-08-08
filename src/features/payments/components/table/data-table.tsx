@@ -1,6 +1,6 @@
 'use client';
 
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import { ColumnDef, flexRender, getCoreRowModel, Row, useReactTable } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
 
 import {
@@ -25,9 +25,10 @@ export function PaymentDataTable<TData, TValue>({ columns, data }: DataTableProp
     getCoreRowModel: getCoreRowModel(),
   });
 
-  const handleRowClick = (row: { original?: { clientId?: string } }) => {
-    if (row.original?.clientId) {
-      router.push(`/clients/${row.original.clientId}?step=payment`);
+  const handleRowClick = (row: Row<TData>) => {
+    const original = row.original as { clientId?: string };
+    if (original?.clientId) {
+      router.push(`/clients/${original.clientId}?step=payment`);
     }
   };
 

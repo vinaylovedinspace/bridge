@@ -1,5 +1,10 @@
+import { Suspense } from 'react';
 import { FormsPage } from '@/features/forms/components/forms-page';
 
 export default function Forms() {
-  return <FormsPage />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <FormsPage />
+    </Suspense>
+  );
 }
