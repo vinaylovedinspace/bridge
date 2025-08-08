@@ -11,9 +11,10 @@ import { calculateLicenseFees } from '@/lib/constants/rto-fees';
 
 type LicenseStepProps = {
   branchServiceCharge?: number;
+  isEditMode?: boolean;
 };
 
-export const LicenseStep = ({ branchServiceCharge = 0 }: LicenseStepProps) => {
+export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: LicenseStepProps) => {
   const { control, watch } = useFormContext<AdmissionFormValues>();
 
   // Watch service type to conditionally show/hide fields
@@ -26,10 +27,13 @@ export const LicenseStep = ({ branchServiceCharge = 0 }: LicenseStepProps) => {
   // Check if student already has a learners license
   const hasExistingLearners = existingLearningLicenseNumber.trim().length > 0;
 
+  // In edit mode, don't apply the existing learners discount since it was already applied during creation
+  const shouldApplyExistingLearnersDiscount = hasExistingLearners && !isEditMode;
+
   // Calculate fees based on scenario
   const feeCalculation = calculateLicenseFees(
     selectedLicenseClasses,
-    hasExistingLearners,
+    shouldApplyExistingLearnersDiscount,
     branchServiceCharge
   );
 
@@ -87,7 +91,7 @@ export const LicenseStep = ({ branchServiceCharge = 0 }: LicenseStepProps) => {
                 Govt: ₹{feeCalculation.governmentFees} + Service: ₹{branchServiceCharge}
               </div>
 
-              {selectedLicenseClasses.length > 1 || hasExistingLearners ? (
+              {selectedLicenseClasses.length > 1 || shouldApplyExistingLearnersDiscount ? (
                 <div className="text-xs text-blue-600 mt-1">{feeCalculation.breakdown}</div>
               ) : null}
             </div>

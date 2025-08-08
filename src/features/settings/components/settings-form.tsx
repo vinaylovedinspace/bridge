@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Calendar, Clock, MapPin, DollarSign } from 'lucide-react';
+import { Calendar, Clock, MapPin, IndianRupee } from 'lucide-react';
 import { RTOOfficeSelect } from '@/components/ui/rto-office-select';
 import { toast } from 'sonner';
 import { branchSettingsSchema, type BranchSettings } from '../types';
@@ -91,7 +91,7 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
         {/* Working Days Configuration */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
+            <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
               <Calendar className="h-5 w-5" />
               Working Days
             </CardTitle>
@@ -132,7 +132,7 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
         {/* Operating Hours Configuration */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
+            <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
               <Clock className="h-5 w-5" />
               Operating Hours
             </CardTitle>
@@ -178,7 +178,7 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
         {/* Default RTO Office Configuration */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
+            <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
               <MapPin className="h-5 w-5" />
               Default RTO Office
             </CardTitle>
@@ -213,8 +213,8 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
         {/* License Service Fee Configuration */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <DollarSign className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
+              <IndianRupee className="h-5 w-5" />
               License Service Fee
             </CardTitle>
             <CardDescription>

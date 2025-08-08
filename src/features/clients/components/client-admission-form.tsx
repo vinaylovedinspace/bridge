@@ -388,7 +388,7 @@ export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFor
       getData: () => getValues('personalInfo'),
     },
     license: {
-      component: <LicenseStep />,
+      component: <LicenseStep isEditMode={true} />,
       onSubmit: (data: unknown) =>
         handleLicenseStep(
           data as { learningLicense?: LearningLicenseValues; drivingLicense?: DrivingLicenseValues }

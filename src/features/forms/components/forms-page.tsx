@@ -12,6 +12,7 @@ import { EligibleStudentsSection } from './eligible-students-section';
 import { getClientForForm } from '@/server/actions/forms';
 import { generateSinglePDF, type FormData } from '@/lib/pdf-generator';
 import { toast } from 'sonner';
+import { useQueryState } from 'nuqs';
 
 interface RtoForm {
   id: string;
@@ -113,9 +114,11 @@ const RTO_FORMS: RtoForm[] = [
 export function FormsPage() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [selectedForm, setSelectedForm] = useState<RtoForm | null>(null);
-  const [activeTab, setActiveTab] = useState<'individual' | 'bulk'>('individual');
+  const [activeTab, setActiveTab] = useQueryState('tab', {
+    defaultValue: 'individual' as 'individual' | 'bulk',
+    parse: (value: string) => value as 'individual' | 'bulk',
+  });
   const [downloadingForm, setDownloadingForm] = useState<string | null>(null);
-
   const primaryForms = RTO_FORMS.filter((form) => form.category === 'primary');
   const additionalForms = RTO_FORMS.filter((form) => form.category === 'additional');
 

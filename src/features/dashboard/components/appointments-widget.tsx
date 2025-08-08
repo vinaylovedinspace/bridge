@@ -27,7 +27,7 @@ export async function AppointmentsWidget() {
       title: 'Final Test',
       count: stats.finalTestCount,
       type: 'final',
-      link: '/appointments',
+      link: '/forms?tab=bulk',
     },
     {
       id: '3',
