@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { TypographyMuted } from '@/components/ui/typography';
 import { Separator } from '@/components/ui/separator';
-import { PaymentModeEnum } from '@/db/schema/client-transactions/columns';
+import { PaymentModeEnum } from '@/db/schema/transactions/columns';
 import { useFormContext } from 'react-hook-form';
 import { AdmissionFormValues } from '@/features/admission/types';
 import { toast } from 'sonner';

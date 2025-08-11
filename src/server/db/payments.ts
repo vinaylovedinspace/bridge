@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { ClientTable, PaymentTable, ClientTransactionTable } from '@/db/schema';
+import { ClientTable, PaymentTable, TransactionTable } from '@/db/schema';
 import { auth } from '@clerk/nextjs/server';
 import { eq, and, desc, max, or, ilike } from 'drizzle-orm';
 import { getCurrentOrganizationBranchId } from '@/server/db/branch';
@@ -46,13 +46,13 @@ const _getPayments = async (branchId: string, name?: string, paymentStatus?: str
     payments.map(async (payment) => {
       const latestTransaction = await db
         .select({
-          createdAt: max(ClientTransactionTable.createdAt),
+          createdAt: max(TransactionTable.createdAt),
         })
-        .from(ClientTransactionTable)
+        .from(TransactionTable)
         .where(
           and(
-            eq(ClientTransactionTable.paymentId, payment.id),
-            eq(ClientTransactionTable.transactionStatus, 'SUCCESS')
+            eq(TransactionTable.paymentId, payment.id),
+            eq(TransactionTable.transactionStatus, 'SUCCESS')
           )
         );
 

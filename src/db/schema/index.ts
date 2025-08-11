@@ -30,8 +30,8 @@ export * from './client-documents/relations';
 export * from './payment/columns';
 export * from './payment/relations';
 
-export * from './client-transactions/columns';
-export * from './client-transactions/relations';
+export * from './transactions/columns';
+export * from './transactions/relations';
 
 export * from './sessions/columns';
 export * from './sessions/relations';

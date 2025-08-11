@@ -1,5 +1,5 @@
 import { integer, pgEnum, pgTable, timestamp, uuid, boolean, text } from 'drizzle-orm/pg-core';
-import { PaymentModeEnum } from '../client-transactions/columns';
+import { PaymentModeEnum } from '../transactions/columns';
 
 export const PaymentStatusEnum = pgEnum('payment_status', [
   'PARTIALLY_PAID',

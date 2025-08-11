@@ -581,12 +581,12 @@ export const createPayment = async (
 
     // Create transaction records for cash payments
     if (isCashPayment && paymentId) {
-      const { ClientTransactionTable } = await import('@/db/schema/client-transactions/columns');
+      const { TransactionTable } = await import('@/db/schema/transactions/columns');
 
       try {
         // Create transaction for full payment
         if (data?.paymentType === 'FULL_PAYMENT' && data?.fullPaymentMode === 'CASH') {
-          await db.insert(ClientTransactionTable).values({
+          await db.insert(TransactionTable).values({
             paymentId,
             amount: finalAmount,
             paymentMode: 'CASH',
@@ -598,7 +598,7 @@ export const createPayment = async (
 
         // Create transaction for first installment if cash
         if (data?.paymentType === 'INSTALLMENTS' && data?.firstPaymentMode === 'CASH') {
-          await db.insert(ClientTransactionTable).values({
+          await db.insert(TransactionTable).values({
             paymentId,
             amount: firstInstallmentAmount,
             paymentMode: 'CASH',
@@ -611,7 +611,7 @@ export const createPayment = async (
 
         // Create transaction for second installment if cash
         if (data?.paymentType === 'INSTALLMENTS' && data?.secondPaymentMode === 'CASH') {
-          await db.insert(ClientTransactionTable).values({
+          await db.insert(TransactionTable).values({
             paymentId,
             amount: secondInstallmentAmount,
             paymentMode: 'CASH',
