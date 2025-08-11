@@ -51,7 +51,7 @@ export const CalendarView = ({ branchId }: CalendarViewProps) => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
+  const [viewMode, setViewMode] = useState<'day' | 'week'>('week');
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<{
     time: string;
     hour: number;
