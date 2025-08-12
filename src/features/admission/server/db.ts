@@ -4,6 +4,7 @@ import { LearningLicenseTable } from '@/db/schema/learning-licenses/columns';
 import { DrivingLicenseTable } from '@/db/schema/driving-licenses/columns';
 import { eq } from 'drizzle-orm';
 import { getNextClientCode } from '@/db/utils/client-code';
+import { schedulePaymentReminders } from '@/features/admission/hooks/use-payment-workflow';
 
 export const upsertClientInDB = async (data: typeof ClientTable.$inferInsert) => {
   // Create a variable to track if this was an update operation
@@ -151,6 +152,22 @@ export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert) 
   if (payment.createdAt && payment.updatedAt) {
     const timeDiff = Math.abs(payment.updatedAt.getTime() - payment.createdAt.getTime());
     isExistingPayment = timeDiff > 1000; // More than 1 second difference
+  }
+
+  // Schedule workflow reminders for new payments
+  if (!isExistingPayment && payment.paymentType) {
+    try {
+      await schedulePaymentReminders(
+        payment.id,
+        payment.paymentType,
+        payment.firstInstallmentDate ? new Date(payment.firstInstallmentDate) : null,
+        payment.secondInstallmentDate ? new Date(payment.secondInstallmentDate) : null,
+        payment.paymentDueDate ? new Date(payment.paymentDueDate) : null
+      );
+    } catch (error) {
+      console.error('Failed to schedule payment reminders:', error);
+      // Don't throw error to avoid blocking payment creation
+    }
   }
 
   return {

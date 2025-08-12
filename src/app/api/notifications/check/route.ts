@@ -45,7 +45,8 @@ export async function POST(request: Request) {
   }
 }
 
-async function checkOverduePayments(branchId: string, tenantId: string) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function checkOverduePayments(branchId: string, _tenantId: string) {
   const today = new Date().toISOString().split('T')[0];
 
   const overduePayments = await db
@@ -73,24 +74,21 @@ async function checkOverduePayments(branchId: string, tenantId: string) {
       )
     );
 
-  const notifications = overduePayments.map((record) => {
-    const amount = !record.payment.firstInstallmentPaid
-      ? record.payment.firstInstallmentAmount
-      : record.payment.secondInstallmentAmount;
+  for (const record of overduePayments) {
+    const installmentNumber = !record.payment.firstInstallmentPaid ? 1 : 2;
+    const dueDate =
+      installmentNumber === 1
+        ? record.payment.firstInstallmentDate
+        : record.payment.secondInstallmentDate;
 
-    return {
-      tenantId,
+    await NotificationService.notifyInstallmentDue(
+      record.client.id,
       branchId,
-      userId: 'system', // TODO: Get actual user for notifications
-      clientName: `${record.client.firstName} ${record.client.lastName}`,
-      amount: amount || 0,
-      clientId: record.client.id,
-      isOverdue: true,
-    };
-  });
-
-  for (const notification of notifications) {
-    await NotificationService.notifyInstallmentDue(notification);
+      record.payment.id,
+      installmentNumber as 1 | 2,
+      dueDate ? new Date(dueDate) : null,
+      true // isOverdue
+    );
   }
 }
 
@@ -119,24 +117,21 @@ async function checkUpcomingInstallments(branchId: string, tenantId: string, tod
       )
     );
 
-  const notifications = todaysInstallments.map((record) => {
-    const amount = !record.payment.firstInstallmentPaid
-      ? record.payment.firstInstallmentAmount
-      : record.payment.secondInstallmentAmount;
+  for (const record of todaysInstallments) {
+    const installmentNumber = !record.payment.firstInstallmentPaid ? 1 : 2;
+    const dueDate =
+      installmentNumber === 1
+        ? record.payment.firstInstallmentDate
+        : record.payment.secondInstallmentDate;
 
-    return {
-      tenantId,
+    await NotificationService.notifyInstallmentDue(
+      record.client.id,
       branchId,
-      userId: 'system',
-      clientName: `${record.client.firstName} ${record.client.lastName}`,
-      amount: amount || 0,
-      clientId: record.client.id,
-      isOverdue: false,
-    };
-  });
-
-  for (const notification of notifications) {
-    await NotificationService.notifyInstallmentDue(notification);
+      record.payment.id,
+      installmentNumber as 1 | 2,
+      dueDate ? new Date(dueDate) : null,
+      false // isOverdue
+    );
   }
 }
 
