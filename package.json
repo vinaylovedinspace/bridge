@@ -63,8 +63,6 @@
     "framer-motion": "^12.23.3",
     "global": "^4.4.0",
     "html2canvas": "^1.4.1",
-    "inngest": "^3.40.1",
-    "inngest-cli": "^1.11.5",
     "jose": "^6.0.10",
     "jotai": "^2.12.2",
     "jspdf": "^3.0.1",

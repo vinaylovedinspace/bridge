@@ -11,7 +11,7 @@ import {
 
 import { and, eq, lte, gte, isNull, or } from 'drizzle-orm';
 import { NotificationService } from '@/lib/notifications/notification-service';
-import { addDays } from 'date-fns';
+import { addDays, startOfDay } from 'date-fns';
 
 // This endpoint should be called by a cron job every hour
 export async function POST(request: Request) {
@@ -31,6 +31,7 @@ export async function POST(request: Request) {
       await Promise.all([
         checkOverduePayments(branch.id, branch.tenantId),
         checkUpcomingInstallments(branch.id, branch.tenantId, todayString),
+        checkPaymentReminders(branch.id, branch.tenantId), // New function for payment reminders
         checkLearningTests(branch.id, branch.tenantId, todayString),
         checkDrivingTestEligibility(branch.id, branch.tenantId),
         checkVehicleDocuments(branch.id, branch.tenantId),
@@ -295,7 +296,7 @@ async function checkVehicleDocuments(branchId: string, tenantId: string) {
 }
 
 async function checkTodaysSessions(branchId: string, tenantId: string, todayString: string) {
-  const todaysSessions = await db
+  const cancelledSessions = await db
     .select({
       session: sessions,
       client: clients,
@@ -306,11 +307,11 @@ async function checkTodaysSessions(branchId: string, tenantId: string, todayStri
       and(
         eq(clients.branchId, branchId),
         eq(sessions.sessionDate, todayString),
-        eq(sessions.status, 'SCHEDULED')
+        eq(sessions.status, 'CANCELLED')
       )
     );
 
-  for (const record of todaysSessions) {
+  for (const record of cancelledSessions) {
     const sessionTime = `${record.session.startTime} - ${record.session.endTime}`;
 
     await NotificationService.notifySessionToday({
@@ -321,5 +322,100 @@ async function checkTodaysSessions(branchId: string, tenantId: string, todayStri
       sessionTime,
       sessionId: record.session.id,
     });
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function checkPaymentReminders(branchId: string, _tenantId: string) {
+  const today = startOfDay(new Date());
+
+  // Check for installment reminders
+  const installmentPayments = await db
+    .select({
+      payment: payments,
+      client: clients,
+    })
+    .from(payments)
+    .innerJoin(clients, eq(payments.clientId, clients.id))
+    .where(and(eq(clients.branchId, branchId), eq(payments.paymentType, 'INSTALLMENTS')));
+
+  for (const record of installmentPayments) {
+    const { payment } = record;
+
+    // Check first installment reminders
+    if (!payment.firstInstallmentPaid && payment.firstInstallmentDate) {
+      const firstDueDate = new Date(payment.firstInstallmentDate);
+
+      // Overdue reminders (1, 3, 7 days after)
+      const daysOverdue = Math.ceil(
+        (today.getTime() - firstDueDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (daysOverdue === 1 || daysOverdue === 3 || daysOverdue === 7) {
+        await NotificationService.notifyInstallmentDue(
+          payment.clientId,
+          payment.planId,
+          payment.id,
+          1,
+          firstDueDate,
+          true
+        );
+      }
+    }
+
+    // Check second installment reminders
+    if (!payment.secondInstallmentPaid && payment.secondInstallmentDate) {
+      const secondDueDate = new Date(payment.secondInstallmentDate);
+
+      // Overdue reminders (1, 3, 7 days after)
+      const daysOverdue = Math.ceil(
+        (today.getTime() - secondDueDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (daysOverdue === 1 || daysOverdue === 3 || daysOverdue === 7) {
+        await NotificationService.notifyInstallmentDue(
+          payment.clientId,
+          payment.planId,
+          payment.id,
+          2,
+          secondDueDate,
+          true
+        );
+      }
+    }
+  }
+
+  // Check for pay later reminders
+  const payLaterPayments = await db
+    .select({
+      payment: payments,
+      client: clients,
+    })
+    .from(payments)
+    .innerJoin(clients, eq(payments.clientId, clients.id))
+    .where(
+      and(
+        eq(clients.branchId, branchId),
+        eq(payments.paymentType, 'PAY_LATER'),
+        eq(payments.paymentStatus, 'PENDING')
+      )
+    );
+
+  for (const record of payLaterPayments) {
+    const { payment } = record;
+
+    if (payment.paymentDueDate) {
+      const dueDate = new Date(payment.paymentDueDate);
+
+      // Overdue reminders (1, 3, 7 days after)
+      const daysOverdue = Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysOverdue === 1 || daysOverdue === 3 || daysOverdue === 7) {
+        await NotificationService.notifyPayLaterDue(
+          payment.clientId,
+          payment.planId,
+          payment.id,
+          dueDate,
+          true
+        );
+      }
+    }
   }
 }
