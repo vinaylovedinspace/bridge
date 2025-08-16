@@ -44,8 +44,7 @@ type MultistepFormProps = {
 export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [clientId, setClientId] = React.useState<string | undefined>(undefined);
-  const [planId, setPlanId] = React.useState<string | undefined>(undefined);
+  // IDs are now stored in form state instead of separate state variables
 
   const methods = useForm<AdmissionFormValues>({
     resolver: zodResolver(admissionFormSchema),
@@ -71,7 +70,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
     mode: 'onChange',
   });
 
-  const { trigger, getValues, watch } = methods;
+  const { trigger, getValues, watch, setValue } = methods;
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep } = useStepNavigation(
     ADMISSION_STEPS,
@@ -106,17 +105,20 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
     });
   };
 
-  const handlePersonalStep = async (data: PersonalInfoValues): ActionReturnType => {
-    console.log('Processing personal info:', data);
-    const result = await createClient(data);
+  const handlePersonalStep = useCallback(
+    async (data: PersonalInfoValues): ActionReturnType => {
+      console.log('Processing personal info:', data);
+      const result = await createClient(data);
 
-    // If the client was created successfully, store the clientId for later steps
-    if (!result.error && result.clientId) {
-      setClientId(result.clientId);
-    }
+      // If the client was created successfully, store the clientId for later steps
+      if (!result.error && result.clientId) {
+        setValue('clientId', result.clientId);
+      }
 
-    return result;
-  };
+      return result;
+    },
+    [setValue]
+  );
 
   const handleLicenseStep = useCallback(
     async (data: {
@@ -125,6 +127,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
     }): ActionReturnType => {
       console.log('Processing license info:', data);
 
+      const clientId = getValues('clientId');
       if (!clientId) {
         return Promise.resolve({
           error: true,
@@ -200,11 +203,12 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
         });
       }
     },
-    [clientId]
+    [getValues]
   );
 
   const handlePlanStep = useCallback(
     async (data: PlanValues): ActionReturnType => {
+      const clientId = getValues('clientId');
       if (!clientId) {
         return Promise.resolve({
           error: true,
@@ -250,17 +254,22 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
         clientId,
       });
 
-      setPlanId(result.planId);
+      if (result.planId) {
+        setValue('planId', result.planId);
+      }
 
       // Sessions are automatically created/updated by the createPlan server action
       // No need to create them again here
       return result;
     },
-    [clientId]
+    [getValues, setValue]
   );
 
   const handlePaymentStep = useCallback(
     async (data: PaymentValues): ActionReturnType => {
+      const clientId = getValues('clientId');
+      const planId = getValues('planId');
+
       if (!clientId) {
         return Promise.resolve({
           error: true,
@@ -281,9 +290,13 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
         planId,
       });
 
+      if (!result.error && result.paymentId) {
+        setValue('paymentId', result.paymentId);
+      }
+
       return result;
     },
-    [clientId, planId]
+    [getValues, setValue]
   );
 
   // Map step keys to components and their corresponding actions
@@ -319,12 +332,21 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
         getData: () => getValues('plan'),
       },
       payment: {
-        component: <PaymentContainer />,
+        component: (
+          <PaymentContainer clientId={getValues('clientId')} paymentId={getValues('paymentId')} />
+        ),
         onSubmit: (data: unknown) => handlePaymentStep(data as PaymentValues),
         getData: () => getValues('payment'),
       },
     };
-  }, [branchConfig, getValues, handleLicenseStep, handlePaymentStep, handlePlanStep]);
+  }, [
+    branchConfig,
+    getValues,
+    handleLicenseStep,
+    handlePaymentStep,
+    handlePlanStep,
+    handlePersonalStep,
+  ]);
 
   // Function to get validation fields for a specific step
   const getStepValidationFields = (step: string): Path<AdmissionFormValues>[] => {

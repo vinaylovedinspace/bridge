@@ -193,6 +193,10 @@ export const admissionFormSchema = z.object({
   drivingLicense: drivingLicenseSchema.optional(),
   plan: planSchema,
   payment: paymentSchema,
+  // Store generated IDs in form state for better state management
+  clientId: z.string().optional(),
+  planId: z.string().optional(),
+  paymentId: z.string().optional(),
 });
 
 export type ServiceTypeValues = z.infer<typeof serviceTypeSchema>;

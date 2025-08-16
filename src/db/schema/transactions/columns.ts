@@ -2,7 +2,7 @@ import { pgTable, text, uuid, integer, timestamp, pgEnum, jsonb } from 'drizzle-
 
 export const PaymentModeEnum = pgEnum('payment_mode', ['PAYMENT_LINK', 'QR', 'CASH', 'CHEQUE']);
 
-export const PaymentGatewayEnum = pgEnum('payment_gateway', ['PAYTM']);
+export const PaymentGatewayEnum = pgEnum('payment_gateway', ['PLACEHOLDER']);
 
 export const TransactionStatusEnum = pgEnum('transaction_status', [
   'SUCCESS',
