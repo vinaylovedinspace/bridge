@@ -19,7 +19,7 @@ export const SuccessScreen = ({ onRedirect }: SuccessScreenProps) => {
 
   return (
     <motion.div
-      className="flex flex-col items-center justify-center min-h-screen bg-background"
+      className="flex flex-col items-center justify-center h-full bg-background"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}

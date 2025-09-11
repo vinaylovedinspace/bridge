@@ -95,7 +95,7 @@ export const CompletionScreen = ({ onComplete }: CompletionScreenProps) => {
   if (!animationsLoaded) {
     return (
       <motion.div
-        className="flex items-center justify-center min-h-screen bg-background"
+        className="flex items-center justify-center h-full bg-background"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
@@ -114,7 +114,7 @@ export const CompletionScreen = ({ onComplete }: CompletionScreenProps) => {
 
   return (
     <motion.div
-      className="flex items-center justify-center min-h-screen bg-background"
+      className="flex items-center justify-center h-full bg-background"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.8, ease: 'easeOut' }}
