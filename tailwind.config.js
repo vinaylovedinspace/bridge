@@ -18,6 +18,7 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: ['var(--font-manrope)'],
+        'space-grotesk': ['var(--font-space-grotesk)'],
       },
       colors: {
         border: 'var(--border)',
@@ -61,5 +62,6 @@ module.exports = {
       },
     },
   },
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   plugins: [require('tailwindcss-animate')],
 };
