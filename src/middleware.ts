@@ -16,7 +16,7 @@ export default clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) {
     await auth.protect();
 
-    const { sessionClaims, orgId } = await auth();
+    const { sessionClaims } = await auth();
 
     // Type-safe access to publicMetadata
     const publicMetadata =
@@ -28,7 +28,7 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.next();
     }
 
-    const isOnboardingComplete = !!publicMetadata.isOnboardingComplete || !!orgId;
+    const isOnboardingComplete = !!publicMetadata.isOnboardingComplete;
 
     // If user is already onboarded but tries to access onboarding route, redirect to home
     if (isOnboardingRoute(req) && isOnboardingComplete) {
