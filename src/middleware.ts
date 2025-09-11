@@ -16,12 +16,17 @@ export default clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) {
     await auth.protect();
 
-    const { sessionClaims } = await auth();
+    const { sessionClaims, orgId } = await auth();
 
     // Type-safe access to publicMetadata
     const publicMetadata =
       (sessionClaims?.publicMetadata as { isOnboardingComplete?: boolean; isOwner?: boolean }) ||
       {};
+
+    // if fresh user (first time user is always an owner)
+    if (!orgId) {
+      return NextResponse.next();
+    }
 
     // For confirmed non-owners, skip onboarding checks but still allow access
     if (publicMetadata.isOwner === false) {
