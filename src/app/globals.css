@@ -107,6 +107,19 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
+}
+
 @layer base {
   * {
     font-family: var(--font-sans);
@@ -127,31 +140,31 @@
     size: A4;
     margin: 0;
   }
-  
+
   * {
     -webkit-print-color-adjust: exact !important;
     color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  
+
   body {
     margin: 0 !important;
     padding: 0 !important;
     background: white !important;
   }
-  
+
   /* Hide everything except the form content when printing */
   body > *:not(.print-container) {
     display: none !important;
   }
-  
+
   /* Hide modal overlay and background */
-  [data-slot="dialog-overlay"],
-  [data-slot="dialog-portal"],
+  [data-slot='dialog-overlay'],
+  [data-slot='dialog-portal'],
   .bg-gray-100 {
     display: none !important;
   }
-  
+
   /* Show only the form content */
   .print-content {
     display: block !important;
@@ -164,33 +177,35 @@
     box-shadow: none !important;
     border: none !important;
   }
-  
+
   /* Hide dialog header when printing */
-  [data-slot="dialog-header"] {
+  [data-slot='dialog-header'] {
     display: none !important;
   }
-  
+
   /* Ensure tables and borders print correctly */
   table {
     border-collapse: collapse !important;
   }
-  
-  table, th, td {
+
+  table,
+  th,
+  td {
     border: 1px solid black !important;
   }
-  
+
   /* Ensure checkboxes print */
-  input[type="checkbox"] {
+  input[type='checkbox'] {
     -webkit-appearance: checkbox !important;
     appearance: checkbox !important;
   }
-  
+
   /* Prevent page breaks within important sections */
   .no-break {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
-  
+
   /* Force page breaks when needed */
   .page-break {
     page-break-before: always !important;
@@ -219,7 +234,8 @@
     --border: oklch(0.914 0 0);
     --input: oklch(0.914 0 0);
     --ring: oklch(0.5332 0.2 264.33);
-    --radius: 0.75rem; /* 12px */    --chart-1: oklch(0.61 0.222 41.116);
+    --radius: 0.75rem; /* 12px */
+    --chart-1: oklch(0.61 0.222 41.116);
     --chart-2: oklch(0.39 0.118 184.704);
     --chart-3: oklch(0.24 0.07 227.392);
     --chart-4: oklch(0.66 0.189 84.429);

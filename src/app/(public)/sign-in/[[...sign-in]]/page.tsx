@@ -13,7 +13,7 @@ export default function SignInPage() {
     <div className="flex min-h-screen" data-testid="signin-page">
       <div className="relative hidden w-1/2 bg-primary h-[calc(100vh-2rem)] lg:block rounded-3xl m-4">
         <div className="flex flex-col justify-between h-full">
-          <TypographyH1 className="text-white pt-30 pl-16 max-w-2xl font-medium leading-14">
+          <TypographyH1 className="text-white pt-30 pl-16 max-w-2xl font-medium leading-14 opacity-0 animate-fade-in">
             <span style={{ fontFamily: 'var(--font-space-grotesk)' }}>
               Simplify Your Driving School Operations with{' '}
             </span>
@@ -25,7 +25,14 @@ export default function SignInPage() {
             </span>
           </TypographyH1>
           <div className="flex relative justify-end w-full h-[50%]">
-            <Image src="/dashboard-sample.svg" alt="Dashboard Sample" priority fill />
+            <Image
+              src="/dashboard-sample.svg"
+              alt="Dashboard Sample"
+              priority
+              fill
+              className="opacity-0 animate-fade-in"
+              style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}
+            />
           </div>
         </div>
       </div>
