@@ -24,8 +24,8 @@ export default clerkMiddleware(async (auth, req) => {
       {};
 
     // if fresh user (first time user is always an owner)
-    if (!orgId) {
-      return NextResponse.next();
+    if (!orgId && !isOnboardingRoute(req)) {
+      return NextResponse.redirect(new URL('/onboarding', req.url));
     }
 
     // For confirmed non-owners, skip onboarding checks but still allow access
