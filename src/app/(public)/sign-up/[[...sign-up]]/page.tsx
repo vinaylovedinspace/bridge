@@ -31,7 +31,7 @@ export default function SignUpPage() {
               priority
               fill
               className="opacity-0 animate-fade-in"
-              style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}
+              style={{ animationDelay: '500ms', animationFillMode: 'forwards' }}
             />{' '}
           </div>
         </div>
