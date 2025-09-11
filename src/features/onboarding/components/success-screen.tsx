@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Img from 'next/image';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 
 interface SuccessScreenProps {
   onRedirect: () => void;
