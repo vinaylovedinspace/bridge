@@ -24,8 +24,6 @@ export const PaymentStep = ({
   paymentCheckboxes,
   setPaymentCheckboxes,
   existingPayment,
-  clientId,
-  paymentId,
 }: PaymentStepProps) => {
   return (
     <Card className="grid grid-cols-12 col-span-8 align-center px-6 py-10 h-fit">
@@ -35,7 +33,7 @@ export const PaymentStep = ({
         setPaymentCheckboxes={setPaymentCheckboxes}
         existingPayment={existingPayment}
       />
-      <PaymentModeSelector clientId={clientId} paymentId={paymentId} />
+      <PaymentModeSelector />
     </Card>
   );
 };

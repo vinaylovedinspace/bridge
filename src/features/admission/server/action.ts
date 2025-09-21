@@ -1,4 +1,5 @@
 'use server';
+
 import { z } from 'zod';
 import { DEFAULT_WORKING_DAYS, DEFAULT_OPERATING_HOURS } from '@/lib/constants/business';
 import {
@@ -39,6 +40,11 @@ import {
   getSessionsByClientId,
   updateScheduledSessionsForClient,
 } from '@/server/actions/sessions';
+import {
+  createPaymentLink,
+  CreatePaymentLinkRequest,
+  PaymentLinkResult,
+} from '@/lib/cashfree/payment-links';
 
 export const createClient = async (
   unsafeData: z.infer<typeof personalInfoSchema>
@@ -677,6 +683,21 @@ export const getBranchConfig = async (): Promise<{
   }
 };
 
+export async function createPaymentLinkAction(
+  request: CreatePaymentLinkRequest
+): Promise<PaymentLinkResult> {
+  try {
+    const result = await createPaymentLink(request);
+    return result;
+  } catch (error) {
+    console.error('Failed to create payment link:', error);
+    return {
+      success: false,
+      error: 'Failed to create payment link. Please try again.',
+    };
+  }
+}
+
 // Update functions (aliases for the existing upsert functions)
 export const updateClient = async (
   _clientId: string,
@@ -700,7 +721,6 @@ export const updateDrivingLicense = async (
 };
 
 export const updatePlan = async (_planId: string, data: PlanValues): ActionReturnType => {
-  // When updating a plan, we'll use the same createPlan function which now handles session generation
   return createPlan(data);
 };
 

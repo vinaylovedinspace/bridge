@@ -170,6 +170,9 @@ export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFor
         })(),
         joiningTime: client.plan?.[0]?.joiningTime || '09:00',
       },
+      planId: client.plan?.[0]?.id || '',
+      clientId: client.id,
+      paymentId: client.payments?.[0]?.id || '',
       payment: {
         clientId: client.id,
         planId: client.plan?.[0]?.id || '',

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { FormItem, FormLabel } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
@@ -10,34 +10,12 @@ import { useFormContext } from 'react-hook-form';
 import { AdmissionFormValues } from '@/features/admission/types';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle, MessageSquare, Phone } from 'lucide-react';
+import { createPaymentLinkAction } from '@/features/admission/server/action';
 
-// Temporary stub for payment link functionality
-// TODO: Implement payment link integration
-const createPaymentLink = async (data: {
-  clientId: string;
-  paymentId: string;
-  phoneNumber: string;
-  amount: number;
-  installmentNumber?: number;
-}) => {
-  console.log('Payment link data:', data);
-  return {
-    error: true,
-    message:
-      'Payment link functionality is currently unavailable. Please use Cash or Bank Transfer.',
-  };
-};
-
-interface PaymentModeSelectorProps {
-  clientId?: string;
-  paymentId?: string;
-}
-
-export const PaymentModeSelector = ({ clientId, paymentId }: PaymentModeSelectorProps) => {
+export const PaymentModeSelector = () => {
   const { getValues, setValue } = useFormContext<AdmissionFormValues>();
 
-  // Initialize payment mode from existing form data
-  const getInitialPaymentMode = () => {
+  const getInitialPaymentMode = useCallback(() => {
     const payment = getValues().payment;
     const paymentType = payment?.paymentType || 'FULL_PAYMENT';
 
@@ -47,10 +25,10 @@ export const PaymentModeSelector = ({ clientId, paymentId }: PaymentModeSelector
       return payment?.firstPaymentMode || 'PAYMENT_LINK';
     }
     return 'PAYMENT_LINK';
-  };
+  }, [getValues]);
 
   const [paymentMode, setPaymentMode] =
-    useState<(typeof PaymentModeEnum.enumValues)[number]>(getInitialPaymentMode());
+    useState<(typeof PaymentModeEnum.enumValues)[number]>(getInitialPaymentMode);
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState(getValues().personalInfo?.phoneNumber);
   const [isSendingLink, setIsSendingLink] = useState(false);
@@ -67,25 +45,24 @@ export const PaymentModeSelector = ({ clientId, paymentId }: PaymentModeSelector
 
     try {
       const formValues = getValues();
-      const formClientId = formValues.clientId || clientId;
-      const formPaymentId = formValues.paymentId || paymentId;
+      const formPlanId = formValues.planId;
+      const customerName =
+        `${formValues.personalInfo?.firstName || ''} ${formValues.personalInfo?.lastName || ''}`.trim();
 
-      if (!formClientId || !formPaymentId) {
-        toast.error('Missing client or payment information. Please save the form first.');
+      if (!formPlanId) {
+        toast.error('Missing plan information. Please complete the Plan step first.');
         return;
       }
 
       const payment = formValues.payment;
 
-      // Calculate amount and installment number based on payment type
+      // Calculate amount based on payment type
       let amount = 0;
-      let installmentNumber: number | undefined;
 
       if (payment?.paymentType === 'FULL_PAYMENT') {
         amount = payment.finalAmount || 0;
       } else if (payment?.paymentType === 'INSTALLMENTS') {
         amount = payment.firstInstallmentAmount || 0;
-        installmentNumber = 1;
       }
 
       if (amount <= 0) {
@@ -93,27 +70,27 @@ export const PaymentModeSelector = ({ clientId, paymentId }: PaymentModeSelector
         return;
       }
 
-      // Use secure server action
-      const result = await createPaymentLink({
-        clientId: formClientId,
-        paymentId: formPaymentId,
-        phoneNumber,
+      // Use the actual payment link creation
+      const result = await createPaymentLinkAction({
         amount,
-        installmentNumber,
+        customerPhone: phoneNumber,
+        customerName: customerName || 'Student',
+        planId: formPlanId,
+        sendSms: true,
       });
 
-      if (!result.error) {
+      if (result.success) {
         setSmsSent(true);
-        toast.success('Processing payment link!', {
-          description: `SMS will be sent to ${phoneNumber} shortly`,
+        toast.success('Payment link created!', {
+          description: `Payment link sent to ${phoneNumber}`,
           duration: 5000,
         });
 
-        // Reset SMS sent status after 45 seconds (longer for workflow processing)
+        // Reset SMS sent status after 45 seconds
         setTimeout(() => setSmsSent(false), 45000);
       } else {
         toast.error('Failed to create payment link', {
-          description: result.message,
+          description: result.error || 'Unknown error occurred',
           duration: 6000,
         });
       }
@@ -243,31 +220,6 @@ export const PaymentModeSelector = ({ clientId, paymentId }: PaymentModeSelector
                 </Button>
               </div>
             </div>
-
-            {smsSent && (
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
-                  <TypographyMuted className="text-blue-800 font-medium">
-                    Payment Link Processing
-                  </TypographyMuted>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4 text-blue-600" />
-                    <TypographyMuted className="text-sm text-blue-700">
-                      Creating payment link for {phoneNumber}
-                    </TypographyMuted>
-                  </div>
-                  <TypographyMuted className="text-xs text-blue-700">
-                    Payment link will be sent via SMS shortly. The link will be valid for 7 days.
-                  </TypographyMuted>
-                  <TypographyMuted className="text-xs text-blue-700">
-                    This process is handled automatically in the background.
-                  </TypographyMuted>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>

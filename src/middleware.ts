@@ -6,6 +6,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/notifications/check',
+  '/api/webhooks/(.*)',
 ]);
 
 // Routes that are exempt from onboarding check
