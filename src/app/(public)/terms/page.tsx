@@ -144,14 +144,11 @@ export default function TermsOfServicePage() {
             <p className="text-gray-700 mb-2">
               <strong>Email:</strong>{' '}
               <a href="mailto:support@bridge-driving.com" className="text-blue-600 hover:underline">
-                support@bridge-driving.com
+                support@welovedinspace.studio
               </a>
             </p>
-            <p className="text-gray-700 mb-2">
-              <strong>Address:</strong> Bridge Driving School, [Your Address]
-            </p>
             <p className="text-gray-700">
-              <strong>Phone:</strong> [Your Phone Number]
+              <strong>Phone:</strong> +91 9136769724
             </p>
           </div>
 
