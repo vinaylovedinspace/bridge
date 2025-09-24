@@ -9,6 +9,7 @@ export const env = createEnv({
     CASHFREE_CLIENT_ID: z.string().min(1),
     CASHFREE_CLIENT_SECRET: z.string().min(1),
     CASHFREE_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
+    CRON_SECRET: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),

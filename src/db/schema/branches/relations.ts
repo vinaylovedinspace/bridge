@@ -3,7 +3,7 @@ import { BranchTable } from './columns';
 import { TenantTable } from '../tenants/columns';
 
 export const branchesRelations = relations(BranchTable, ({ one }) => ({
-  school: one(TenantTable, {
+  tenant: one(TenantTable, {
     fields: [BranchTable.tenantId],
     references: [TenantTable.id],
   }),
