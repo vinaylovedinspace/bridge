@@ -29,8 +29,9 @@ export const MultistepForm = () => {
     defaultValues: {
       schoolName: '',
       branches: [{ name: '' }], // Start with one empty branch
+      schoolWhatsappNumber: '',
     },
-    mode: 'onChange',
+    mode: 'onSubmit',
   });
 
   const { handleSubmit, trigger } = methods;
@@ -64,7 +65,7 @@ export const MultistepForm = () => {
   const currentStepKey = stepOrder[currentStepIndex];
   const currentStep = steps[currentStepKey];
   const [isPending, setIsPending] = useState(false);
-  const { getToken } = useAuth();
+  useAuth();
   const { setActive } = useClerk();
   const { userMemberships } = useOrganizationList();
   const router = useRouter();
@@ -86,23 +87,12 @@ export const MultistepForm = () => {
     try {
       const response = await createTenant(data);
       if (response?.error) {
-        // On error, hide completion and show error
         setShowCompletion(false);
         toast.error(response.message);
       } else {
-        // On success, mark server action as completed
-        console.log('Tenant creation response:', response);
         if (response.organizationIds?.length) {
           setCreatedOrgIds(response.organizationIds);
         }
-
-        // Wait for Clerk to propagate metadata changes
-        // Typical propagation time is 200-500ms, we'll wait up to 1 second
-        await new Promise((resolve) => setTimeout(resolve, 800));
-
-        // Force token refresh to get the updated metadata
-        await getToken({ skipCache: true });
-
         setServerActionCompleted(true);
       }
     } catch (error) {
@@ -136,26 +126,10 @@ export const MultistepForm = () => {
       try {
         await setActive({ organization: targetOrgId });
         console.log('Successfully set active organization');
-
-        // Wait for Clerk to propagate the changes
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // After setting active org, refresh the token to ensure
-        // the active organization context is properly set
-        await getToken({ skipCache: true });
-
-        // Double-check by getting a fresh token one more time
-        await getToken({ skipCache: true });
       } catch (error) {
         console.error('Failed to set active organization:', error);
       }
     }
-
-    // Refresh server components to ensure they have latest auth state
-    router.refresh();
-
-    // Small delay before redirect to ensure everything is synced
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Redirect to dashboard
     router.push('/dashboard');
@@ -176,6 +150,13 @@ export const MultistepForm = () => {
         // Submit the form if on the last step
         handleSubmit(onSubmit)();
       }
+    }
+  };
+
+  // Handle previous step
+  const goToPreviousStep = () => {
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex(currentStepIndex - 1);
     }
   };
 
@@ -207,6 +188,11 @@ export const MultistepForm = () => {
 
           {/* Navigation buttons */}
           <div className="flex justify-center gap-4 mt-20">
+            {currentStepIndex > 0 && (
+              <Button type="button" variant="outline" size="onboarding" onClick={goToPreviousStep}>
+                Previous
+              </Button>
+            )}
             <Button
               type="button"
               variant="black"

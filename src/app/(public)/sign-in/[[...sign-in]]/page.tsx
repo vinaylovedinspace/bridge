@@ -31,6 +31,7 @@ export default function SignInPage() {
               priority
               fill
               placeholder="blur"
+              blurDataURL="..."
             />
           </div>
         </div>

@@ -3,60 +3,49 @@ import { NextResponse } from 'next/server';
 
 // Public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
+  // public pages
   '/sign-in(.*)',
   '/sign-up(.*)',
-  '/api/notifications/check',
-  '/api/cron/(.*)',
-  '/api/webhooks/(.*)',
   '/data-deletion(.*)',
   '/terms(.*)',
   '/privacy(.*)',
+
+  '/api/notifications/check',
+  '/api/cron/(.*)',
+  '/api/webhooks/(.*)',
 ]);
 
-// Routes that are exempt from onboarding check
+// Auth routes that authenticated users should be redirected from
+const isAuthRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)']);
 const isOnboardingRoute = createRouteMatcher(['/onboarding(.*)']);
 
 export default clerkMiddleware(async (auth, req) => {
-  // Protect non-public routes
+  const { userId, orgId } = await auth();
+
   if (!isPublicRoute(req)) {
     await auth.protect();
 
-    const { sessionClaims, orgId } = await auth();
-
-    // Type-safe access to publicMetadata
-    const publicMetadata =
-      (sessionClaims?.publicMetadata as { isOnboardingComplete?: boolean; isOwner?: boolean }) ||
-      {};
-
-    // if fresh user (first time user is always an owner)
-    if (!orgId && !isOnboardingRoute(req)) {
-      return NextResponse.redirect(new URL('/onboarding', req.url));
-    }
-
-    // For confirmed non-owners, skip onboarding checks but still allow access
-    if (publicMetadata.isOwner === false) {
-      return NextResponse.next();
-    }
-
-    const isOnboardingComplete = !!publicMetadata.isOnboardingComplete;
-
-    // If user is already onboarded but tries to access onboarding route, redirect to home
-    if (isOnboardingRoute(req) && isOnboardingComplete) {
+    if (isOnboardingRoute(req) && orgId) {
       return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
-    // If user is not onboarded and tries to access a non-onboarding route, redirect to onboarding
-    if (!isOnboardingRoute(req) && !isOnboardingComplete) {
+    if (!isOnboardingRoute(req) && !orgId) {
       return NextResponse.redirect(new URL('/onboarding', req.url));
     }
   }
+
+  if (isAuthRoute(req) && userId) {
+    return NextResponse.redirect(new URL('/dashboard', req.url));
+  }
+
+  return NextResponse.next();
 });
 
 export const config = {
   matcher: [
     // Skip Next.js internals and all static files, unless found in search params
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|json)).*)',
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     // Always run for API routes
-    '/(api|trpc)(.*)',
+    '/(api)(.*)',
   ],
 };
