@@ -73,7 +73,7 @@ export function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8" id="vehicle-form">
         <div className="grid grid-cols-12 w-full">
           <TypographyP className="col-span-3 font-medium">Basic Details</TypographyP>
 
@@ -202,7 +202,7 @@ export function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
           </div>
         </div>
 
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" disabled={isPending} id="submit-vehicle">
           {isPending ? 'Submitting...' : vehicle?.id ? 'Update' : 'Submit'}
         </Button>
       </form>

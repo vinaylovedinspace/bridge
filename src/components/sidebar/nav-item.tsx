@@ -11,7 +11,7 @@ export function NavItem({ item }: { item: (typeof navItems)[number] }) {
   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
   return (
-    <Link href={item.href} className="block">
+    <Link href={item.href} className="block" id={item.label}>
       <Button
         variant="ghost"
         className={cn(

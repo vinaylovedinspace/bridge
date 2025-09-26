@@ -13,7 +13,7 @@ export default function VehiclesTableLayout({ children }: { children: React.Reac
         <Suspense fallback={<div>Loading search...</div>}>
           <VehicleSearchBar />
         </Suspense>
-        <Link href="/vehicles/add">
+        <Link href="/vehicles/add" id="add-vehicle">
           <Button>
             <Plus className="h-4 w-4" />
             Add Vehicle

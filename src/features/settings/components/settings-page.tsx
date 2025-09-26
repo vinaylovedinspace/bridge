@@ -29,7 +29,7 @@ export const SettingsPage = ({ branchId }: SettingsPageProps) => {
   }
 
   return (
-    <ScrollArea className="h-[calc(100vh-92px)] pr-10">
+    <ScrollArea className="h-[calc(100vh-92px)] pr-10" id="settings-page">
       <div className="p-6 max-w-4xl mx-auto space-y-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Branch Settings</h1>

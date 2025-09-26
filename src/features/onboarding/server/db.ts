@@ -65,6 +65,7 @@ export async function createTenantWithBranches(
           tenantId: tenant.id,
           branches: branches.map((b) => b.id),
           defaultOrganizationId: createdOrgIds[0],
+          isOnboardingComplete: false,
         },
       });
 
@@ -104,6 +105,7 @@ async function rollbackClerkResources(orgIds: string[], userId: string): Promise
       await clerk.users.updateUserMetadata(userId, {
         publicMetadata: {
           tenantId: null,
+          isOnboardingComplete: false,
         },
       });
     } catch (e) {

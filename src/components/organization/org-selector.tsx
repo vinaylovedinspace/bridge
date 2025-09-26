@@ -25,18 +25,17 @@ export function OrgSelector() {
   }, [isLoaded, organization, userMemberships.data, setActive]);
 
   return (
-    <OrganizationSwitcher
-      hidePersonal
-      appearance={{
-        elements: {
-          organizationSwitcherPopoverActionButton__createOrganization: {
-            display: 'none',
+    <div id="org-selector">
+      <OrganizationSwitcher
+        hidePersonal
+        appearance={{
+          elements: {
+            organizationSwitcherPopoverActionButton__createOrganization: {
+              display: 'none',
+            },
           },
-          // organizationSwitcherPopoverActionButton__manageOrganization: {
-          //   display: 'none',
-          // },
-        },
-      }}
-    />
+        }}
+      />
+    </div>
   );
 }

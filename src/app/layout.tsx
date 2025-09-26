@@ -4,6 +4,10 @@ import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
+import { NextStepProvider, NextStep } from 'nextstepjs';
+import { tourSteps } from '@/lib/tour-steps';
+import { OnboardingWrapper } from '@/providers/onboarding-wrapper';
+import { markOnboardingComplete } from '@/server/actions/user';
 
 const manrope = Manrope({
   variable: '--font-manrope',
@@ -30,7 +34,17 @@ export default function RootLayout({
       <html lang="en">
         <body className={`${manrope.variable} ${spaceGrotesk.variable} antialiased`}>
           <Toaster closeButton duration={3000} />
-          <NuqsAdapter>{children}</NuqsAdapter>
+          <NuqsAdapter>
+            <NextStepProvider>
+              <NextStep
+                steps={tourSteps}
+                onComplete={markOnboardingComplete}
+                onSkip={markOnboardingComplete}
+              >
+                <OnboardingWrapper>{children}</OnboardingWrapper>
+              </NextStep>
+            </NextStepProvider>
+          </NuqsAdapter>
         </body>
       </html>
     </ClerkProvider>

@@ -4,7 +4,6 @@ import { TypographyH1, TypographyH2 } from '@/components/ui/typography';
 import { Controller, useFormContext } from 'react-hook-form';
 import MultiStepFormInput from '../form-input';
 import { OnboardingFormValues } from '../../types';
-import SchoolNameStep from './school-name';
 
 export const SchoolWhatsappNumberStep = () => {
   const {
