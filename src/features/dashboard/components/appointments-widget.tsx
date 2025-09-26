@@ -20,14 +20,14 @@ export async function AppointmentsWidget() {
       title: 'Learning Test',
       count: stats.learningTestCount,
       type: 'learning',
-      link: '/clients?learningTest=true',
+      link: '/forms/bulk?type=ll',
     },
     {
       id: '2',
       title: 'Final Test',
       count: stats.finalTestCount,
       type: 'final',
-      link: '/forms?tab=bulk',
+      link: '/forms/bulk?type=dl',
     },
     {
       id: '3',

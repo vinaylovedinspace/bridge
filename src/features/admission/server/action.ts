@@ -650,6 +650,7 @@ export const getBranchConfig = async (): Promise<{
   error: boolean;
   message: string;
   data?: {
+    id: string;
     workingDays: number[];
     operatingHours: { start: string; end: string };
     licenseServiceCharge: number;
@@ -672,6 +673,7 @@ export const getBranchConfig = async (): Promise<{
       error: false,
       message: 'Branch configuration retrieved successfully',
       data: {
+        id: branch.id,
         workingDays: branch.workingDays || DEFAULT_WORKING_DAYS,
         operatingHours: branch.operatingHours || DEFAULT_OPERATING_HOURS,
         licenseServiceCharge: branch.licenseServiceCharge || 500,
