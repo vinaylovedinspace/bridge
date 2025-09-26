@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import SchoolNameStep from './steps/school-name';
 import BranchesStep from './steps/branches';
 import React from 'react';
-import { onboardingFormSchema, OnboardingFormValues } from '../types';
+import { onboardingFormSchema, OnboardingFormValues, StepKey } from '../types';
 import { createTenant } from '../../server/action';
 import { toast } from 'sonner';
 import { useAuth, useClerk } from '@clerk/nextjs';
@@ -15,9 +15,7 @@ import { useOrganizationList } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { CompletionScreen } from '../completion-screen';
 import { SuccessScreen } from '../success-screen';
-
-// Define the step configuration with components
-export type StepKey = 'schoolName' | 'branches';
+import SchoolWhatsappNumberStep from './steps/school-whatsapp-number';
 
 interface StepConfig {
   title: string;
@@ -39,11 +37,18 @@ export const MultistepForm = () => {
 
   // Define the steps configuration
   const steps: Record<StepKey, StepConfig> = {
-    schoolName: {
+    'school-name': {
       title: 'School Information',
       component: SchoolNameStep,
       validationFields: ['schoolName'],
     },
+
+    'school-whatsapp': {
+      title: 'School Whatsapp Number',
+      component: SchoolWhatsappNumberStep,
+      validationFields: ['schoolWhatsappNumber'],
+    },
+
     branches: {
       title: 'Branch Locations',
       component: BranchesStep,
@@ -52,7 +57,7 @@ export const MultistepForm = () => {
   };
 
   // Define step order
-  const stepOrder: StepKey[] = ['schoolName', 'branches'];
+  const stepOrder: StepKey[] = ['school-name', 'school-whatsapp', 'branches'];
 
   // Current step state
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
