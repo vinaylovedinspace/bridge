@@ -13,14 +13,14 @@ export function OnboardingWrapper({ children }: { children: React.ReactNode }) {
   const isOnboardingComplete = user?.publicMetadata?.isOnboardingComplete as boolean;
 
   useEffect(() => {
-    if (!isLoaded || !user) return;
+    if (!isLoaded || !user || currenPath === '/onboarding') return;
 
     // Start the onboarding tour for new users who haven't completed onboarding
     // Only start if no step is currently active
     if (!isOnboardingComplete && !currentStep) {
       startNextStep('onboardingTour');
     }
-  }, [isLoaded, user, isOnboardingComplete, startNextStep, currentStep]);
+  }, [isLoaded, user, isOnboardingComplete, startNextStep, currentStep, currenPath]);
 
   useEffect(() => {
     if (currenPath === '/vehicles' && currentStep === 2) {
