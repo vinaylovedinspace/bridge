@@ -1,6 +1,7 @@
 'use client';
 import { motion } from 'motion/react';
 import { SignUp } from '@clerk/nextjs';
+import { getAuthCardAppearance } from '@/lib/auth/auth-card-css';
 
 export const AnimatedSignUp = () => {
   return (
@@ -13,21 +14,7 @@ export const AnimatedSignUp = () => {
         ease: 'easeOut',
       }}
     >
-      <SignUp
-        appearance={{
-          elements: {
-            headerTitle: '!text-2xl !font-bold',
-            headerSubtitle: '!hidden',
-            formButtonPrimary:
-              '!bg-primary !text-primary-foreground !py-2 !border-0 !outline-none hover:!bg-primary/90 !rounded-sm ',
-            cardBox: '!shadow-none !border-0',
-            card: '!p-2',
-            footer: '!hidden ',
-            input: '!p-4',
-            socialButtonsBlockButton__google: '!py-3 !bg-white !rounded-sm !border-0 ',
-          },
-        }}
-      />
+      <SignUp appearance={getAuthCardAppearance} />
     </motion.div>
   );
 };

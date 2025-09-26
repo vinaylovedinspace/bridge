@@ -25,7 +25,13 @@ export default function SignInPage() {
             </span>
           </TypographyH1>
           <div className="flex relative justify-end w-full h-[50%]">
-            <Image src="/dashboard-sample.svg" alt="Dashboard Sample" priority fill />
+            <Image
+              src="/dashboard-sample.svg"
+              alt="Dashboard Sample"
+              priority
+              fill
+              placeholder="blur"
+            />
           </div>
         </div>
       </div>
