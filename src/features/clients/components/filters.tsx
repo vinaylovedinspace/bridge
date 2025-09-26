@@ -13,8 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { useQueryState } from 'nuqs';
 import { useColumnPreferences } from '@/hooks/use-column-preferences';
-import { Settings, FileText } from 'lucide-react';
-import Link from 'next/link';
+import { Settings } from 'lucide-react';
 
 const paymentStatusOptions = [
   { value: 'ALL', label: 'All Status' },
@@ -48,8 +47,6 @@ export const ClientFilters = () => {
     shallow: false,
     defaultValue: 'ALL',
   });
-
-  const [learningTest] = useQueryState('learningTest');
 
   const { visibleColumns, setVisibleColumns } = useColumnPreferences();
   const visibleColumnsArray = visibleColumns?.split(',') || [];
@@ -91,14 +88,6 @@ export const ClientFilters = () => {
         </Select>
       </div>
       <div className="flex gap-2">
-        {learningTest === 'true' && (
-          <Link href="/forms">
-            <Button variant="outline">
-              <FileText className="h-4 w-4 mr-2" />
-              Bulk Print Forms
-            </Button>
-          </Link>
-        )}
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="icon">

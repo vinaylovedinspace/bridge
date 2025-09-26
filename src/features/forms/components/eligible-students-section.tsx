@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -12,170 +11,71 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Download, Printer, Users, Calendar, CheckCircle2 } from 'lucide-react';
-import {
-  getEligibleStudentsForPermanentLicense,
-  getFormPrintStats,
-  markFormsAsPrinted,
-  getBulkClientDataForForms,
-} from '@/server/actions/forms';
-import { generateBulkPDFs, type FormData } from '@/lib/pdf-generator';
-import { toast } from 'sonner';
+import { Users, Calendar, CheckCircle2 } from 'lucide-react';
+import type { FilterType } from '@/server/db/forms';
 
-type FilterType = 'new-only' | 'all-eligible' | 'recently-printed';
+type EligibleStudent = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string | null;
+  clientCode: string;
+  learningLicenseIssueDate?: string | null;
+  learningLicenseClass?: string[] | null;
+  daysSinceLearningLicense: number;
+  printedAt?: Date | null;
+  printedBy?: string | null;
+  isPrinted: boolean;
+  daysSincePrint: number | null;
+};
 
-type EligibleStudent = Awaited<ReturnType<typeof getEligibleStudentsForPermanentLicense>>[0];
+type Stats = {
+  totalEligible: number;
+  newEligible: number;
+  recentlyPrinted: number;
+  alreadyPrinted: number;
+};
 
-type Stats = Awaited<ReturnType<typeof getFormPrintStats>>;
+interface EligibleStudentsSectionProps {
+  formType: 'form-2' | 'form-4';
+  students: EligibleStudent[];
+  stats: Stats | null;
+  selectedStudents: Set<string>;
+  filter: FilterType;
+  skipPrinted: boolean;
+  loading: boolean;
+  onFilterChange: (filter: FilterType) => void;
+  onSkipPrintedChange: (skipPrinted: boolean) => void;
+  onSelectAll: () => void;
+  onClearSelection: () => void;
+  onStudentToggle: (studentId: string, checked: boolean) => void;
+  getSelectableCount: () => number;
+}
 
-export function EligibleStudentsSection() {
-  const [students, setStudents] = useState<EligibleStudent[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<FilterType>('new-only');
-  const [skipPrinted, setSkipPrinted] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [studentsData, statsData] = await Promise.all([
-        getEligibleStudentsForPermanentLicense(filter),
-        getFormPrintStats(),
-      ]);
-      setStudents(studentsData);
-      setStats(statsData);
-      setSelectedStudents(new Set()); // Clear selection when filter changes
-    } catch (error) {
-      toast.error('Failed to load eligible students');
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  }, [filter]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const handleSelectAll = () => {
-    const selectableStudents = students.filter((student) => !skipPrinted || !student.isPrinted);
-    setSelectedStudents(new Set(selectableStudents.map((s) => s.id)));
-  };
-
-  const handleClearSelection = () => {
-    setSelectedStudents(new Set());
-  };
-
-  const handleStudentToggle = (studentId: string, checked: boolean) => {
-    const newSelection = new Set(selectedStudents);
-    if (checked) {
-      newSelection.add(studentId);
-    } else {
-      newSelection.delete(studentId);
-    }
-    setSelectedStudents(newSelection);
-  };
-
-  const handleMarkAsPrinted = async () => {
-    if (selectedStudents.size === 0) {
-      toast.error('Please select students to mark as printed');
-      return;
-    }
-
-    setProcessing(true);
-    try {
-      await markFormsAsPrinted(Array.from(selectedStudents), 'form-4');
-      toast.success(`Marked ${selectedStudents.size} forms as printed`);
-      await loadData(); // Refresh data
-    } catch (error) {
-      toast.error('Failed to mark forms as printed');
-      console.error(error);
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleBulkDownload = async () => {
-    if (selectedStudents.size === 0) {
-      toast.error('Please select students to download forms');
-      return;
-    }
-
-    setProcessing(true);
-    try {
-      const clientIds = Array.from(selectedStudents);
-      toast.info(`Generating PDFs for ${clientIds.length} students...`);
-
-      // Fetch detailed client data for selected students
-      const clientsData = await getBulkClientDataForForms(clientIds);
-
-      if (clientsData.length === 0) {
-        toast.error('No client data found for selected students');
-        return;
-      }
-
-      // Convert to FormData format
-      const formsData: FormData[] = clientsData.map((client) => ({
-        id: client.id,
-        firstName: client.firstName,
-        middleName: client.middleName,
-        lastName: client.lastName,
-        clientCode: client.clientCode,
-        phoneNumber: client.phoneNumber,
-        email: client.email,
-        aadhaarNumber: client.aadhaarNumber,
-        panNumber: client.panNumber,
-        birthDate: client.birthDate,
-        bloodGroup: client.bloodGroup,
-        gender: client.gender,
-        address: client.address,
-        city: client.city,
-        state: client.state,
-        pincode: client.pincode,
-        guardianFirstName: client.guardianFirstName,
-        guardianMiddleName: client.guardianMiddleName,
-        guardianLastName: client.guardianLastName,
-        photoUrl: client.photoUrl,
-        signatureUrl: client.signatureUrl,
-        learningLicenseNumber: client.learningLicenseNumber,
-        learningLicenseIssueDate: client.learningLicenseIssueDate,
-        learningLicenseExpiryDate: client.learningLicenseExpiryDate,
-        learningLicenseClass: client.learningLicenseClass,
-      }));
-
-      // Generate and download bulk PDFs
-      const timestamp = new Date().toISOString().split('T')[0];
-      await generateBulkPDFs(formsData, {
-        filename: `Form4_Bulk_${timestamp}_${formsData.length}students`,
-        quality: 0.9,
-      });
-
-      toast.success(`Successfully generated ${formsData.length} Form 4 PDFs!`);
-
-      // Optionally mark as printed after successful generation
-      // await markFormsAsPrinted(clientIds, 'form-4');
-      // await loadData();
-    } catch (error) {
-      console.error('Bulk PDF generation failed:', error);
-      toast.error('Failed to generate PDFs. Please try again.');
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const getSelectableCount = () => {
-    return students.filter((student) => !skipPrinted || !student.isPrinted).length;
-  };
-
+export function EligibleStudentsSection({
+  formType,
+  students,
+  stats,
+  selectedStudents,
+  filter,
+  skipPrinted,
+  loading,
+  onFilterChange,
+  onSkipPrintedChange,
+  onSelectAll,
+  onClearSelection,
+  onStudentToggle,
+  getSelectableCount,
+}: EligibleStudentsSectionProps) {
   if (loading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Eligible Students for Permanent License
+            {formType === 'form-2'
+              ? "Students for Learner's License Application (Form 2)"
+              : 'Eligible Students for Permanent License'}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -190,7 +90,9 @@ export function EligibleStudentsSection() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          Eligible Students for Permanent License
+          {formType === 'form-2'
+            ? "Students for Learner's License Application (Form 2)"
+            : 'Eligible Students for Permanent License'}
         </CardTitle>
         {stats && (
           <div className="flex gap-2 text-sm text-muted-foreground">
@@ -212,7 +114,7 @@ export function EligibleStudentsSection() {
         {/* Filters and Controls */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Select value={filter} onValueChange={(value: FilterType) => setFilter(value)}>
+            <Select value={filter} onValueChange={onFilterChange}>
               <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>
@@ -227,7 +129,7 @@ export function EligibleStudentsSection() {
               <Checkbox
                 id="skip-printed"
                 checked={skipPrinted}
-                onCheckedChange={(checked) => setSkipPrinted(!!checked)}
+                onCheckedChange={(checked) => onSkipPrintedChange(!!checked)}
               />
               <label htmlFor="skip-printed" className="text-sm">
                 Skip Printed
@@ -239,7 +141,7 @@ export function EligibleStudentsSection() {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleSelectAll}
+              onClick={onSelectAll}
               disabled={getSelectableCount() === 0}
             >
               Select All ({getSelectableCount()})
@@ -247,7 +149,7 @@ export function EligibleStudentsSection() {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleClearSelection}
+              onClick={onClearSelection}
               disabled={selectedStudents.size === 0}
             >
               Clear Selection
@@ -276,7 +178,7 @@ export function EligibleStudentsSection() {
                   <div className="flex items-center space-x-3">
                     <Checkbox
                       checked={isSelected}
-                      onCheckedChange={(checked) => handleStudentToggle(student.id, !!checked)}
+                      onCheckedChange={(checked) => onStudentToggle(student.id, !!checked)}
                       disabled={!isSelectable}
                     />
                     <div>
@@ -310,32 +212,11 @@ export function EligibleStudentsSection() {
           )}
         </div>
 
-        {/* Action Buttons */}
+        {/* Student count display */}
         {selectedStudents.size > 0 && (
-          <div className="flex items-center justify-between pt-4 border-t">
+          <div className="flex items-center justify-center pt-4 border-t">
             <div className="text-sm text-muted-foreground">
               {selectedStudents.size} student{selectedStudents.size !== 1 ? 's' : ''} selected
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={handleBulkDownload}
-                disabled={processing}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                {processing ? 'Generating PDFs...' : 'Download Selected'}
-              </Button>
-
-              <Button
-                onClick={handleMarkAsPrinted}
-                disabled={processing}
-                className="flex items-center gap-2"
-              >
-                <Printer className="h-4 w-4" />
-                {processing ? 'Marking...' : 'Mark as Printed'}
-              </Button>
             </div>
           </div>
         )}
