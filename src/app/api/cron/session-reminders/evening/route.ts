@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     // Send WhatsApp reminders for each session
     const reminderResults = await Promise.allSettled(
       sessions.map(async (session) => {
-        const message = generateSessionReminderMessage(
+        generateSessionReminderMessage(
           session.client.firstName,
           session.client.lastName,
           session.sessionNumber,
@@ -52,11 +52,7 @@ export async function POST(request: Request) {
           true // isForTomorrow
         );
 
-        return await sendWhatsAppMessage(
-          session.client.phoneNumber,
-          message,
-          session.branch.tenant.whatsappNumber
-        );
+        return await sendWhatsAppMessage();
       })
     );
 
