@@ -91,27 +91,6 @@ export const CompletionScreen = ({ onComplete }: CompletionScreenProps) => {
     };
   }, [animationsLoaded]); // Start timers only when animations are loaded
 
-  // Show loading state while animations are being preloaded
-  if (!animationsLoaded) {
-    return (
-      <motion.div
-        className="flex items-center justify-center h-full bg-background"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="flex flex-col items-center gap-4">
-          <motion.div
-            className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          />
-          <p className="text-muted-foreground text-sm font-medium">Loading animations...</p>
-        </div>
-      </motion.div>
-    );
-  }
-
   return (
     <motion.div
       className="flex items-center justify-center h-full bg-background"

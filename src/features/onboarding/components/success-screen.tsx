@@ -12,7 +12,7 @@ export const SuccessScreen = ({ onRedirect }: SuccessScreenProps) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onRedirect();
-    }, 3000);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [onRedirect]);
@@ -46,7 +46,7 @@ export const SuccessScreen = ({ onRedirect }: SuccessScreenProps) => {
           className="space-y-4"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.6, duration: 0.5 }}
+          transition={{ delay: 0, duration: 0.5 }}
         >
           <h1 className="text-4xl font-bold text-foreground">We are all set!</h1>
           <p className="text-lg text-muted-foreground">Redirecting to dashboard...</p>
