@@ -13,10 +13,11 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   if (!client || !branch) {
     notFound();
   }
-
+  console.log('branch', branch);
   const branchConfig = {
     workingDays: branch.workingDays || [],
     operatingHours: branch.operatingHours || { start: '09:00', end: '17:00' },
+    licenseServiceCharge: branch.licenseServiceCharge || 0,
   };
 
   return (

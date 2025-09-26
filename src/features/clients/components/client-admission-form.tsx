@@ -58,6 +58,7 @@ type ClientAdmissionFormProps = {
   branchConfig: {
     workingDays: number[];
     operatingHours: { start: string; end: string };
+    licenseServiceCharge: number;
   };
 };
 
@@ -391,7 +392,9 @@ export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFor
       getData: () => getValues('personalInfo'),
     },
     license: {
-      component: <LicenseStep isEditMode={true} />,
+      component: (
+        <LicenseStep isEditMode={true} branchServiceCharge={branchConfig.licenseServiceCharge} />
+      ),
       onSubmit: (data: unknown) =>
         handleLicenseStep(
           data as { learningLicense?: LearningLicenseValues; drivingLicense?: DrivingLicenseValues }

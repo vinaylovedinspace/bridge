@@ -56,7 +56,7 @@ export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: Lic
   return (
     <div className="space-y-10">
       {/* License Classes - Always show, but change behavior based on service type */}
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-12">
         <TypographyH5 className="col-span-3">License Classes</TypographyH5>
         <div className="col-span-4">
           <FormField

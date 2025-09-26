@@ -18,9 +18,9 @@ export function Sidebar() {
           ))}
         </div>
       </div>
-      <div className="flex">
+      <div className="mt-auto">
         <SignOutButton>
-          <Button variant="ghost">
+          <Button variant="ghost" className="w-full flex justify-start h-14">
             <LogOut />
             Log out
           </Button>
