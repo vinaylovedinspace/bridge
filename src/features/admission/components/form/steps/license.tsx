@@ -8,6 +8,7 @@ import { TypographyH5 } from '@/components/ui/typography';
 import { AdmissionFormValues } from '@/features/admission/types';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { calculateLicenseFees } from '@/lib/constants/rto-fees';
+import { LICENSE_CLASS_OPTIONS } from '@/lib/constants/license-classes';
 
 type LicenseStepProps = {
   branchServiceCharge?: number;
@@ -37,22 +38,6 @@ export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: Lic
     branchServiceCharge
   );
 
-  // Create options array for MultiSelect - showing only the 3 most common license types
-  const licenseClassOptions = [
-    {
-      label: 'LMV (Light Motor Vehicle)',
-      value: 'LMV',
-    },
-    {
-      label: 'MCWG (Motorcycle with Gear)',
-      value: 'MCWG',
-    },
-    {
-      label: 'MCWOG (Motorcycle without Gear)',
-      value: 'MCWOG',
-    },
-  ];
-
   return (
     <div className="space-y-10">
       {/* License Classes - Always show, but change behavior based on service type */}
@@ -68,7 +53,7 @@ export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: Lic
                   {serviceType === 'DRIVING_ONLY' ? 'License Class' : 'Applying for'}
                 </FormLabel>
                 <MultiSelect
-                  options={licenseClassOptions}
+                  options={LICENSE_CLASS_OPTIONS}
                   onValueChange={field.onChange}
                   defaultValue={field.value}
                   placeholder="Select license classes"
@@ -90,10 +75,6 @@ export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: Lic
               <div className="text-xs text-gray-500">
                 Govt: ₹{feeCalculation.governmentFees} + Service: ₹{branchServiceCharge}
               </div>
-
-              {selectedLicenseClasses.length > 1 || shouldApplyExistingLearnersDiscount ? (
-                <div className="text-xs text-blue-600 mt-1">{feeCalculation.breakdown}</div>
-              ) : null}
             </div>
           )}
         </div>
