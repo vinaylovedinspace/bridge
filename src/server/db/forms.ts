@@ -24,6 +24,7 @@ export const getEligibleStudentsForLearnersLicense = async (filter: FilterType =
     with: {
       learningLicense: {
         columns: {
+          licenseNumber: true,
           issueDate: true,
           class: true,
         },
@@ -196,7 +197,6 @@ export const getBulkClientDataForForms = async (branchId: string, clientIds: str
       phoneNumber: true,
       email: true,
       aadhaarNumber: true,
-      panNumber: true,
       birthDate: true,
       bloodGroup: true,
       gender: true,
@@ -231,7 +231,6 @@ export const getBulkClientDataForForms = async (branchId: string, clientIds: str
     phoneNumber: client.phoneNumber,
     email: client.email,
     aadhaarNumber: client.aadhaarNumber,
-    panNumber: client.panNumber,
     birthDate: client.birthDate,
     bloodGroup: client.bloodGroup,
     gender: client.gender,

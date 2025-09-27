@@ -75,7 +75,6 @@ export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFor
         lastName: client.lastName,
         clientCode: client.clientCode,
         aadhaarNumber: client.aadhaarNumber || '',
-        panNumber: client.panNumber || '',
         photoUrl: client.photoUrl || '',
         signatureUrl: client.signatureUrl || '',
         guardianFirstName: client.guardianFirstName || '',

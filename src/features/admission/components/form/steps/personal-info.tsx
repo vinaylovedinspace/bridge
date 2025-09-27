@@ -24,7 +24,6 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { BloodGroupEnum, GenderEnum, CitizenStatusEnum } from '@/db/schema/client/columns';
 import { TypographyH5, TypographyP } from '@/components/ui/typography';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { PhotoUpload } from '@/components/ui/photo-upload';
 import { useEffect } from 'react';
 import { Info } from 'lucide-react';
 
@@ -93,7 +92,7 @@ export const PersonalInfoStep = () => {
         </TypographyH5>
 
         <div className="grid grid-cols-3 col-span-9 gap-6 items-end">
-          <div className="grid grid-cols-3 gap-6 col-span-3 items-top">
+          <div className="grid grid-cols-3 gap-6 col-span-3 items-top justify-between">
             <FormField
               control={control}
               name="personalInfo.aadhaarNumber"
@@ -112,26 +111,7 @@ export const PersonalInfoStep = () => {
                 </FormItem>
               )}
             />
-            <FormField
-              control={control}
-              name="personalInfo.panNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>PAN Number</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="ABCDE1234F"
-                      value={field.value || ''}
-                      onChange={field.onChange}
-                      maxLength={10}
-                      style={{ textTransform: 'uppercase' }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
+            {/* <FormField
               control={control}
               name="personalInfo.photoUrl"
               render={({ field }) => (
@@ -144,7 +124,7 @@ export const PersonalInfoStep = () => {
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            /> */}
           </div>
           <FormField
             control={control}

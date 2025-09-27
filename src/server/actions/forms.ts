@@ -23,14 +23,14 @@ export const getEligibleStudentsForLearnersLicense = async (filter: FilterType =
   const branchId = await getCurrentOrganizationBranchId();
   if (!branchId) throw new Error('No branch found');
 
-  return _getEligibleStudentsForLearnersLicense(branchId, filter);
+  return _getEligibleStudentsForLearnersLicense(filter);
 };
 
 export const getEligibleStudentsForPermanentLicense = async (filter: FilterType = 'new-only') => {
   const branchId = await getCurrentOrganizationBranchId();
   if (!branchId) throw new Error('No branch found');
 
-  return _getEligibleStudentsForPermanentLicense(branchId, filter);
+  return _getEligibleStudentsForPermanentLicense(filter);
 };
 
 export const markFormsAsPrinted = async (clientIds: string[], formType: string) => {
@@ -53,8 +53,8 @@ export const getFormPrintStats = async (formType: 'form-2' | 'form-4' = 'form-4'
 
   const getStudentsFunction =
     formType === 'form-2'
-      ? (filter: FilterType) => _getEligibleStudentsForLearnersLicense(branchId, filter)
-      : (filter: FilterType) => _getEligibleStudentsForPermanentLicense(branchId, filter);
+      ? (filter: FilterType) => _getEligibleStudentsForLearnersLicense(filter)
+      : (filter: FilterType) => _getEligibleStudentsForPermanentLicense(filter);
 
   const [totalEligible, newEligible, recentlyPrinted] = await Promise.all([
     getStudentsFunction('all-eligible'),

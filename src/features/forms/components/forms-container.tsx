@@ -19,14 +19,6 @@ type FormItem = {
 };
 
 const primaryForms: FormItem[] = [
-  // {
-  //   id: 'form-1',
-  //   name: 'Form 1',
-  //   title: 'Application-cum-Declaration: Physical Fitness',
-  //   description: 'Used along with Form 2 when applying for a new learners licence',
-  //   fileName: 'form-1.pdf',
-  //   sections: ['Personal Info', 'Medical Details', 'Guardian Info'],
-  // },
   {
     id: 'form-1a',
     name: 'Form 1A',
@@ -45,15 +37,15 @@ const primaryForms: FormItem[] = [
     fileName: 'form-2.pdf',
     sections: ['Personal Info', 'Address', 'Guardian Info', '+1'],
   },
-  // {
-  //   id: 'form-4',
-  //   name: 'Form 4',
-  //   title: 'Application for Permanent Driving Licence',
-  //   description:
-  //     'Submitted once the learners licence is held for 30 days; accompanied by documents, photos, etc.',
-  //   fileName: 'form-4.pdf',
-  //   sections: ['Personal Info', 'Learning License', 'Address', '+1'],
-  // },
+  {
+    id: 'form-4a',
+    name: 'Form 4A',
+    title: 'Application for International Driving Permit (IDP)',
+    description:
+      'Required along with your valid DL, Medical Certificate, passport & visa copies, photos & applicable fees',
+    fileName: 'form-4a.pdf',
+    sections: ['Personal Info', 'Driving License', 'Passport', '+1'],
+  },
   {
     id: 'form-5',
     name: 'Form 5',
@@ -72,38 +64,14 @@ const primaryForms: FormItem[] = [
     sections: ['Personal Info', 'ADTC Details', 'Training Records', '+1'],
   },
   {
-    id: 'form-4a',
-    name: 'Form 4A',
-    title: 'Application for International Driving Permit (IDP)',
+    id: 'form-14',
+    name: 'Form 14',
+    title: 'Enrollment Document',
     description:
-      'Required along with your valid DL, Medical Certificate, passport & visa copies, photos & applicable fees',
-    fileName: 'form-4a.pdf',
-    sections: ['Personal Info', 'Driving License', 'Passport', '+1'],
+      'Register showing the Enrolment of Trainee(s) in the Driving School Establishments',
+    fileName: 'form-14.pdf',
+    sections: ['Personal Info', 'Address'],
   },
-  // {
-  //   id: 'form-8',
-  //   name: 'Form 8',
-  //   title: 'Application for Adding a New Class of Vehicle',
-  //   description: 'Used if you already hold a licence and want to add another vehicle category',
-  //   fileName: 'form-8.pdf',
-  //   sections: ['Personal Info', 'Existing License', 'New Vehicle Class'],
-  // },
-  // {
-  //   id: 'form-9',
-  //   name: 'Form 9',
-  //   title: 'Application for Driving Licence Renewal',
-  //   description: 'Submitted when renewing an existing DL — includes medical certificate as needed',
-  //   fileName: 'form-9.pdf',
-  //   sections: ['Personal Info', 'Existing License', 'Medical Certificate'],
-  // },
-  // {
-  //   id: 'form-lld',
-  //   name: 'Form LLD',
-  //   title: 'Application for Duplicate Driving Licence',
-  //   description: 'For lost, damaged, or stolen licences; police FIR may also be required',
-  //   fileName: 'form-lld.pdf',
-  //   sections: ['Personal Info', 'License Details', 'Police Report'],
-  // },
 ];
 
 type FormsContainerProps = {
