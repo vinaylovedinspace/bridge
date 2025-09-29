@@ -12,11 +12,6 @@ export const PAYMENT_INFO = {
     isChecked: false,
     date: null as Date | null,
   },
-  later: {
-    label: 'Pay Later',
-    isChecked: false,
-    date: null as Date | null,
-  },
 };
 
 export type PaymentInfoState = typeof PAYMENT_INFO;
@@ -26,7 +21,7 @@ export type PaymentCheckboxProps = {
   setPaymentCheckboxes: Dispatch<SetStateAction<PaymentInfoState>>;
   existingPayment?: {
     discount: number;
-    paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS' | 'PAY_LATER' | null;
+    paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS' | null;
     secondInstallmentDate?: Date | string | null;
     paymentDueDate?: Date | string | null;
   } | null;

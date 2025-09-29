@@ -48,92 +48,19 @@ export async function POST(request: Request) {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function checkOverduePayments(branchId: string, _tenantId: string) {
-  const today = new Date().toISOString().split('T')[0];
-
-  const overduePayments = await db
-    .select({
-      payment: payments,
-      client: clients,
-    })
-    .from(payments)
-    .innerJoin(clients, eq(payments.clientId, clients.id))
-    .where(
-      and(
-        eq(clients.branchId, branchId),
-        or(
-          and(
-            eq(payments.paymentType, 'INSTALLMENTS'),
-            eq(payments.firstInstallmentPaid, false),
-            lte(payments.firstInstallmentDate, today)
-          ),
-          and(
-            eq(payments.paymentType, 'INSTALLMENTS'),
-            eq(payments.secondInstallmentPaid, false),
-            lte(payments.secondInstallmentDate, today)
-          )
-        )
-      )
-    );
-
-  for (const record of overduePayments) {
-    const installmentNumber = !record.payment.firstInstallmentPaid ? 1 : 2;
-    const dueDate =
-      installmentNumber === 1
-        ? record.payment.firstInstallmentDate
-        : record.payment.secondInstallmentDate;
-
-    await NotificationService.notifyInstallmentDue(
-      record.client.id,
-      branchId,
-      record.payment.id,
-      installmentNumber as 1 | 2,
-      dueDate ? new Date(dueDate) : null,
-      true // isOverdue
-    );
-  }
+  // TODO: Reimplement overdue payment checking with new schema
+  console.log('Overdue payment checking temporarily disabled during migration', { branchId });
+  return;
 }
 
 async function checkUpcomingInstallments(branchId: string, tenantId: string, todayString: string) {
-  const todaysInstallments = await db
-    .select({
-      payment: payments,
-      client: clients,
-    })
-    .from(payments)
-    .innerJoin(clients, eq(payments.clientId, clients.id))
-    .where(
-      and(
-        eq(clients.branchId, branchId),
-        eq(payments.paymentType, 'INSTALLMENTS'),
-        or(
-          and(
-            eq(payments.firstInstallmentPaid, false),
-            eq(payments.firstInstallmentDate, todayString)
-          ),
-          and(
-            eq(payments.secondInstallmentPaid, false),
-            eq(payments.secondInstallmentDate, todayString)
-          )
-        )
-      )
-    );
-
-  for (const record of todaysInstallments) {
-    const installmentNumber = !record.payment.firstInstallmentPaid ? 1 : 2;
-    const dueDate =
-      installmentNumber === 1
-        ? record.payment.firstInstallmentDate
-        : record.payment.secondInstallmentDate;
-
-    await NotificationService.notifyInstallmentDue(
-      record.client.id,
-      branchId,
-      record.payment.id,
-      installmentNumber as 1 | 2,
-      dueDate ? new Date(dueDate) : null,
-      false // isOverdue
-    );
-  }
+  // TODO: Reimplement installment checking with new schema
+  console.log('Installment checking temporarily disabled during migration', {
+    branchId,
+    tenantId,
+    todayString,
+  });
+  return;
 }
 
 async function checkLearningTests(branchId: string, tenantId: string, todayString: string) {
@@ -327,95 +254,7 @@ async function checkTodaysSessions(branchId: string, tenantId: string, todayStri
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function checkPaymentReminders(branchId: string, _tenantId: string) {
-  const today = startOfDay(new Date());
-
-  // Check for installment reminders
-  const installmentPayments = await db
-    .select({
-      payment: payments,
-      client: clients,
-    })
-    .from(payments)
-    .innerJoin(clients, eq(payments.clientId, clients.id))
-    .where(and(eq(clients.branchId, branchId), eq(payments.paymentType, 'INSTALLMENTS')));
-
-  for (const record of installmentPayments) {
-    const { payment } = record;
-
-    // Check first installment reminders
-    if (!payment.firstInstallmentPaid && payment.firstInstallmentDate) {
-      const firstDueDate = new Date(payment.firstInstallmentDate);
-
-      // Overdue reminders (1, 3, 7 days after)
-      const daysOverdue = Math.ceil(
-        (today.getTime() - firstDueDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      if (daysOverdue === 1 || daysOverdue === 3 || daysOverdue === 7) {
-        await NotificationService.notifyInstallmentDue(
-          payment.clientId,
-          payment.planId,
-          payment.id,
-          1,
-          firstDueDate,
-          true
-        );
-      }
-    }
-
-    // Check second installment reminders
-    if (!payment.secondInstallmentPaid && payment.secondInstallmentDate) {
-      const secondDueDate = new Date(payment.secondInstallmentDate);
-
-      // Overdue reminders (1, 3, 7 days after)
-      const daysOverdue = Math.ceil(
-        (today.getTime() - secondDueDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      if (daysOverdue === 1 || daysOverdue === 3 || daysOverdue === 7) {
-        await NotificationService.notifyInstallmentDue(
-          payment.clientId,
-          payment.planId,
-          payment.id,
-          2,
-          secondDueDate,
-          true
-        );
-      }
-    }
-  }
-
-  // Check for pay later reminders
-  const payLaterPayments = await db
-    .select({
-      payment: payments,
-      client: clients,
-    })
-    .from(payments)
-    .innerJoin(clients, eq(payments.clientId, clients.id))
-    .where(
-      and(
-        eq(clients.branchId, branchId),
-        eq(payments.paymentType, 'PAY_LATER'),
-        eq(payments.paymentStatus, 'PENDING')
-      )
-    );
-
-  for (const record of payLaterPayments) {
-    const { payment } = record;
-
-    if (payment.paymentDueDate) {
-      const dueDate = new Date(payment.paymentDueDate);
-
-      // Overdue reminders (1, 3, 7 days after)
-      const daysOverdue = Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-      if (daysOverdue === 1 || daysOverdue === 3 || daysOverdue === 7) {
-        await NotificationService.notifyPayLaterDue(
-          payment.clientId,
-          payment.planId,
-          payment.id,
-          dueDate,
-          true
-        );
-      }
-    }
-  }
+  // TODO: Reimplement payment reminders with new schema
+  console.log('Payment reminders temporarily disabled during migration', { branchId });
+  return;
 }

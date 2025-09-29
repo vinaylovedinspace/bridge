@@ -15,17 +15,10 @@ import { createPaymentLinkAction } from '@/features/admission/server/action';
 export const PaymentModeSelector = () => {
   const { getValues, setValue } = useFormContext<AdmissionFormValues>();
 
+  // TODO: Reimplement payment mode logic for new schema
   const getInitialPaymentMode = useCallback(() => {
-    const payment = getValues().payment;
-    const paymentType = payment?.paymentType || 'FULL_PAYMENT';
-
-    if (paymentType === 'FULL_PAYMENT') {
-      return payment?.fullPaymentMode || 'PAYMENT_LINK';
-    } else if (paymentType === 'INSTALLMENTS') {
-      return payment?.firstPaymentMode || 'PAYMENT_LINK';
-    }
     return 'PAYMENT_LINK';
-  }, [getValues]);
+  }, []);
 
   const [paymentMode, setPaymentMode] =
     useState<(typeof PaymentModeEnum.enumValues)[number]>(getInitialPaymentMode);
@@ -59,11 +52,8 @@ export const PaymentModeSelector = () => {
       // Calculate amount based on payment type
       let amount = 0;
 
-      if (payment?.paymentType === 'FULL_PAYMENT') {
-        amount = payment.finalAmount || 0;
-      } else if (payment?.paymentType === 'INSTALLMENTS') {
-        amount = payment.firstInstallmentAmount || 0;
-      }
+      // TODO: Reimplement amount calculation with new schema
+      amount = payment?.finalAmount || 0;
 
       if (amount <= 0) {
         toast.error('Invalid payment amount');
@@ -117,31 +107,11 @@ export const PaymentModeSelector = () => {
             onValueChange={(value) => {
               const newMode = value as (typeof PaymentModeEnum.enumValues)[number];
               setPaymentMode(newMode);
-              // Update the form value based on payment type
-              const paymentType = getValues().payment?.paymentType || 'FULL_PAYMENT';
-              if (paymentType === 'FULL_PAYMENT') {
-                setValue('payment.fullPaymentMode', newMode);
-                // Auto-update payment status for cash payments
-                if (newMode === 'CASH') {
-                  setValue('payment.paymentStatus', 'FULLY_PAID');
-                  setValue('payment.fullPaymentPaid', true);
-                } else {
-                  setValue('payment.paymentStatus', 'PENDING');
-                  setValue('payment.fullPaymentPaid', false);
-                }
-              } else if (paymentType === 'INSTALLMENTS') {
-                setValue('payment.firstPaymentMode', newMode);
-                setValue('payment.secondPaymentMode', newMode);
-                // Auto-update payment status for cash installments
-                if (newMode === 'CASH') {
-                  setValue('payment.paymentStatus', 'FULLY_PAID');
-                  setValue('payment.firstInstallmentPaid', true);
-                  setValue('payment.secondInstallmentPaid', true);
-                } else {
-                  setValue('payment.paymentStatus', 'PENDING');
-                  setValue('payment.firstInstallmentPaid', false);
-                  setValue('payment.secondInstallmentPaid', false);
-                }
+              // TODO: Reimplement payment mode updates with new schema
+              if (newMode === 'CASH') {
+                setValue('payment.paymentStatus', 'FULLY_PAID');
+              } else {
+                setValue('payment.paymentStatus', 'PENDING');
               }
             }}
             className="flex gap-5 items-center"

@@ -1,7 +1,6 @@
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { DatePicker } from '@/components/ui/date-picker';
 import { X } from 'lucide-react';
 import { PaymentCheckboxProps } from './types';
 import { AdmissionFormValues } from '@/features/admission/types';
@@ -21,32 +20,20 @@ export const PaymentOptions = ({
   useEffect(() => {
     if (paymentCheckboxes.installments.isChecked) {
       setValue('payment.paymentType', 'INSTALLMENTS');
-    } else if (paymentCheckboxes.later.isChecked) {
-      setValue('payment.paymentType', 'PAY_LATER');
     } else {
       setValue('payment.paymentType', 'FULL_PAYMENT');
     }
-  }, [paymentCheckboxes.installments.isChecked, paymentCheckboxes.later.isChecked, setValue]);
+  }, [paymentCheckboxes.installments.isChecked, setValue]);
 
   const handleCheckboxChange = (
     info: keyof typeof paymentCheckboxes,
     checked: boolean | 'indeterminate'
   ) => {
     setPaymentCheckboxes((prev) => {
-      // Handle mutual exclusivity between payment types
-      if (info === 'later' && checked === true) {
-        return {
-          ...prev,
-          later: { ...prev.later, isChecked: true },
-          installments: { ...prev.installments, isChecked: false },
-        };
-      }
-
       if (info === 'installments' && checked === true) {
         return {
           ...prev,
           installments: { ...prev.installments, isChecked: true },
-          later: { ...prev.later, isChecked: false },
         };
       }
 
@@ -81,16 +68,6 @@ export const PaymentOptions = ({
     }));
   };
 
-  const handleDateChange = (key: 'installments' | 'later', date: Date | null) => {
-    setPaymentCheckboxes((prev) => ({
-      ...prev,
-      [key]: {
-        ...prev[key],
-        date,
-      },
-    }));
-  };
-
   return (
     <>
       <div className="flex gap-10 col-span-9">
@@ -116,22 +93,9 @@ export const PaymentOptions = ({
             <Checkbox
               checked={paymentCheckboxes.installments.isChecked}
               onCheckedChange={(checked) => handleCheckboxChange('installments', checked)}
-              disabled={paymentCheckboxes.later.isChecked}
             />
           </FormControl>
           <FormLabel className="cursor-pointer">{paymentCheckboxes.installments.label}</FormLabel>
-        </FormItem>
-
-        {/* Pay Later checkbox */}
-        <FormItem className="flex items-center gap-3">
-          <FormControl>
-            <Checkbox
-              checked={paymentCheckboxes.later.isChecked}
-              onCheckedChange={(checked) => handleCheckboxChange('later', checked)}
-              disabled={paymentCheckboxes.installments.isChecked}
-            />
-          </FormControl>
-          <FormLabel className="cursor-pointer">{paymentCheckboxes.later.label}</FormLabel>
         </FormItem>
       </div>
 
@@ -179,59 +143,7 @@ export const PaymentOptions = ({
         </div>
       )}
 
-      {paymentCheckboxes.later.isChecked && (
-        <div className="col-span-5 col-start-4 pt-5">
-          <FormField
-            control={control}
-            name="payment.paymentDueDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Expected Payment Date</FormLabel>
-                <FormControl>
-                  <DatePicker
-                    selected={field.value ? new Date(field.value) : null}
-                    onChange={(date) => {
-                      field.onChange(date ? new Date(date).toISOString() : null);
-                      handleDateChange('later', date);
-                    }}
-                    className="h-12" // Increased height
-                    minDate={new Date()}
-                    maxDate={new Date(2100, 0, 1)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-      )}
-
-      {paymentCheckboxes.installments.isChecked && (
-        <div className="col-span-5 col-start-4 pt-5">
-          <FormField
-            control={control}
-            name="payment.secondInstallmentDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Expected Date for 2nd Installment</FormLabel>
-                <FormControl>
-                  <DatePicker
-                    selected={field.value ? new Date(field.value) : null}
-                    onChange={(date) => {
-                      field.onChange(date ? new Date(date).toISOString() : null);
-                      handleDateChange('installments', date);
-                    }}
-                    className="h-12" // Increased height
-                    minDate={new Date()}
-                    maxDate={new Date(2100, 0, 1)} // Allow future dates for expiry
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-      )}
+      {/* TODO: Implement installment date selection with new schema */}
     </>
   );
 };

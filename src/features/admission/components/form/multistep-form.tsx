@@ -44,7 +44,6 @@ type MultistepFormProps = {
 export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // IDs are now stored in form state instead of separate state variables
 
   const methods = useForm<AdmissionFormValues>({
     resolver: zodResolver(admissionFormSchema),
@@ -64,6 +63,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
         sessionDurationInMinutes: 30,
       },
       payment: {
+        vehicleRentAmount: 0,
         discount: 0,
       },
     },

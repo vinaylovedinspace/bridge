@@ -17,11 +17,7 @@ export const PaymentOverview = ({ discountInfo, paymentCheckboxes }: PaymentOver
   const discountValue = discountInfo.isChecked ? Number(discountInfo.value) || 0 : 0;
 
   // Determine payment type based on checkboxes
-  const paymentType = paymentCheckboxes.installments.isChecked
-    ? 'INSTALLMENTS'
-    : paymentCheckboxes.later.isChecked
-      ? 'PAY_LATER'
-      : 'FULL_PAYMENT';
+  const paymentType = paymentCheckboxes.installments.isChecked ? 'INSTALLMENTS' : 'FULL_PAYMENT';
 
   // Use the shared utility function for payment calculations
   const {

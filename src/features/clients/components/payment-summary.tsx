@@ -12,7 +12,7 @@ type PaymentSummaryProps = {
     discount: number;
     finalAmount: number;
     paymentStatus: 'PENDING' | 'PARTIALLY_PAID' | 'FULLY_PAID';
-    paymentType: 'FULL_PAYMENT' | 'INSTALLMENTS' | 'PAY_LATER';
+    paymentType: 'FULL_PAYMENT' | 'INSTALLMENTS';
     fullPaymentDate?: Date | null;
     fullPaymentMode?: string | null;
     fullPaymentPaid?: boolean;
@@ -185,27 +185,6 @@ export const PaymentSummary = ({ payment }: PaymentSummaryProps) => {
             </CardContent>
           </Card>
         </div>
-      )}
-
-      {payment.paymentType === 'PAY_LATER' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              {getStatusIcon(payment.paymentStatus)}
-              Pay Later Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {payment.paymentDueDate && (
-              <div>
-                <p className="text-sm text-muted-foreground">Payment Due Date</p>
-                <p className="font-semibold">
-                  {format(new Date(payment.paymentDueDate), 'MMM dd, yyyy')}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       )}
 
       <div className="text-sm text-muted-foreground">

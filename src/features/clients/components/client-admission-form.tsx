@@ -66,6 +66,11 @@ export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFor
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { plan } = client;
+
+  const recentPlan = plan?.[0];
+  const payment = recentPlan?.payment;
+
   // Pre-populate form with existing client data
   const getDefaultValues = (): ClientFormValues => {
     return {
@@ -170,26 +175,19 @@ export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFor
         })(),
         joiningTime: client.plan?.[0]?.joiningTime || '09:00',
       },
-      planId: client.plan?.[0]?.id || '',
+      planId: recentPlan?.id || '',
       clientId: client.id,
-      paymentId: client.payments?.[0]?.id || '',
+      paymentId: payment?.id,
       payment: {
         clientId: client.id,
-        planId: client.plan?.[0]?.id || '',
-        originalAmount: client.payments?.[0]?.originalAmount || 0,
-        discount: client.payments?.[0]?.discount || 0,
-        finalAmount: client.payments?.[0]?.finalAmount || 0,
-        paymentStatus: client.payments?.[0]?.paymentStatus || 'PENDING',
-        paymentType: client.payments?.[0]?.paymentType || 'FULL_PAYMENT',
-        fullPaymentDate: client.payments?.[0]?.fullPaymentDate || null,
-        fullPaymentMode: client.payments?.[0]?.fullPaymentMode || 'PAYMENT_LINK',
-        firstInstallmentAmount: client.payments?.[0]?.firstInstallmentAmount || null,
-        firstInstallmentDate: client.payments?.[0]?.firstInstallmentDate || null,
-        firstPaymentMode: client.payments?.[0]?.firstPaymentMode || 'PAYMENT_LINK',
-        secondInstallmentAmount: client.payments?.[0]?.secondInstallmentAmount || null,
-        secondInstallmentDate: client.payments?.[0]?.secondInstallmentDate || null,
-        secondPaymentMode: client.payments?.[0]?.secondPaymentMode || 'PAYMENT_LINK',
-        paymentDueDate: client.payments?.[0]?.paymentDueDate || null,
+        planId: recentPlan?.id || '',
+        vehicleRentAmount: payment?.vehicleRentAmount || 0,
+        originalAmount: payment?.originalAmount || 0,
+        discount: payment?.discount || 0,
+        finalAmount: payment?.finalAmount || 0,
+        licenseServiceFee: payment?.licenseServiceFee || 0,
+        paymentStatus: payment?.paymentStatus || 'PENDING',
+        paymentType: payment?.paymentType || 'FULL_PAYMENT',
       },
     };
   };
@@ -213,8 +211,7 @@ export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFor
 
   // Check if payment is processed and should be read-only
   const isPaymentProcessed =
-    client.payments?.[0]?.paymentStatus === 'FULLY_PAID' ||
-    client.payments?.[0]?.paymentStatus === 'PARTIALLY_PAID';
+    payment?.paymentStatus === 'FULLY_PAID' || payment?.paymentStatus === 'PARTIALLY_PAID';
   const isPaymentStep = currentStep === 'payment';
   const shouldDisablePaymentEdit = isPaymentStep && isPaymentProcessed;
 
@@ -354,8 +351,8 @@ export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFor
         });
       }
 
-      if (client.payments?.[0]) {
-        result = await updatePayment(client.payments[0].id, {
+      if (payment) {
+        result = await updatePayment(payment.id, {
           ...data,
           clientId: client.id,
           planId,
@@ -409,36 +406,7 @@ export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFor
       getData: () => getValues('plan'),
     },
     payment: {
-      component: isPaymentProcessed ? (
-        client.payments?.[0] ? (
-          <PaymentSummary
-            payment={{
-              ...client.payments[0],
-              paymentStatus: client.payments[0].paymentStatus || 'PENDING',
-              paymentType: client.payments[0].paymentType || 'FULL_PAYMENT',
-              fullPaymentDate: client.payments[0].fullPaymentDate
-                ? new Date(client.payments[0].fullPaymentDate)
-                : null,
-              firstInstallmentDate: client.payments[0].firstInstallmentDate
-                ? new Date(client.payments[0].firstInstallmentDate)
-                : null,
-              secondInstallmentDate: client.payments[0].secondInstallmentDate
-                ? new Date(client.payments[0].secondInstallmentDate)
-                : null,
-              paymentDueDate: client.payments[0].paymentDueDate
-                ? new Date(client.payments[0].paymentDueDate)
-                : null,
-              fullPaymentPaid: client.payments[0].fullPaymentPaid || false,
-              firstInstallmentPaid: client.payments[0].firstInstallmentPaid || false,
-              secondInstallmentPaid: client.payments[0].secondInstallmentPaid || false,
-            }}
-          />
-        ) : (
-          <ClientPaymentContainer existingPayment={client.payments?.[0] || null} />
-        )
-      ) : (
-        <ClientPaymentContainer existingPayment={client.payments?.[0] || null} />
-      ),
+      component: <ClientPaymentContainer existingPayment={payment || null} />,
       onSubmit: (data: unknown) => handlePaymentStep(data as PaymentValues),
       getData: () => getValues('payment'),
     },

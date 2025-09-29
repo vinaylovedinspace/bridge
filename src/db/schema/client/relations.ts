@@ -4,7 +4,6 @@ import { BranchTable } from '../branches/columns';
 import { LearningLicenseTable } from '@/db/schema/learning-licenses/columns';
 import { DrivingLicenseTable } from '@/db/schema/driving-licenses/columns';
 import { PlanTable } from '../plan/columns';
-import { PaymentTable } from '../payment/columns';
 import { formPrints } from '../form-prints/columns';
 
 export const clientRelations = relations(ClientTable, ({ one, many }) => ({
@@ -21,6 +20,5 @@ export const clientRelations = relations(ClientTable, ({ one, many }) => ({
     references: [DrivingLicenseTable.clientId],
   }),
   plan: many(PlanTable),
-  payments: many(PaymentTable),
   formPrints: many(formPrints),
 }));

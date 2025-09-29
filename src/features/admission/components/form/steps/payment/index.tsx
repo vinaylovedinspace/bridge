@@ -12,7 +12,7 @@ export { PaymentOverviewComponent as PaymentOverview };
 interface PaymentStepProps extends PaymentCheckboxProps {
   existingPayment?: {
     discount: number;
-    paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS' | 'PAY_LATER' | null;
+    paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS' | null;
     secondInstallmentDate?: Date | string | null;
     paymentDueDate?: Date | string | null;
   } | null;

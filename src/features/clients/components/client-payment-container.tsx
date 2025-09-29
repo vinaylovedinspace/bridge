@@ -11,7 +11,7 @@ import {
 type ClientPaymentContainerProps = {
   existingPayment?: {
     discount: number;
-    paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS' | 'PAY_LATER' | null;
+    paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS' | null;
     secondInstallmentDate?: Date | string | null;
     paymentDueDate?: Date | string | null;
   } | null;
@@ -33,11 +33,6 @@ export const ClientPaymentContainer = ({ existingPayment }: ClientPaymentContain
           date: existingPayment.secondInstallmentDate
             ? new Date(existingPayment.secondInstallmentDate)
             : null,
-        },
-        later: {
-          label: 'Pay Later',
-          isChecked: existingPayment.paymentType === 'PAY_LATER',
-          date: existingPayment.paymentDueDate ? new Date(existingPayment.paymentDueDate) : null,
         },
       };
     }

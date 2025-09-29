@@ -149,12 +149,12 @@ const _getClient = async (id: string) => {
   const client = await db.query.ClientTable.findFirst({
     where: eq(ClientTable.id, id),
     with: {
-      payments: true,
       learningLicense: true,
       drivingLicense: true,
       plan: {
         with: {
           vehicle: true,
+          payment: true,
         },
       },
     },

@@ -7,44 +7,43 @@ export const PaymentStatusEnum = pgEnum('payment_status', [
   'PENDING',
 ]);
 
-export const PaymentTypeEnum = pgEnum('payment_type', [
-  'FULL_PAYMENT',
-  'INSTALLMENTS',
-  'PAY_LATER',
-]);
+export const PaymentTypeEnum = pgEnum('payment_type', ['FULL_PAYMENT', 'INSTALLMENTS']);
 
 export const PaymentTable = pgTable('payments', {
   id: uuid('id').primaryKey().defaultRandom(),
   clientId: uuid('client_id').notNull(),
   planId: uuid('plan_id').notNull().unique(),
 
+  vehicleRentAmount: integer('vehicle_rent_amount').notNull(),
   originalAmount: integer('original_amount').notNull(),
   discount: integer('discount').notNull().default(0),
   finalAmount: integer('final_amount').notNull(),
+  licenseServiceFee: integer('license_service_fee').notNull().default(0),
   paymentStatus: PaymentStatusEnum('payment_status').default('PENDING'),
-
-  // Payment type (full payment, installments, or pay later)
   paymentType: PaymentTypeEnum('payment_type').default('FULL_PAYMENT'),
 
-  // For full payment (only used when paymentType is FULL_PAYMENT)
-  fullPaymentDate: text('full_payment_date'), // YYYY-MM-DD string to avoid timezone issues
-  fullPaymentMode: PaymentModeEnum('full_payment_mode'),
-  fullPaymentPaid: boolean('full_payment_paid').default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
 
-  // For installment payments (only used when paymentType is INSTALLMENTS)
-  firstInstallmentAmount: integer('first_installment_amount').default(0),
-  firstPaymentMode: PaymentModeEnum('first_payment_mode'),
-  firstInstallmentDate: text('first_installment_date'), // YYYY-MM-DD string to avoid timezone issues
-  firstInstallmentPaid: boolean('first_installment_paid').default(false),
+export const FullPaymentTable = pgTable('full_payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  paymentId: uuid('payment_id').notNull(),
+  paymentDate: text('payment_date'),
+  paymentMode: PaymentModeEnum('payment_mode'),
+  isPaid: boolean('is_paid').default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
 
-  secondInstallmentAmount: integer('second_installment_amount').default(0),
-  secondPaymentMode: PaymentModeEnum('second_payment_mode'),
-  secondInstallmentDate: text('second_installment_date'), // YYYY-MM-DD string to avoid timezone issues
-  secondInstallmentPaid: boolean('second_installment_paid').default(false),
-
-  // For pay later (only used when paymentType is PAY_LATER)
-  paymentDueDate: text('payment_due_date'), // YYYY-MM-DD string to avoid timezone issues
-
+export const InstallmentPaymentTable = pgTable('installment_payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  paymentId: uuid('payment_id').notNull(),
+  installmentNumber: integer('installment_number').notNull(), // 1 or 2
+  amount: integer('amount').notNull(),
+  paymentMode: PaymentModeEnum('payment_mode'),
+  paymentDate: text('payment_date'),
+  isPaid: boolean('is_paid').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

@@ -416,7 +416,6 @@ export const createPayment = async (
 ): Promise<{ error: boolean; message: string; paymentId?: string }> => {
   const { userId } = await auth();
 
-  console.log('Payment data received:', JSON.stringify(unsafeData, null, 2));
   if (!userId) {
     return { error: true, message: 'Unauthorized' };
   }
@@ -431,97 +430,47 @@ export const createPayment = async (
     return { error: true, message: 'Plan ID is required' };
   }
 
+  // Get the plan and vehicle data to calculate the original amount
+  const plan = await db.query.PlanTable.findFirst({
+    where: eq(PlanTable.id, unsafeData.planId),
+  });
+
+  if (!plan) {
+    return { error: true, message: 'Plan not found' };
+  }
+
+  const vehicle = await db.query.VehicleTable.findFirst({
+    where: and(eq(VehicleTable.id, plan.vehicleId), isNull(VehicleTable.deletedAt)),
+  });
+
+  if (!vehicle) {
+    return { error: true, message: 'Vehicle not found' };
+  }
+
+  // Use the utility function to calculate payment amounts
+  const { originalAmount, finalAmount } = calculatePaymentAmounts({
+    sessions: plan.numberOfSessions,
+    duration: plan.sessionDurationInMinutes,
+    rate: vehicle.rent,
+    discount: unsafeData.discount,
+    paymentType: unsafeData.paymentType,
+  });
+
   try {
-    // Get the plan and vehicle data to calculate the original amount
-    const plan = await db.query.PlanTable.findFirst({
-      where: eq(PlanTable.id, unsafeData.planId),
-    });
-
-    if (!plan) {
-      return { error: true, message: 'Plan not found' };
-    }
-
-    const vehicle = await db.query.VehicleTable.findFirst({
-      where: and(eq(VehicleTable.id, plan.vehicleId), isNull(VehicleTable.deletedAt)),
-    });
-
-    if (!vehicle) {
-      return { error: true, message: 'Vehicle not found' };
-    }
-
-    // Use the utility function to calculate payment amounts
-    const { originalAmount, finalAmount, firstInstallmentAmount, secondInstallmentAmount } =
-      calculatePaymentAmounts({
-        sessions: plan.numberOfSessions,
-        duration: plan.sessionDurationInMinutes,
-        rate: vehicle.rent,
-        discount: unsafeData.discount,
-        paymentType: unsafeData.paymentType,
-      });
-
-    const { data } = paymentSchema.safeParse({ ...unsafeData, originalAmount, finalAmount });
-
-    // Check if payment mode is cash to automatically mark as paid
-    const isCashPayment =
-      (data?.paymentType === 'FULL_PAYMENT' && data?.fullPaymentMode === 'CASH') ||
-      (data?.paymentType === 'INSTALLMENTS' &&
-        (data?.firstPaymentMode === 'CASH' || data?.secondPaymentMode === 'CASH'));
-
-    console.log('Payment data received:', JSON.stringify(data, null, 2));
-    console.log('Is cash payment:', isCashPayment);
-
-    // Validate the payment data with our calculated values
-    const paymentData = {
-      ...data,
+    const { success, data, error } = paymentSchema.safeParse({
+      ...unsafeData,
       originalAmount,
       finalAmount,
-      firstInstallmentAmount,
-      secondInstallmentAmount,
-      // Convert Date objects to string format for the database
-      fullPaymentDate: data?.paymentType === 'FULL_PAYMENT' ? new Date().toISOString() : null,
-      firstInstallmentDate: data?.paymentType === 'INSTALLMENTS' ? new Date().toISOString() : null,
-      secondInstallmentDate:
-        data?.paymentType === 'INSTALLMENTS' && data?.secondInstallmentDate
-          ? new Date(data.secondInstallmentDate).toISOString()
-          : null,
-      paymentDueDate:
-        data?.paymentType === 'PAY_LATER' && data?.paymentDueDate
-          ? new Date(data.paymentDueDate).toISOString()
-          : null,
-      // Auto-mark cash payments as paid
-      fullPaymentPaid:
-        data?.paymentType === 'FULL_PAYMENT' && data?.fullPaymentMode === 'CASH'
-          ? true
-          : data?.fullPaymentPaid || false,
-      firstInstallmentPaid:
-        data?.paymentType === 'INSTALLMENTS' && data?.firstPaymentMode === 'CASH'
-          ? true
-          : data?.firstInstallmentPaid || false,
-      // Auto-set payment status for cash payments
-      paymentStatus: isCashPayment
-        ? data?.paymentType === 'FULL_PAYMENT'
-          ? 'FULLY_PAID'
-          : data?.paymentType === 'INSTALLMENTS'
-            ? data?.firstPaymentMode === 'CASH' && data?.secondPaymentMode === 'CASH'
-              ? 'FULLY_PAID'
-              : 'PARTIALLY_PAID'
-            : 'PENDING'
-        : data?.paymentStatus || 'PENDING',
-    };
+      vehicleRentAmount: vehicle.rent,
+    });
 
-    console.log('Final payment data being validated:', JSON.stringify(paymentData, null, 2));
-
-    const parseResult = paymentSchema.safeParse(paymentData);
-
-    if (!parseResult.success) {
-      console.error('Payment validation error:', parseResult.error);
+    if (!success) {
+      console.error('Payment validation error:', error);
       return { error: true, message: 'Invalid payment data' };
     }
 
-    console.log('Payment data after validation:', JSON.stringify(parseResult.data, null, 2));
-
     // Create or update the payment
-    const { isExistingPayment, paymentId } = await upsertPaymentInDB(parseResult.data);
+    const { isExistingPayment, paymentId } = await upsertPaymentInDB(data);
 
     // Check if sessions need to be created when payment is completed (onboarding finished)
     if (paymentId && !isExistingPayment) {
@@ -585,59 +534,9 @@ export const createPayment = async (
       }
     }
 
-    // Create transaction records for cash payments
-    if (isCashPayment && paymentId) {
-      const { TransactionTable } = await import('@/db/schema/transactions/columns');
-
-      try {
-        // Create transaction for full payment
-        if (data?.paymentType === 'FULL_PAYMENT' && data?.fullPaymentMode === 'CASH') {
-          await db.insert(TransactionTable).values({
-            paymentId,
-            amount: finalAmount,
-            paymentMode: 'CASH',
-            transactionStatus: 'SUCCESS',
-            transactionReference: `CASH-${Date.now()}`,
-            notes: 'Cash payment received',
-          });
-        }
-
-        // Create transaction for first installment if cash
-        if (data?.paymentType === 'INSTALLMENTS' && data?.firstPaymentMode === 'CASH') {
-          await db.insert(TransactionTable).values({
-            paymentId,
-            amount: firstInstallmentAmount,
-            paymentMode: 'CASH',
-            transactionStatus: 'SUCCESS',
-            transactionReference: `CASH-INST1-${Date.now()}`,
-            notes: 'First installment cash payment received',
-            installmentNumber: 1,
-          });
-        }
-
-        // Create transaction for second installment if cash
-        if (data?.paymentType === 'INSTALLMENTS' && data?.secondPaymentMode === 'CASH') {
-          await db.insert(TransactionTable).values({
-            paymentId,
-            amount: secondInstallmentAmount,
-            paymentMode: 'CASH',
-            transactionStatus: 'SUCCESS',
-            transactionReference: `CASH-INST2-${Date.now()}`,
-            notes: 'Second installment cash payment received',
-            installmentNumber: 2,
-          });
-        }
-      } catch (transactionError) {
-        console.error('Error creating cash transaction records:', transactionError);
-        // Don't fail the payment creation if transaction logging fails
-      }
-    }
-
-    const action = isExistingPayment ? 'updated' : 'created';
-    const cashMessage = isCashPayment ? ' and marked as paid (cash received)' : '';
     return {
       error: false,
-      message: `Payment ${action} successfully${cashMessage}`,
+      message: 'Payment created successfully',
       paymentId,
     };
   } catch (error) {
