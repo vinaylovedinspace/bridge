@@ -146,7 +146,13 @@ export const paymentSchema = createInsertSchema(PaymentTable, {
     .enum(PaymentStatusEnum.enumValues, { required_error: 'Payment status is required' })
     .default('PENDING'),
   licenseServiceFee: z.number().default(0),
-}).omit({ createdAt: true, updatedAt: true });
+})
+  .omit({ createdAt: true, updatedAt: true, vehicleRentAmount: true })
+  .extend({
+    paymentMode: z
+      .enum(PaymentModeEnum.enumValues, { required_error: 'Payment mode is required' })
+      .default('PAYMENT_LINK'),
+  });
 
 export const fullPaymentSchema = createInsertSchema(FullPaymentTable, {
   paymentDate: z.string().nullable().optional(),

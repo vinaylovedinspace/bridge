@@ -1,6 +1,6 @@
 import { pgTable, text, uuid, integer, timestamp, pgEnum, jsonb } from 'drizzle-orm/pg-core';
 
-export const PaymentModeEnum = pgEnum('payment_mode', ['PAYMENT_LINK', 'QR', 'CASH', 'CHEQUE']);
+export const PaymentModeEnum = pgEnum('payment_mode', ['PAYMENT_LINK', 'QR', 'CASH']);
 
 export const PaymentGatewayEnum = pgEnum('payment_gateway', ['PLACEHOLDER']);
 

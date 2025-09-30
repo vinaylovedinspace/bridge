@@ -75,7 +75,6 @@ export const EditAdmissionForm = ({ client, branchConfig }: EditAdmissionFormPro
     try {
       const currentStepKey = currentStep as StepKey;
       const fieldsToValidate = getMultistepAdmissionStepValidationFields(currentStepKey, getValues);
-
       const isStepValid = await trigger(fieldsToValidate);
       if (!isStepValid) return;
 

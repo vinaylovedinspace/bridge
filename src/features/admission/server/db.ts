@@ -1,5 +1,11 @@
 import { db } from '@/db';
-import { ClientTable, PaymentTable, PlanTable } from '@/db/schema';
+import {
+  ClientTable,
+  PaymentTable,
+  PlanTable,
+  FullPaymentTable,
+  InstallmentPaymentTable,
+} from '@/db/schema';
 import { LearningLicenseTable } from '@/db/schema/learning-licenses/columns';
 import { DrivingLicenseTable } from '@/db/schema/driving-licenses/columns';
 import { eq } from 'drizzle-orm';
@@ -171,4 +177,18 @@ export const getClientById = async (clientId: string) => {
   });
 
   return client;
+};
+
+export const createFullPaymentInDB = async (data: typeof FullPaymentTable.$inferInsert) => {
+  const [fullPayment] = await db.insert(FullPaymentTable).values(data).returning();
+
+  return fullPayment;
+};
+
+export const createInstallmentPaymentsInDB = async (
+  data: (typeof InstallmentPaymentTable.$inferInsert)[]
+) => {
+  const installmentPayments = await db.insert(InstallmentPaymentTable).values(data).returning();
+
+  return installmentPayments;
 };

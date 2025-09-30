@@ -20,6 +20,8 @@ import {
   getClientById as getClientByIdFromDB,
   upsertPlanInDB,
   upsertPaymentInDB,
+  createFullPaymentInDB,
+  createInstallmentPaymentsInDB,
 } from './db';
 import { db } from '@/db';
 import { eq, and, isNull } from 'drizzle-orm';
@@ -383,7 +385,6 @@ export const createPayment = async (
       ...unsafeData,
       originalAmount,
       finalAmount,
-      vehicleRentAmount: vehicle.rent,
     });
 
     if (!success) {
@@ -392,7 +393,38 @@ export const createPayment = async (
     }
 
     // Create or update the payment
-    const { isExistingPayment, paymentId } = await upsertPaymentInDB(data);
+    const { isExistingPayment, paymentId } = await upsertPaymentInDB({
+      ...data,
+      vehicleRentAmount: vehicle.rent,
+    });
+
+    // Create FullPayment or InstallmentPayment entries if paymentMode is CASH
+    if (data.paymentMode === 'CASH' || data.paymentMode === 'QR') {
+      const currentDate = dateToString(new Date());
+
+      if (data.paymentType === 'FULL_PAYMENT') {
+        // Create a single full payment entry
+        await createFullPaymentInDB({
+          paymentId,
+          paymentMode: 'CASH',
+          paymentDate: currentDate,
+          isPaid: true,
+        });
+      } else if (data.paymentType === 'INSTALLMENTS') {
+        const firstInstallmentAmount = Math.ceil(finalAmount / 2);
+
+        await createInstallmentPaymentsInDB([
+          {
+            paymentId,
+            installmentNumber: 1,
+            amount: firstInstallmentAmount,
+            paymentMode: 'CASH',
+            paymentDate: currentDate,
+            isPaid: true,
+          },
+        ]);
+      }
+    }
 
     // Check if sessions need to be created when payment is completed (onboarding finished)
     if (paymentId && !isExistingPayment) {

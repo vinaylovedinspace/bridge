@@ -107,7 +107,7 @@ export const PaymentModeSelector = () => {
             onValueChange={(value) => {
               const newMode = value as (typeof PaymentModeEnum.enumValues)[number];
               setPaymentMode(newMode);
-              // TODO: Reimplement payment mode updates with new schema
+              setValue('payment.paymentMode', newMode);
               if (newMode === 'CASH') {
                 setValue('payment.paymentStatus', 'FULLY_PAID');
               } else {

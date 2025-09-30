@@ -160,7 +160,6 @@ export const transformClientToFormData = (client: NonNullable<ClientDetail>): Cl
     payment: activePlan?.payment
       ? {
           discount: activePlan.payment.discount,
-          vehicleRentAmount: activePlan.payment.vehicleRentAmount,
           paymentType: activePlan.payment.paymentType || 'FULL_PAYMENT',
           paymentStatus: activePlan.payment.paymentStatus || 'PENDING',
           licenseServiceFee: activePlan.payment.licenseServiceFee,
@@ -168,17 +167,18 @@ export const transformClientToFormData = (client: NonNullable<ClientDetail>): Cl
           finalAmount: activePlan.payment.finalAmount,
           clientId: activePlan.payment.clientId,
           planId: activePlan.payment.planId,
+          paymentMode: 'PAYMENT_LINK' as const,
         }
       : {
           discount: 0,
-          vehicleRentAmount: 0,
           paymentType: 'FULL_PAYMENT' as const,
           paymentStatus: 'PENDING' as const,
           licenseServiceFee: 0,
           originalAmount: 0,
           finalAmount: 0,
           clientId: client.id,
-          planId: '',
+          planId: activePlan?.id ?? '',
+          paymentMode: 'PAYMENT_LINK' as const,
         },
     clientId: client.id,
     planId: activePlan?.id,
