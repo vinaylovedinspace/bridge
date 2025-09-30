@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 
-type ClientFormNavigationProps = {
+type FormNavigationProps = {
   isFirstStep: boolean;
   isLastStep: boolean;
   isSubmitting: boolean;
@@ -13,7 +13,7 @@ type ClientFormNavigationProps = {
   onDiscardChanges: () => void;
 };
 
-export const ClientFormNavigation = ({
+export const FormNavigation = ({
   isFirstStep,
   isLastStep,
   isSubmitting,
@@ -22,7 +22,7 @@ export const ClientFormNavigation = ({
   onPrevious,
   onNext,
   onDiscardChanges,
-}: ClientFormNavigationProps) => {
+}: FormNavigationProps) => {
   return (
     <div className="bg-white py-4 px-6 border-t flex justify-between">
       <Button

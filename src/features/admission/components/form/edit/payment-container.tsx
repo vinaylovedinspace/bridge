@@ -8,7 +8,7 @@ import {
   PAYMENT_INFO,
 } from '@/features/admission/components/form/steps/payment';
 
-type ClientPaymentContainerProps = {
+type PaymentContainerProps = {
   existingPayment?: {
     discount: number;
     paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS' | null;
@@ -17,7 +17,7 @@ type ClientPaymentContainerProps = {
   } | null;
 };
 
-export const ClientPaymentContainer = ({ existingPayment }: ClientPaymentContainerProps) => {
+export const PaymentContainer = ({ existingPayment }: PaymentContainerProps) => {
   const [paymentCheckboxes, setPaymentCheckboxes] = useState<PaymentInfoState>(() => {
     // Initialize with existing payment data if available
     if (existingPayment) {

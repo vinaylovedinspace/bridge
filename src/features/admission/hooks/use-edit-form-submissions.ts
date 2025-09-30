@@ -21,11 +21,10 @@ import {
 import { ActionReturnType } from '@/types/actions';
 import { ClientDetail } from '@/server/db/client';
 
-export const useStepSubmission = (client: NonNullable<ClientDetail>) => {
+export const useEditFormSubmissions = (client: NonNullable<ClientDetail>) => {
   const router = useRouter();
 
   const handlePersonalStep = async (data: PersonalInfoValues): ActionReturnType => {
-    console.log('Updating personal info:', data);
     return await updateClient(client.id, data);
   };
 
@@ -33,8 +32,6 @@ export const useStepSubmission = (client: NonNullable<ClientDetail>) => {
     learningLicense?: LearningLicenseValues;
     drivingLicense?: DrivingLicenseValues;
   }): ActionReturnType => {
-    console.log('Processing license info:', JSON.stringify(data, null, 2));
-
     const { learningLicense, drivingLicense } = data;
     const hasLearningLicense = learningLicense && Object.keys(learningLicense).length > 0;
     const hasDrivingLicense = drivingLicense && Object.keys(drivingLicense).length > 0;
@@ -86,8 +83,7 @@ export const useStepSubmission = (client: NonNullable<ClientDetail>) => {
         error: false,
         message: 'License information updated successfully',
       };
-    } catch (error) {
-      console.error('Error processing license data:', error);
+    } catch {
       return Promise.resolve({
         error: true,
         message: 'An unexpected error occurred while processing license data',

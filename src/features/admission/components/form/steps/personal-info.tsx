@@ -21,7 +21,12 @@ import {
 import { StateSelect } from '@/components/ui/state-select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DatePicker } from '@/components/ui/date-picker';
-import { BloodGroupEnum, GenderEnum, CitizenStatusEnum } from '@/db/schema/client/columns';
+import {
+  BloodGroupEnum,
+  GenderEnum,
+  CitizenStatusEnum,
+  EducationalQualificationEnum,
+} from '@/db/schema/client/columns';
 import { TypographyH5, TypographyP } from '@/components/ui/typography';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useEffect } from 'react';
@@ -275,12 +280,11 @@ export const PersonalInfoStep = () => {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="BELOW_10TH">Below 10th</SelectItem>
-                    <SelectItem value="CLASS_10TH">10th Pass</SelectItem>
-                    <SelectItem value="CLASS_12TH">12th Pass</SelectItem>
-                    <SelectItem value="GRADUATE">Graduate</SelectItem>
-                    <SelectItem value="POST_GRADUATE">Post Graduate</SelectItem>
-                    <SelectItem value="OTHERS">Others</SelectItem>
+                    {EducationalQualificationEnum.enumValues.map((qualification) => (
+                      <SelectItem key={qualification} value={qualification}>
+                        {qualification.replaceAll('_', ' ')}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />

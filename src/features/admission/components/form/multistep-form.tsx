@@ -47,6 +47,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
     resolver: zodResolver(admissionFormSchema),
     defaultValues: {
       personalInfo: {
+        educationalQualification: 'GRADUATE',
         citizenStatus: 'BIRTH',
         isCurrentAddressSameAsPermanentAddress: false,
         state: DEFAULT_STATE,
@@ -59,6 +60,8 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
         vehicleId: '',
         numberOfSessions: 21,
         sessionDurationInMinutes: 30,
+        joiningDate: new Date(),
+        joiningTime: '12:00',
       },
       payment: {
         vehicleRentAmount: 0,
@@ -70,7 +73,8 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
 
   const { trigger, getValues, watch, setValue } = methods;
 
-  const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep } = useStepNavigation(true);
+  const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
+    useStepNavigation(false);
 
   // Watch all form values to detect changes
   const watchedValues = watch();
@@ -385,29 +389,21 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
     return JSON.stringify(currentValues) !== JSON.stringify(initialStepValues);
   };
 
-  console.log('Step validation fields:', methods.formState.errors);
-  // Handle next step navigation with validation
   const handleNext = async () => {
     try {
       // Step 1: Generate validation fields on demand for the current step
       const currentStepKey = currentStep;
       const fieldsToValidate = getMultistepAdmissionStepValidationFields(currentStepKey, getValues);
 
-      console.log('Fields to validate:', fieldsToValidate);
       const isStepValid = await trigger(fieldsToValidate);
 
       if (!isStepValid) {
-        // If validation fails, we don't proceed further
-        console.log('Validation failed for fields:', fieldsToValidate);
         return;
       }
 
-      // Check if there are any changes in the current step
       const hasChanges = hasCurrentStepChanges();
 
       if (!hasChanges) {
-        // If no changes, just proceed to next step without submitting
-        console.log('No changes detected, skipping submission');
         if (isLastStep) {
           router.refresh();
           router.push('/dashboard'); // Redirect to dashboard or another appropriate page
@@ -461,7 +457,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
         className="h-full flex flex-col py-10 gap-4"
         data-testid={`admission-step-${currentStep}`}
       >
-        <ProgressBar interactive={false} />
+        <ProgressBar interactive={false} currentStep={currentStep} onStepChange={goToStep} />
 
         {/* Form content - scrollable area */}
         <ScrollArea className="h-[calc(100vh-340px)] pr-10">

@@ -9,32 +9,31 @@ import {
   ProgressBar,
 } from '@/features/admission/components/progress-bar/progress-bar';
 import { ClientDetail } from '@/server/db/client';
-import { useClientForm } from '../hooks/useClientForm';
-import { useStepSubmission } from '../hooks/useStepSubmission';
-import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
-import { ClientFormSteps } from './client-form-steps';
-import { ClientFormNavigation } from './client-form-navigation';
-import { UnsavedChangesDialog } from './unsaved-changes-dialog';
 import { getMultistepAdmissionStepValidationFields } from '@/features/admission/lib/utils';
 import { BranchConfig } from '@/server/db/branch';
+import { useAdmissionForm } from '../../../hooks/use-admission-form';
+import { useEditFormSubmissions } from '../../../hooks/use-edit-form-submissions';
+import { useUnsavedChanges } from '../../../hooks/use-unsaved-changes';
+import { EditFormSteps } from './form-steps';
+import { FormNavigation } from './form-navigation';
+import { UnsavedChangesDialog } from './unsaved-changes-dialog';
 
 type StepKey = 'service' | 'personal' | 'license' | 'plan' | 'payment';
 
-type ClientAdmissionFormProps = {
+type EditAdmissionFormProps = {
   client: NonNullable<ClientDetail>;
   branchConfig: BranchConfig;
 };
 
-export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFormProps) => {
+export const EditAdmissionForm = ({ client, branchConfig }: EditAdmissionFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const methods = useClientForm(client);
+  const methods = useAdmissionForm(client);
   const { trigger, getValues } = methods;
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
     useStepNavigation(true);
-
-  const { submitStep } = useStepSubmission(client);
+  const { submitStep } = useEditFormSubmissions(client);
 
   const {
     showUnsavedChangesDialog,
@@ -113,9 +112,10 @@ export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFor
   return (
     <FormProvider {...methods}>
       <div className="h-full flex flex-col py-2 gap-4">
-        {/* Progress Bar */}
         <ProgressBar
           interactive={true}
+          currentStep={currentStep}
+          onStepChange={goToStep}
           onStepClick={async (step) => {
             const canNavigate = await handleStepNavigation(step as StepKey);
             if (canNavigate) {
@@ -127,7 +127,7 @@ export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFor
 
         <ScrollArea className="h-[calc(100vh-20rem)] pr-10">
           <form className="space-y-8 pb-24">
-            <ClientFormSteps
+            <EditFormSteps
               currentStep={currentStep as StepKey}
               client={client}
               branchConfig={branchConfig}
@@ -135,7 +135,7 @@ export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFor
           </form>
         </ScrollArea>
 
-        <ClientFormNavigation
+        <FormNavigation
           isFirstStep={isFirstStep}
           isLastStep={isLastStep}
           isSubmitting={isSubmitting}

@@ -1,10 +1,10 @@
 import { getClient } from '@/server/db/client';
 import { notFound } from 'next/navigation';
-import { ClientAdmissionForm } from '@/features/clients/components/client-admission-form';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { TypographyH4 } from '@/components/ui/typography';
 import { getBranchConfig } from '@/server/db/branch';
+import { EditAdmissionForm } from '@/features/admission/components/form/edit';
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,7 +25,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         </TypographyH4>
       </div>
 
-      <ClientAdmissionForm client={client} branchConfig={branch} />
+      <EditAdmissionForm client={client} branchConfig={branch} />
     </div>
   );
 }

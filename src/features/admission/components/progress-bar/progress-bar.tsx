@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQueryState } from 'nuqs';
 import { cn } from '@/lib/utils';
 import { parseAsStringLiteral } from 'nuqs';
@@ -37,11 +37,14 @@ export const useCurrentStep = (interactive = true) => {
   const currentStep = interactive ? externalStep : internalStep;
   const setStep = interactive ? setExternalStep : setInternalStep;
 
-  return {
-    currentStep,
-    setStep,
-    setExternalStep,
-  };
+  return useMemo(
+    () => ({
+      currentStep,
+      setStep,
+      setExternalStep,
+    }),
+    [currentStep, setStep, setExternalStep]
+  );
 };
 
 export const useStepNavigation = (interactive = true) => {
@@ -53,7 +56,6 @@ export const useStepNavigation = (interactive = true) => {
 
   const goToStep = useCallback(
     (stepKey: AdmissionFormStepKey) => {
-      console.log('goToStep', stepKey);
       setStep(stepKey);
     },
     [setStep]
@@ -89,21 +91,26 @@ export const useStepNavigation = (interactive = true) => {
 export type ProgressBarProps = {
   interactive?: boolean;
   onStepClick?: (stepKey: AdmissionFormStepKey) => Promise<boolean> | boolean;
+  currentStep: AdmissionFormStepKey;
+  onStepChange?: (stepKey: AdmissionFormStepKey) => void;
 };
 
-export const ProgressBar = ({ interactive = true, onStepClick }: ProgressBarProps) => {
-  const { currentStep, goToStep } = useStepNavigation(interactive);
-
+export const ProgressBar = ({
+  interactive = true,
+  onStepClick,
+  currentStep,
+  onStepChange,
+}: ProgressBarProps) => {
   const handleStepClick = async (stepKey: AdmissionFormStepKey) => {
     if (!interactive) return;
 
     if (onStepClick) {
       const canNavigate = await onStepClick(stepKey);
       if (canNavigate) {
-        goToStep(stepKey);
+        onStepChange?.(stepKey);
       }
     } else {
-      goToStep(stepKey);
+      onStepChange?.(stepKey);
     }
   };
 

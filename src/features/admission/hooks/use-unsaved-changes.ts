@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import { ClientDetail } from '@/server/db/client';
-import { ClientFormValues, transformClientToFormData } from '../utils/transform-client-data';
 import { AdmissionFormStepKey } from '@/features/admission/components/progress-bar/progress-bar';
+import { ClientFormValues, transformClientToFormData } from '../lib/utils';
 
 export const useUnsavedChanges = (
   client: NonNullable<ClientDetail>,

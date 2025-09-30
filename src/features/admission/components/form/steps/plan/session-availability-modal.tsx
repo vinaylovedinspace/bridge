@@ -33,9 +33,10 @@ export const SessionAvailabilityModal = ({
 }: SessionAvailabilityModalProps) => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
+  console.log('selectedDate', selectedDate);
 
   const timeSlots = generateTimeSlots(branchConfig.operatingHours!);
-  const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+  const selectedDateStr = format(selectedDate ?? new Date(), 'yyyy-MM-dd');
 
   // Get session details for each time slot on the selected date
   const sessionsByTimeSlot = sessions

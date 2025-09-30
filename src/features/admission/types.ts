@@ -105,7 +105,7 @@ export const drivingLicenseSchema = createInsertSchema(DrivingLicenseTable, {
 
 // Base plan schema without operating hours validation
 export const basePlanSchema = createInsertSchema(PlanTable, {
-  vehicleId: z.string(),
+  vehicleId: z.string().min(1, 'Vehicle selection is required'),
   numberOfSessions: z.number().min(1, 'Number of sessions is required'),
   sessionDurationInMinutes: z.number().min(1, 'Session duration is required'),
   joiningDate: z.date().min(new Date('1900-01-01'), 'Invalid joining date'),
