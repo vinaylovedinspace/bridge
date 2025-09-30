@@ -173,6 +173,8 @@ export const getClient = async (id: string) => {
   return await _getClient(id);
 };
 
+export type ClientType = NonNullable<Awaited<ReturnType<typeof getClient>>>;
+
 const _getClientsWithUnassignedSessions = async (branchId: string) => {
   // Get clients who have cancelled sessions (unassigned sessions)
   const clients = await db

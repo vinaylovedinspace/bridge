@@ -180,9 +180,17 @@ export const getClientById = async (clientId: string) => {
 };
 
 export const createFullPaymentInDB = async (data: typeof FullPaymentTable.$inferInsert) => {
-  const [fullPayment] = await db.insert(FullPaymentTable).values(data).returning();
+  const response = await db.transaction(async (tx) => {
+    const [fullPayment] = await tx.insert(FullPaymentTable).values(data).returning();
+    await tx
+      .update(PaymentTable)
+      .set({ paymentStatus: 'FULLY_PAID' })
+      .where(eq(PaymentTable.id, data.paymentId));
 
-  return fullPayment;
+    return fullPayment;
+  });
+
+  return response;
 };
 
 export const createInstallmentPaymentsInDB = async (

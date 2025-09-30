@@ -108,11 +108,6 @@ export const PaymentModeSelector = () => {
               const newMode = value as (typeof PaymentModeEnum.enumValues)[number];
               setPaymentMode(newMode);
               setValue('payment.paymentMode', newMode);
-              if (newMode === 'CASH') {
-                setValue('payment.paymentStatus', 'FULLY_PAID');
-              } else {
-                setValue('payment.paymentStatus', 'PENDING');
-              }
             }}
             className="flex gap-5 items-center"
           >

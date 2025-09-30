@@ -37,7 +37,11 @@ const getPaymentStatusBadge = (status?: string | null) => {
     case 'PARTIALLY_PAID':
       return <Badge variant="secondary">Partially Paid</Badge>;
     case 'FULLY_PAID':
-      return <Badge variant="default">Fully Paid</Badge>;
+      return (
+        <Badge variant="default" className="bg-green-500 font-bold">
+          Fully Paid
+        </Badge>
+      );
     default:
       return <Badge variant="secondary">No Payment</Badge>;
   }

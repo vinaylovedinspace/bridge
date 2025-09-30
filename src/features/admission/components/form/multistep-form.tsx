@@ -64,8 +64,8 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
         joiningTime: '12:00',
       },
       payment: {
-        vehicleRentAmount: 0,
         discount: 0,
+        paymentMode: 'PAYMENT_LINK' as const,
       },
     },
     mode: 'onChange',

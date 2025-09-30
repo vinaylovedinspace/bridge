@@ -403,7 +403,6 @@ export const createPayment = async (
       const currentDate = dateToString(new Date());
 
       if (data.paymentType === 'FULL_PAYMENT') {
-        // Create a single full payment entry
         await createFullPaymentInDB({
           paymentId,
           paymentMode: 'CASH',

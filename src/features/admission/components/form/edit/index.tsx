@@ -11,7 +11,7 @@ import {
 import { ClientDetail } from '@/server/db/client';
 import { getMultistepAdmissionStepValidationFields } from '@/features/admission/lib/utils';
 import { BranchConfig } from '@/server/db/branch';
-import { useAdmissionForm } from '../../../hooks/use-admission-form';
+import { useEditAdmissionForm } from '../../../hooks/use-admission-form';
 import { useEditFormSubmissions } from '../../../hooks/use-edit-form-submissions';
 import { useUnsavedChanges } from '../../../hooks/use-unsaved-changes';
 import { EditFormSteps } from './form-steps';
@@ -28,7 +28,7 @@ type EditAdmissionFormProps = {
 export const EditAdmissionForm = ({ client, branchConfig }: EditAdmissionFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const methods = useAdmissionForm(client);
+  const methods = useEditAdmissionForm(client);
   const { trigger, getValues } = methods;
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =

@@ -16,8 +16,6 @@ type EditFormStepsProps = {
 };
 
 export const EditFormSteps = ({ currentStep, client, branchConfig }: EditFormStepsProps) => {
-  const payment = client.plan?.[0]?.payment;
-
   const stepComponents = {
     service: <ServiceTypeStep disabled={true} />,
     personal: <PersonalInfoStep />,
@@ -25,7 +23,7 @@ export const EditFormSteps = ({ currentStep, client, branchConfig }: EditFormSte
       <LicenseStep isEditMode={true} branchServiceCharge={branchConfig.licenseServiceCharge ?? 0} />
     ),
     plan: <PlanStep branchConfig={branchConfig} currentClientId={client.id} />,
-    payment: <PaymentContainer existingPayment={payment || null} />,
+    payment: <PaymentContainer payment={client.plan[0].payment} />,
   };
 
   return stepComponents[currentStep];
