@@ -1,5 +1,6 @@
 import { Path } from 'react-hook-form';
 import { AdmissionFormValues } from '../types';
+import { Enrollment } from '@/server/db/plan';
 
 // Helper function to generate field paths from type
 const generateFieldPaths = ({
@@ -59,12 +60,6 @@ export const getMultistepAdmissionStepValidationFields = (
   }
 };
 
-import { z } from 'zod';
-import { admissionFormSchema } from '@/features/enrollment/types';
-import { ClientDetail } from '@/server/db/client';
-
-export type ClientFormValues = z.infer<typeof admissionFormSchema>;
-
 // Helper function to convert date string to Date object
 const parseDate = (dateString: string | null): Date | null => {
   if (!dateString) return null;
@@ -79,42 +74,43 @@ const combineDateAndTime = (dateString: string, timeString: string): Date => {
   return date;
 };
 
-export const transformClientToFormData = (client: NonNullable<ClientDetail>): ClientFormValues => {
-  const { learningLicense, drivingLicense, plan, ...clientData } = client;
-
-  // Get the first (active) plan if available
-  const activePlan = plan && plan.length > 0 ? plan[0] : null;
+export const transformClientToFormData = (
+  enrollment: NonNullable<Enrollment>
+): AdmissionFormValues => {
+  const { client, payment } = enrollment;
+  const learningLicense = client?.learningLicense;
+  const drivingLicense = client?.drivingLicense;
 
   return {
     personalInfo: {
-      firstName: clientData.firstName,
-      lastName: clientData.lastName,
-      clientCode: clientData.clientCode,
-      aadhaarNumber: clientData.aadhaarNumber,
-      guardianFirstName: clientData.guardianFirstName || '',
-      guardianLastName: clientData.guardianLastName || '',
-      birthDate: new Date(clientData.birthDate),
-      bloodGroup: clientData.bloodGroup,
-      gender: clientData.gender,
-      educationalQualification: clientData.educationalQualification || 'CLASS_12TH',
-      phoneNumber: clientData.phoneNumber,
-      address: clientData.address,
-      city: clientData.city,
-      state: clientData.state,
-      pincode: clientData.pincode,
+      firstName: client.firstName,
+      lastName: client.lastName,
+      clientCode: client.clientCode,
+      aadhaarNumber: client.aadhaarNumber,
+      guardianFirstName: client.guardianFirstName || '',
+      guardianLastName: client.guardianLastName || '',
+      birthDate: new Date(client.birthDate),
+      bloodGroup: client.bloodGroup,
+      gender: client.gender,
+      educationalQualification: client.educationalQualification || 'CLASS_12TH',
+      phoneNumber: client.phoneNumber,
+      address: client.address,
+      city: client.city,
+      state: client.state,
+      pincode: client.pincode,
       isCurrentAddressSameAsPermanentAddress:
-        clientData.isCurrentAddressSameAsPermanentAddress ?? false,
-      permanentAddress: clientData.permanentAddress,
-      permanentCity: clientData.permanentCity,
-      permanentState: clientData.permanentState,
-      permanentPincode: clientData.permanentPincode,
-      citizenStatus: clientData.citizenStatus || 'BIRTH',
-      serviceType: clientData.serviceType,
-      branchId: clientData.branchId,
-      tenantId: clientData.tenantId,
-      middleName: clientData.middleName || '',
-      email: clientData.email || '',
-      photoUrl: clientData.photoUrl || undefined,
+        client.isCurrentAddressSameAsPermanentAddress ?? false,
+      permanentAddress: client.permanentAddress,
+      permanentCity: client.permanentCity,
+      permanentState: client.permanentState,
+      permanentPincode: client.permanentPincode,
+      citizenStatus: client.citizenStatus || 'BIRTH',
+      serviceType: client.serviceType,
+      branchId: client.branchId,
+      tenantId: client.tenantId,
+      middleName: client.middleName || '',
+      email: client.email || '',
+      photoUrl: client.photoUrl || undefined,
     },
     learningLicense: learningLicense
       ? {
@@ -140,35 +136,25 @@ export const transformClientToFormData = (client: NonNullable<ClientDetail>): Cl
           department: drivingLicense.department,
         }
       : undefined,
-    plan: activePlan
+    plan: {
+      vehicleId: enrollment.vehicleId,
+      planCode: enrollment.planCode,
+      numberOfSessions: enrollment.numberOfSessions,
+      sessionDurationInMinutes: enrollment.sessionDurationInMinutes,
+      joiningDate: combineDateAndTime(enrollment.joiningDate, enrollment.joiningTime),
+      joiningTime: enrollment.joiningTime,
+      clientId: enrollment.clientId,
+    },
+    payment: payment
       ? {
-          vehicleId: activePlan.vehicleId,
-          planCode: activePlan.planCode,
-          numberOfSessions: activePlan.numberOfSessions,
-          sessionDurationInMinutes: activePlan.sessionDurationInMinutes,
-          joiningDate: combineDateAndTime(activePlan.joiningDate, activePlan.joiningTime),
-          joiningTime: activePlan.joiningTime,
-          clientId: activePlan.clientId,
-        }
-      : {
-          vehicleId: '',
-          numberOfSessions: 21,
-          planCode: '',
-          sessionDurationInMinutes: 30,
-          joiningDate: new Date(new Date().setHours(12, 0, 0, 0)),
-          joiningTime: '09:00',
-          clientId: client.id,
-        },
-    payment: activePlan?.payment
-      ? {
-          discount: activePlan.payment.discount,
-          paymentType: activePlan.payment.paymentType || 'FULL_PAYMENT',
-          paymentStatus: activePlan.payment.paymentStatus || 'PENDING',
-          licenseServiceFee: activePlan.payment.licenseServiceFee,
-          originalAmount: activePlan.payment.originalAmount,
-          finalAmount: activePlan.payment.finalAmount,
-          clientId: activePlan.payment.clientId,
-          planId: activePlan.payment.planId,
+          discount: payment.discount,
+          paymentType: payment.paymentType || 'FULL_PAYMENT',
+          paymentStatus: payment.paymentStatus || 'PENDING',
+          licenseServiceFee: payment.licenseServiceFee,
+          originalAmount: payment.originalAmount,
+          finalAmount: payment.finalAmount,
+          clientId: payment.clientId,
+          planId: payment.planId,
           paymentMode: 'PAYMENT_LINK' as const,
         }
       : {
@@ -179,11 +165,11 @@ export const transformClientToFormData = (client: NonNullable<ClientDetail>): Cl
           originalAmount: 0,
           finalAmount: 0,
           clientId: client.id,
-          planId: activePlan?.id ?? '',
+          planId: enrollment.id,
           paymentMode: 'PAYMENT_LINK' as const,
         },
     clientId: client.id,
-    planId: activePlan?.id,
-    paymentId: activePlan?.payment?.id,
+    planId: enrollment.id,
+    paymentId: payment?.id,
   };
 };

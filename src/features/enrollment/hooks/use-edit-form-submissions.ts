@@ -11,7 +11,6 @@ import {
   updateClient,
   createLearningLicense,
   createDrivingLicense,
-  createPlan,
   createPayment,
   updateLearningLicense,
   updateDrivingLicense,
@@ -19,13 +18,13 @@ import {
   updatePayment,
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
-import { ClientDetail } from '@/server/db/client';
+import { Enrollment } from '@/server/db/plan';
 
-export const useEditFormSubmissions = (client: NonNullable<ClientDetail>) => {
+export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
   const router = useRouter();
 
   const handlePersonalStep = async (data: PersonalInfoValues): ActionReturnType => {
-    return await updateClient(client.id, data);
+    return await updateClient(enrollment.client.id, data);
   };
 
   const handleLicenseStep = async (data: {
@@ -41,15 +40,15 @@ export const useEditFormSubmissions = (client: NonNullable<ClientDetail>) => {
       let drivingResult: Awaited<ActionReturnType> | null = null;
 
       if (hasLearningLicense) {
-        if (client.learningLicense) {
-          learningResult = await updateLearningLicense(client.learningLicense.id, {
+        if (enrollment.client.learningLicense) {
+          learningResult = await updateLearningLicense(enrollment.client.learningLicense.id, {
             ...learningLicense,
-            clientId: client.id,
+            clientId: enrollment.client.id,
           });
         } else {
           learningResult = await createLearningLicense({
             ...learningLicense,
-            clientId: client.id,
+            clientId: enrollment.client.id,
           });
         }
 
@@ -60,17 +59,17 @@ export const useEditFormSubmissions = (client: NonNullable<ClientDetail>) => {
 
       const hasClass = learningLicense?.class && learningLicense.class.length > 0;
       if (hasDrivingLicense || hasClass) {
-        if (client.drivingLicense) {
-          drivingResult = await updateDrivingLicense(client.drivingLicense.id, {
+        if (enrollment.client.drivingLicense) {
+          drivingResult = await updateDrivingLicense(enrollment.client.drivingLicense.id, {
             ...drivingLicense,
             class: learningLicense?.class || [],
-            clientId: client.id,
+            clientId: enrollment.client.id,
           });
         } else {
           drivingResult = await createDrivingLicense({
             ...drivingLicense,
             class: learningLicense?.class || [],
-            clientId: client.id,
+            clientId: enrollment.client.id,
           });
         }
 
@@ -93,19 +92,10 @@ export const useEditFormSubmissions = (client: NonNullable<ClientDetail>) => {
 
   const handlePlanStep = async (data: PlanValues): ActionReturnType => {
     try {
-      let result;
-
-      if (client.plan?.[0]) {
-        result = await updatePlan(client.plan[0].id, {
-          ...data,
-          clientId: client.id,
-        });
-      } else {
-        result = await createPlan({
-          ...data,
-          clientId: client.id,
-        });
-      }
+      const result = await updatePlan(enrollment.id, {
+        ...data,
+        clientId: enrollment.client.id,
+      });
 
       return result;
     } catch (error) {
@@ -120,7 +110,7 @@ export const useEditFormSubmissions = (client: NonNullable<ClientDetail>) => {
   const handlePaymentStep = async (data: PaymentValues): ActionReturnType => {
     console.log('Client-side payment data being submitted:', JSON.stringify(data, null, 2));
 
-    const payment = client.plan?.[0]?.payment;
+    const { payment } = enrollment;
     const isPaymentProcessed =
       payment?.paymentStatus === 'FULLY_PAID' || payment?.paymentStatus === 'PARTIALLY_PAID';
 
@@ -133,7 +123,7 @@ export const useEditFormSubmissions = (client: NonNullable<ClientDetail>) => {
 
     try {
       let result;
-      const planId = client.plan?.[0]?.id;
+      const planId = enrollment.id;
 
       if (!planId) {
         return Promise.resolve({
@@ -145,13 +135,13 @@ export const useEditFormSubmissions = (client: NonNullable<ClientDetail>) => {
       if (payment) {
         result = await updatePayment(payment.id, {
           ...data,
-          clientId: client.id,
+          clientId: enrollment.client.id,
           planId,
         });
       } else {
         result = await createPayment({
           ...data,
-          clientId: client.id,
+          clientId: enrollment.client.id,
           planId,
         });
       }

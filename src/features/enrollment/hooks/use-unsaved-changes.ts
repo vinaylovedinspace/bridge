@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
-import { ClientDetail } from '@/server/db/client';
 import { AdmissionFormStepKey } from '@/features/enrollment/components/progress-bar/progress-bar';
-import { ClientFormValues, transformClientToFormData } from '../lib/utils';
+import { transformClientToFormData } from '../lib/utils';
+import { Enrollment } from '@/server/db/plan';
+import { AdmissionFormValues } from '@/features/enrollment/types';
 
 export const useUnsavedChanges = (
-  client: NonNullable<ClientDetail>,
-  methods: UseFormReturn<ClientFormValues>,
+  enrollment: NonNullable<Enrollment>,
+  methods: UseFormReturn<AdmissionFormValues>,
   currentStep: string
 ) => {
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
@@ -17,7 +18,7 @@ export const useUnsavedChanges = (
 
   const { reset, getValues, watch } = methods;
   const watchedValues = watch();
-  const originalValues = transformClientToFormData(client);
+  const originalValues = transformClientToFormData(enrollment);
 
   const getCurrentStepValues = (stepKey: AdmissionFormStepKey) => {
     switch (stepKey) {

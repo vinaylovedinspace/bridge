@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { TypographyH4 } from '@/components/ui/typography';
 import MultistepForm from '@/features/enrollment/components/form/multistep-form';
 import { getBranchConfig } from '@/server/db/branch';
 

@@ -145,36 +145,6 @@ export const getClients = async (
   return await _getClients(branchId, name, paymentStatus, needsLearningTest);
 };
 
-const _getClient = async (id: string) => {
-  const client = await db.query.ClientTable.findFirst({
-    where: eq(ClientTable.id, id),
-    with: {
-      learningLicense: true,
-      drivingLicense: true,
-      plan: {
-        with: {
-          vehicle: true,
-          payment: true,
-        },
-      },
-    },
-  });
-
-  return client;
-};
-
-export const getClient = async (id: string) => {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return null;
-  }
-
-  return await _getClient(id);
-};
-
-export type ClientType = NonNullable<Awaited<ReturnType<typeof getClient>>>;
-
 const _getClientsWithUnassignedSessions = async (branchId: string) => {
   // Get clients who have cancelled sessions (unassigned sessions)
   const clients = await db

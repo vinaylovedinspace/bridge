@@ -8,7 +8,6 @@ import {
   useStepNavigation,
   ProgressBar,
 } from '@/features/enrollment/components/progress-bar/progress-bar';
-import { ClientDetail } from '@/server/db/client';
 import { getMultistepAdmissionStepValidationFields } from '@/features/enrollment/lib/utils';
 import { BranchConfig } from '@/server/db/branch';
 import { useEditAdmissionForm } from '../../../hooks/use-admission-form';
@@ -17,23 +16,24 @@ import { useUnsavedChanges } from '../../../hooks/use-unsaved-changes';
 import { EditFormSteps } from './form-steps';
 import { FormNavigation } from './form-navigation';
 import { UnsavedChangesDialog } from './unsaved-changes-dialog';
+import { Enrollment } from '@/server/db/plan';
 
 type StepKey = 'service' | 'personal' | 'license' | 'plan' | 'payment';
 
 type EditAdmissionFormProps = {
-  client: NonNullable<ClientDetail>;
+  enrollment: NonNullable<Enrollment>;
   branchConfig: BranchConfig;
 };
 
-export const EditAdmissionForm = ({ client, branchConfig }: EditAdmissionFormProps) => {
+export const EditAdmissionForm = ({ enrollment, branchConfig }: EditAdmissionFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const methods = useEditAdmissionForm(client);
+  const methods = useEditAdmissionForm(enrollment);
   const { trigger, getValues } = methods;
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
     useStepNavigation(true);
-  const { submitStep } = useEditFormSubmissions(client);
+  const { submitStep } = useEditFormSubmissions(enrollment);
 
   const {
     showUnsavedChangesDialog,
@@ -43,9 +43,9 @@ export const EditAdmissionForm = ({ client, branchConfig }: EditAdmissionFormPro
     handleStepNavigation,
     handleConfirmNavigation,
     handleCancelNavigation,
-  } = useUnsavedChanges(client, methods, currentStep);
+  } = useUnsavedChanges(enrollment, methods, currentStep);
 
-  const payment = client.plan?.[0]?.payment;
+  const { payment } = enrollment;
   const isPaymentProcessed =
     payment?.paymentStatus === 'FULLY_PAID' || payment?.paymentStatus === 'PARTIALLY_PAID';
   const isPaymentStep = currentStep === 'payment';
@@ -128,7 +128,7 @@ export const EditAdmissionForm = ({ client, branchConfig }: EditAdmissionFormPro
           <form className="space-y-8 pb-24">
             <EditFormSteps
               currentStep={currentStep as StepKey}
-              client={client}
+              enrollment={enrollment}
               branchConfig={branchConfig}
             />
           </form>
