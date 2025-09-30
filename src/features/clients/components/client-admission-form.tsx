@@ -4,7 +4,10 @@ import { useState } from 'react';
 import { FormProvider } from 'react-hook-form';
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useStepNavigation, ProgressBar } from '@/features/admission/progress-bar/progress-bar';
+import {
+  useStepNavigation,
+  ProgressBar,
+} from '@/features/admission/components/progress-bar/progress-bar';
 import { ClientDetail } from '@/server/db/client';
 import { useClientForm } from '../hooks/useClientForm';
 import { useStepSubmission } from '../hooks/useStepSubmission';

@@ -21,7 +21,7 @@ import { PersonalInfoStep } from './steps/personal-info';
 import { LicenseStep } from './steps/license';
 import { PlanStep } from './steps/plan';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useStepNavigation, ProgressBar } from '../../progress-bar/progress-bar';
+import { useStepNavigation, ProgressBar } from '../progress-bar/progress-bar';
 import { ActionReturnType } from '@/types/actions';
 import {
   createClient,
