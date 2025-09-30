@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { admissionFormSchema } from '@/features/admission/types';
 import { ClientDetail } from '@/server/db/client';
 
-type ClientFormValues = z.infer<typeof admissionFormSchema>;
+export type ClientFormValues = z.infer<typeof admissionFormSchema>;
 
 // Helper function to convert date string to Date object
 const parseDate = (dateString: string | null): Date | null => {

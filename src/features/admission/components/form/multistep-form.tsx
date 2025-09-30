@@ -21,7 +21,7 @@ import { PersonalInfoStep } from './steps/personal-info';
 import { LicenseStep } from './steps/license';
 import { PlanStep } from './steps/plan';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useStepNavigation, ProgressBar, ADMISSION_STEPS } from '../progress-bar/progress-bar';
+import { useStepNavigation, ProgressBar } from '../../progress-bar/progress-bar';
 import { ActionReturnType } from '@/types/actions';
 import {
   createClient,
@@ -70,11 +70,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
 
   const { trigger, getValues, watch, setValue } = methods;
 
-  const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep } = useStepNavigation(
-    ADMISSION_STEPS,
-    'service',
-    true
-  );
+  const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep } = useStepNavigation(true);
 
   // Watch all form values to detect changes
   const watchedValues = watch();
@@ -465,7 +461,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
         className="h-full flex flex-col py-10 gap-4"
         data-testid={`admission-step-${currentStep}`}
       >
-        <ProgressBar steps={ADMISSION_STEPS} defaultStep="service" interactive={false} />
+        <ProgressBar interactive={false} />
 
         {/* Form content - scrollable area */}
         <ScrollArea className="h-[calc(100vh-340px)] pr-10">

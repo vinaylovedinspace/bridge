@@ -4,11 +4,7 @@ import { useState } from 'react';
 import { FormProvider } from 'react-hook-form';
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  useStepNavigation,
-  ProgressBar,
-  ADMISSION_STEPS,
-} from '@/features/admission/components/progress-bar/progress-bar';
+import { useStepNavigation, ProgressBar } from '@/features/admission/progress-bar/progress-bar';
 import { ClientDetail } from '@/server/db/client';
 import { useClientForm } from '../hooks/useClientForm';
 import { useStepSubmission } from '../hooks/useStepSubmission';
@@ -33,7 +29,7 @@ export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFor
   const { trigger, getValues } = methods;
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
-    useStepNavigation(ADMISSION_STEPS, 'service', true);
+    useStepNavigation(true);
 
   const { submitStep } = useStepSubmission(client);
 
@@ -116,8 +112,6 @@ export const ClientAdmissionForm = ({ client, branchConfig }: ClientAdmissionFor
       <div className="h-full flex flex-col py-2 gap-4">
         {/* Progress Bar */}
         <ProgressBar
-          steps={ADMISSION_STEPS}
-          defaultStep="service"
           interactive={true}
           onStepClick={async (step) => {
             const canNavigate = await handleStepNavigation(step as StepKey);

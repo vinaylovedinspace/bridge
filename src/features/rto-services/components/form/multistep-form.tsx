@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { ProgressBar, StepConfig } from '@/features/admission/components/progress-bar/progress-bar';
+import { StepConfig } from '@/features/admission/progress-bar/progress-bar';
 import { PersonalInfoStep } from './steps/personal-info';
 import { ServiceDetailsStep } from './steps/service-details';
 import { rtoServiceFormSchema, type RTOServiceFormData } from '../../schemas/rto-services';
@@ -317,8 +317,6 @@ export function RTOServiceMultistepForm({
   return (
     <FormProvider {...form}>
       <div className="h-full flex flex-col py-10 gap-4">
-        <ProgressBar steps={RTO_STEPS} defaultStep="service" interactive={false} />
-
         <ScrollArea className="h-[calc(100vh-320px)]">
           <form className="space-y-8 pb-24">{stepComponents[externalStep]}</form>
         </ScrollArea>

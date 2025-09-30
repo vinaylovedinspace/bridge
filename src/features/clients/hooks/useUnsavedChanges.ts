@@ -1,13 +1,9 @@
 import { useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
-import { z } from 'zod';
-import { admissionFormSchema } from '@/features/admission/types';
 import { ClientDetail } from '@/server/db/client';
-import { transformClientToFormData } from '../utils/transform-client-data';
-
-type ClientFormValues = z.infer<typeof admissionFormSchema>;
-type StepKey = 'service' | 'personal' | 'license' | 'plan' | 'payment';
+import { ClientFormValues, transformClientToFormData } from '../utils/transform-client-data';
+import { AdmissionFormStepKey } from '@/features/admission/progress-bar/progress-bar';
 
 export const useUnsavedChanges = (
   client: NonNullable<ClientDetail>,
@@ -15,13 +11,15 @@ export const useUnsavedChanges = (
   currentStep: string
 ) => {
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
-  const [pendingStepNavigation, setPendingStepNavigation] = useState<StepKey | null>(null);
+  const [pendingStepNavigation, setPendingStepNavigation] = useState<AdmissionFormStepKey | null>(
+    null
+  );
 
   const { reset, getValues, watch } = methods;
   const watchedValues = watch();
   const originalValues = transformClientToFormData(client);
 
-  const getCurrentStepValues = (stepKey: StepKey) => {
+  const getCurrentStepValues = (stepKey: AdmissionFormStepKey) => {
     switch (stepKey) {
       case 'service':
         return { serviceType: watchedValues.personalInfo?.serviceType };
@@ -41,7 +39,7 @@ export const useUnsavedChanges = (
     }
   };
 
-  const getOriginalStepValues = (stepKey: StepKey) => {
+  const getOriginalStepValues = (stepKey: AdmissionFormStepKey) => {
     switch (stepKey) {
       case 'service':
         return { serviceType: originalValues.personalInfo.serviceType };
@@ -62,7 +60,7 @@ export const useUnsavedChanges = (
   };
 
   const hasCurrentStepChanges = (): boolean => {
-    const currentStepKey = currentStep as StepKey;
+    const currentStepKey = currentStep as AdmissionFormStepKey;
     const currentValues = getCurrentStepValues(currentStepKey);
     const originalStepValues = getOriginalStepValues(currentStepKey);
 
@@ -75,7 +73,7 @@ export const useUnsavedChanges = (
   };
 
   const resetCurrentStepToOriginal = () => {
-    const currentStepKey = currentStep as StepKey;
+    const currentStepKey = currentStep as AdmissionFormStepKey;
 
     switch (currentStepKey) {
       case 'service':
@@ -115,7 +113,7 @@ export const useUnsavedChanges = (
     }
   };
 
-  const handleStepNavigation = async (targetStep: StepKey): Promise<boolean> => {
+  const handleStepNavigation = async (targetStep: AdmissionFormStepKey): Promise<boolean> => {
     if (targetStep === currentStep) return true;
 
     const hasChanges = hasCurrentStepChanges();
@@ -129,7 +127,7 @@ export const useUnsavedChanges = (
     return true;
   };
 
-  const handleConfirmNavigation = (goToStep: (step: StepKey) => void) => {
+  const handleConfirmNavigation = (goToStep: (step: AdmissionFormStepKey) => void) => {
     resetCurrentStepToOriginal();
     toast.success('Changes discarded successfully');
 
