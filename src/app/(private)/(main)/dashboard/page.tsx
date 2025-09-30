@@ -14,7 +14,7 @@ export default function Home() {
             <PlusIcon /> RTO Services
           </Button>
         </Link>
-        <Link href="/admission" className="flex gap-2 items-center">
+        <Link href="/enrollment" className="flex gap-2 items-center">
           <Button size="lg" data-testid="dashboard-new-admission-button">
             <PlusIcon /> New admission
           </Button>
