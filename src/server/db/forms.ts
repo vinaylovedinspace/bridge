@@ -1,12 +1,12 @@
 import { db } from '@/db';
 import { formPrints, ClientTable } from '@/db/schema';
-import { getBranchConfig } from '@/features/admission/server/action';
 import { and, eq, desc, inArray } from 'drizzle-orm';
+import { getBranchConfig } from './branch';
 
 export type FilterType = 'new-only' | 'all-eligible' | 'recently-printed';
 
 export const getEligibleStudentsForLearnersLicense = async (filter: FilterType = 'new-only') => {
-  const branchId = (await getBranchConfig()).data?.id as string;
+  const { id: branchId } = await getBranchConfig();
 
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -79,7 +79,7 @@ export const getEligibleStudentsForLearnersLicense = async (filter: FilterType =
 };
 
 export const getEligibleStudentsForPermanentLicense = async (filter: FilterType = 'new-only') => {
-  const branchId = (await getBranchConfig()).data?.id as string;
+  const { id: branchId } = await getBranchConfig();
 
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);

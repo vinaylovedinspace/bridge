@@ -1,11 +1,5 @@
-import { format } from 'date-fns';
-
 // Time slot configuration constants
-const TIME_SLOT_INTERVAL_MINUTES = 30;
 const MINUTES_PER_HOUR = 60;
-const ZERO_SECONDS = 0;
-const ZERO_MILLISECONDS = 0;
-const RESET_MINUTES = 0;
 
 // Session assignment constants
 export const DEFAULT_SESSION_DURATION_MINUTES = 30;
@@ -33,41 +27,6 @@ export const calculateEndTime = (
 
 export const formatTimeSlot = (hour: number, minute: number) => {
   return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-};
-
-// Generate time slots based on operating hours
-export const generateTimeSlots = (
-  startHour: number,
-  startMinute: number,
-  endHour: number,
-  endMinute: number
-) => {
-  const slots = [];
-  let currentHour = startHour;
-  let currentMinute = startMinute;
-
-  // Calculate total end time in minutes for comparison
-  const endTotalMinutes = endHour * MINUTES_PER_HOUR + endMinute;
-
-  while (currentHour * MINUTES_PER_HOUR + currentMinute < endTotalMinutes) {
-    const time = new Date();
-    time.setHours(currentHour, currentMinute, ZERO_SECONDS, ZERO_MILLISECONDS);
-
-    slots.push({
-      time: format(time, 'h:mm a'),
-      hour: currentHour,
-      minute: currentMinute,
-    });
-
-    // Add interval minutes
-    currentMinute += TIME_SLOT_INTERVAL_MINUTES;
-    if (currentMinute >= MINUTES_PER_HOUR) {
-      currentHour++;
-      currentMinute = RESET_MINUTES;
-    }
-  }
-
-  return slots;
 };
 
 // Generate avatar colors for clients

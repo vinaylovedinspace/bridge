@@ -3,14 +3,11 @@ import {
   ClientTable,
   PaymentTable,
   TransactionTable,
-  FullPaymentTable,
   InstallmentPaymentTable,
   PlanTable,
 } from '@/db/schema';
-import { auth } from '@clerk/nextjs/server';
-import { eq, and, desc, max, or, ilike, isNull, sum } from 'drizzle-orm';
-import { getCurrentOrganizationBranchId } from '@/server/db/branch';
-import { format, isBefore, parseISO } from 'date-fns';
+import { eq, and, desc, max, or, ilike, sum } from 'drizzle-orm';
+import { getBranchConfig } from './branch';
 
 const _getPayments = async (branchId: string, name?: string, paymentStatus?: string) => {
   const conditions = [eq(ClientTable.branchId, branchId)];
@@ -108,12 +105,7 @@ const _getPayments = async (branchId: string, name?: string, paymentStatus?: str
 };
 
 export const getPayments = async (name?: string, paymentStatus?: string) => {
-  const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    return [];
-  }
+  const { id: branchId } = await getBranchConfig();
 
   return await _getPayments(branchId, name, paymentStatus);
 };
@@ -195,12 +187,7 @@ const _getOverduePaymentsCount = async (branchId: string) => {
 };
 
 export const getOverduePaymentsCount = async () => {
-  const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    return 0;
-  }
+  const { id: branchId } = await getBranchConfig();
 
   return await _getOverduePaymentsCount(branchId);
 };

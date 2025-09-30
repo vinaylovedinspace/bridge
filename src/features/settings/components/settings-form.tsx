@@ -18,10 +18,11 @@ import {
   DEFAULT_OPERATING_HOURS,
   DAYS_OF_WEEK,
 } from '@/lib/constants/business';
+import { BranchConfig } from '@/server/db/branch';
 
 interface SettingsFormProps {
   branchId: string;
-  initialData?: BranchSettings;
+  initialData?: BranchConfig;
 }
 
 export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
@@ -29,11 +30,11 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
 
   const form = useForm<BranchSettings>({
     resolver: zodResolver(branchSettingsSchema),
-    defaultValues: initialData || {
-      workingDays: DEFAULT_WORKING_DAYS,
-      operatingHours: DEFAULT_OPERATING_HOURS,
-      defaultRtoOffice: '',
-      licenseServiceCharge: 500,
+    defaultValues: {
+      workingDays: initialData?.workingDays || DEFAULT_WORKING_DAYS,
+      operatingHours: initialData?.operatingHours || DEFAULT_OPERATING_HOURS,
+      defaultRtoOffice: initialData?.defaultRtoOffice || '',
+      licenseServiceCharge: initialData?.licenseServiceCharge || 500,
     },
   });
 

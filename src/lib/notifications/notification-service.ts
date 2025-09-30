@@ -76,16 +76,13 @@ export class NotificationService {
 
     if (!payment) return null;
 
-    const amount =
-      installmentNumber === 1 ? payment.firstInstallmentAmount : payment.secondInstallmentAmount;
-
     return this.create({
       tenantId: parseInt(client.tenantId),
       branchId: parseInt(branchId),
       userId: '',
       type: isOverdue ? NOTIFICATION_TYPES.INSTALLMENT_OVERDUE : NOTIFICATION_TYPES.INSTALLMENT_DUE,
       title: isOverdue ? 'Installment Overdue' : 'Installment Due Today',
-      message: `${client.firstName} ${client.lastName} has ${installmentNumber === 1 ? 'first' : 'second'} installment of ₹${amount} ${isOverdue ? 'overdue' : 'due today'}`,
+      message: `${client.firstName} ${client.lastName} has ${installmentNumber === 1 ? 'first' : 'second'} installment of ₹$} ${isOverdue ? 'overdue' : 'due today'}`,
       entityType: ENTITY_TYPES.PAYMENT,
       entityId: parseInt(paymentId),
       isRead: false,

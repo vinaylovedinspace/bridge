@@ -1,7 +1,6 @@
 'use server';
 
 import { z } from 'zod';
-import { DEFAULT_WORKING_DAYS, DEFAULT_OPERATING_HOURS } from '@/lib/constants/business';
 import {
   learningLicenseSchema,
   LearningLicenseValues,
@@ -12,12 +11,7 @@ import {
   planSchema,
   paymentSchema,
 } from '../types';
-import { auth } from '@clerk/nextjs/server';
-import {
-  getCurrentOrganizationBranchId,
-  getCurrentOrganizationBranch,
-  getCurrentOrganizationTenantId,
-} from '@/server/db/branch';
+import { getBranchConfig } from '@/server/db/branch';
 import { ActionReturnType } from '@/types/actions';
 import {
   upsertClientInDB,
@@ -49,22 +43,7 @@ import {
 export const createClient = async (
   unsafeData: z.infer<typeof personalInfoSchema>
 ): Promise<{ error: boolean; message: string } & { clientId?: string }> => {
-  const { userId, orgId } = await auth();
-
-  if (!userId || !orgId) {
-    return { error: true, message: 'User not authenticated or not in an organization' };
-  }
-
-  const branchId = await getCurrentOrganizationBranchId();
-  const tenantId = await getCurrentOrganizationTenantId();
-
-  if (!branchId) {
-    return { error: true, message: 'Branch not found' };
-  }
-
-  if (!tenantId) {
-    return { error: true, message: 'Tenant not found' };
-  }
+  const { id: branchId, tenantId } = await getBranchConfig();
 
   try {
     // Safely convert birthDate to string, handling edge cases
@@ -100,18 +79,6 @@ export const createClient = async (
 };
 
 export const createLearningLicense = async (data: LearningLicenseValues): ActionReturnType => {
-  const { userId, orgId } = await auth();
-
-  if (!userId || !orgId) {
-    return { error: true, message: 'User not authenticated or not in an organization' };
-  }
-
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!branchId) {
-    return { error: true, message: 'Branch not found' };
-  }
-
   try {
     // Validate the learning license data
     const parseResult = learningLicenseSchema.safeParse(data);
@@ -151,18 +118,6 @@ export const createLearningLicense = async (data: LearningLicenseValues): Action
 };
 
 export const createDrivingLicense = async (data: DrivingLicenseValues): ActionReturnType => {
-  const { userId, orgId } = await auth();
-  console.log(data, 'data');
-  if (!userId || !orgId) {
-    return { error: true, message: 'User not authenticated or not in an organization' };
-  }
-
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!branchId) {
-    return { error: true, message: 'Branch not found' };
-  }
-
   try {
     // Validate the driving license data
     const parseResult = drivingLicenseSchema.safeParse(data);
@@ -214,12 +169,6 @@ export const getClientById = async (
 ): Promise<
   { error: boolean; message: string } & { data?: Awaited<ReturnType<typeof getClientByIdFromDB>> }
 > => {
-  const { userId, orgId } = await auth();
-
-  if (!userId || !orgId) {
-    return { error: true, message: 'User not authenticated or not in an organization' };
-  }
-
   if (!clientId) {
     return { error: true, message: 'Client ID is required' };
   }
@@ -245,18 +194,6 @@ export const getClientById = async (
 export const createPlan = async (
   data: PlanValues
 ): Promise<{ error: boolean; message: string } & { planId?: string }> => {
-  const { userId, orgId } = await auth();
-
-  if (!userId || !orgId) {
-    return { error: true, message: 'User not authenticated or not in an organization' };
-  }
-
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!branchId) {
-    return { error: true, message: 'Branch not found' };
-  }
-
   try {
     // Extract time from the joiningDate and format it as a string
     const joiningDateTime = data.joiningDate;
@@ -344,10 +281,7 @@ export const createPlan = async (
       }
 
       // Get branch configuration
-      const branchConfigResult = await getBranchConfig();
-      if (branchConfigResult.error || !branchConfigResult.data) {
-        return { error: true, message: 'Failed to get branch configuration' };
-      }
+      const branchConfig = await getBranchConfig();
 
       // Generate sessions from plan data
       const sessionsToGenerate = generateSessionsFromPlan(
@@ -362,7 +296,7 @@ export const createPlan = async (
           firstName: clientDetails.firstName,
           lastName: clientDetails.lastName,
         },
-        branchConfigResult.data
+        branchConfig
       );
 
       if (sessionsToGenerate.length > 0) {
@@ -414,18 +348,6 @@ export const createPlan = async (
 export const createPayment = async (
   unsafeData: z.infer<typeof paymentSchema>
 ): Promise<{ error: boolean; message: string; paymentId?: string }> => {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return { error: true, message: 'Unauthorized' };
-  }
-
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!branchId) {
-    return { error: true, message: 'Branch not found' };
-  }
-
   if (!unsafeData.planId) {
     return { error: true, message: 'Plan ID is required' };
   }
@@ -492,11 +414,7 @@ export const createPayment = async (
 
             if (client) {
               // Get branch config for session generation
-              const branch = await getCurrentOrganizationBranch();
-              const branchConfig = {
-                workingDays: branch?.workingDays || DEFAULT_WORKING_DAYS,
-                operatingHours: branch?.operatingHours || DEFAULT_OPERATING_HOURS,
-              };
+              const branchConfig = await getBranchConfig();
 
               // Generate sessions from plan
               const sessions = generateSessionsFromPlan(
@@ -542,45 +460,6 @@ export const createPayment = async (
   } catch (error) {
     console.error('Error processing payment data:', error);
     return { error: true, message: 'Failed to save payment information' };
-  }
-};
-
-export const getBranchConfig = async (): Promise<{
-  error: boolean;
-  message: string;
-  data?: {
-    id: string;
-    workingDays: number[];
-    operatingHours: { start: string; end: string };
-    licenseServiceCharge: number;
-  };
-}> => {
-  const { userId, orgId } = await auth();
-
-  if (!userId || !orgId) {
-    return { error: true, message: 'User not authenticated or not in an organization' };
-  }
-
-  try {
-    const branch = await getCurrentOrganizationBranch();
-
-    if (!branch) {
-      return { error: true, message: 'Branch not found' };
-    }
-
-    return {
-      error: false,
-      message: 'Branch configuration retrieved successfully',
-      data: {
-        id: branch.id,
-        workingDays: branch.workingDays || DEFAULT_WORKING_DAYS,
-        operatingHours: branch.operatingHours || DEFAULT_OPERATING_HOURS,
-        licenseServiceCharge: branch.licenseServiceCharge || 500,
-      },
-    };
-  } catch (error) {
-    console.error('Error fetching branch config:', error);
-    return { error: true, message: 'Failed to fetch branch configuration' };
   }
 };
 

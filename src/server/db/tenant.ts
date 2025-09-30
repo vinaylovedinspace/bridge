@@ -1,8 +1,7 @@
 import { db } from '@/db';
 import { TenantTable } from '@/db/schema';
-import { auth } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
-import { getCurrentOrganizationTenantId } from './branch';
+import { getBranchConfig } from './branch';
 
 export const getTenantById = async (tenantId: string) => {
   const tenant = await db.query.TenantTable.findFirst({
@@ -18,17 +17,7 @@ export const getTenantNameById = async (tenantId: string): Promise<string | null
 };
 
 export const getCurrentTenant = async () => {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return null;
-  }
-
-  const tenantId = await getCurrentOrganizationTenantId();
-
-  if (!tenantId) {
-    return null;
-  }
+  const { tenantId } = await getBranchConfig();
 
   return await getTenantById(tenantId);
 };

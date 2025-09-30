@@ -85,7 +85,6 @@ export const PersonalInfoStep = () => {
 
   return (
     <div className="space-y-10">
-      {/* Basic Information */}
       <div className="grid grid-cols-12">
         <TypographyH5 className="col-span-3" data-testid="admission-personal-info-heading">
           Personal Details
@@ -111,20 +110,6 @@ export const PersonalInfoStep = () => {
                 </FormItem>
               )}
             />
-            {/* <FormField
-              control={control}
-              name="personalInfo.photoUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <PhotoUpload
-                    value={field.value || ''}
-                    onChange={field.onChange}
-                    label="Passport Size Photo"
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
-            /> */}
           </div>
           <FormField
             control={control}

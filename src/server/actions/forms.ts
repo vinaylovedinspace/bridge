@@ -8,8 +8,8 @@ import {
   insertFormPrints,
   type FilterType,
 } from '@/server/db/forms';
-import { getCurrentOrganizationBranchId } from '@/server/db/branch';
 import { auth } from '@clerk/nextjs/server';
+import { getBranchConfig } from '../db/branch';
 
 export const getClientsForForms = async () => {
   return getClients();
@@ -20,37 +20,24 @@ export const getClientForForm = async (clientId: string) => {
 };
 
 export const getEligibleStudentsForLearnersLicense = async (filter: FilterType = 'new-only') => {
-  const branchId = await getCurrentOrganizationBranchId();
-  if (!branchId) throw new Error('No branch found');
-
   return _getEligibleStudentsForLearnersLicense(filter);
 };
 
 export const getEligibleStudentsForPermanentLicense = async (filter: FilterType = 'new-only') => {
-  const branchId = await getCurrentOrganizationBranchId();
-  if (!branchId) throw new Error('No branch found');
-
   return _getEligibleStudentsForPermanentLicense(filter);
 };
 
 export const markFormsAsPrinted = async (clientIds: string[], formType: string) => {
   const { userId } = await auth();
-  if (!userId) throw new Error('Unauthorized');
-
-  const branchId = await getCurrentOrganizationBranchId();
-  if (!branchId) throw new Error('No branch found');
-
   const batchId = crypto.randomUUID();
+  const { id: branchId } = await getBranchConfig();
 
-  await insertFormPrints(branchId, clientIds, formType, userId, batchId);
+  await insertFormPrints(branchId, clientIds, formType, userId!, batchId);
 
   return batchId;
 };
 
 export const getFormPrintStats = async (formType: 'form-2' | 'form-4' = 'form-4') => {
-  const branchId = await getCurrentOrganizationBranchId();
-  if (!branchId) throw new Error('No branch found');
-
   const getStudentsFunction =
     formType === 'form-2'
       ? (filter: FilterType) => _getEligibleStudentsForLearnersLicense(filter)
@@ -71,8 +58,6 @@ export const getFormPrintStats = async (formType: 'form-2' | 'form-4' = 'form-4'
 };
 
 export const getBulkClientDataForForms = async (clientIds: string[]) => {
-  const branchId = await getCurrentOrganizationBranchId();
-  if (!branchId) throw new Error('No branch found');
-
+  const { id: branchId } = await getBranchConfig();
   return _getBulkClientDataForForms(branchId, clientIds);
 };

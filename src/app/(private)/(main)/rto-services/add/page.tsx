@@ -1,9 +1,9 @@
 import { TypographyH4 } from '@/components/ui/typography';
 import { RTOServiceForm } from '@/features/rto-services/components/form';
-import { getCurrentOrganizationBranch } from '@/server/db/branch';
+import { getBranchConfig } from '@/server/db/branch';
 
 export default async function AddRTOServicePage() {
-  const branch = await getCurrentOrganizationBranch();
+  const branch = await getBranchConfig();
 
   return (
     <div>

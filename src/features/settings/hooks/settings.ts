@@ -1,20 +1,20 @@
 'use client';
 
-import { getBranchSettings } from '../server/actions';
 import useSWR from 'swr';
+import type { BranchConfig } from '@/server/db/branch';
 
-export function useBranchSettings(branchId: string) {
-  const response = useSWR(
-    branchId ? ['branch-settings', branchId] : null,
-    () => getBranchSettings(branchId),
-    {
-      revalidateOnMount: true,
-    }
-  );
+const fetcher = async (url: string): Promise<BranchConfig> => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error('Failed to fetch branch settings');
+  }
+  return response.json();
+};
 
-  return {
-    ...response,
-    data: response.data?.success ? response.data.data : undefined,
-    error: response.error || (!response.data?.success ? response.data?.error : undefined),
-  };
+export function useBranchSettings() {
+  const response = useSWR('/api/branch/settings', fetcher, {
+    revalidateOnMount: true,
+  });
+
+  return response;
 }

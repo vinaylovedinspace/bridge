@@ -9,18 +9,14 @@ import {
 } from './db';
 import { ActionReturnType } from '@/types/actions';
 import { vehicleFormSchema } from '../schemas/vehicles';
-import { getCurrentOrganizationBranchId } from '@/server/db/branch';
+import { getBranchConfig } from '@/server/db/branch';
 
 /**
  * Server action to add a new vehicle
  */
 export async function addVehicle(unsafeData: z.infer<typeof vehicleFormSchema>): ActionReturnType {
   try {
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return { error: true, message: 'User not authenticated or not in an organization' };
-    }
+    const { userId } = await auth();
 
     // Validate the data
     const { success, data } = vehicleFormSchema.safeParse(unsafeData);
@@ -28,17 +24,12 @@ export async function addVehicle(unsafeData: z.infer<typeof vehicleFormSchema>):
     if (!success) {
       return { error: true, message: 'Invalid vehicle data' };
     }
-
-    const branchId = await getCurrentOrganizationBranchId();
-
-    if (!branchId) {
-      return { error: true, message: 'Branch not found' };
-    }
+    const { id: branchId } = await getBranchConfig();
 
     await addVehicleInDB({
       ...data,
       branchId,
-      createdBy: userId,
+      createdBy: userId!,
     });
 
     return {
@@ -62,11 +53,7 @@ export async function updateVehicle(
   unsafeData: z.infer<typeof vehicleFormSchema>
 ): ActionReturnType {
   try {
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return { error: true, message: 'User not authenticated or not in an organization' };
-    }
+    const { userId } = await auth();
 
     // Validate the data
     const { success, data } = vehicleFormSchema.safeParse(unsafeData);
@@ -75,16 +62,12 @@ export async function updateVehicle(
       return { error: true, message: 'Invalid vehicle data' };
     }
 
-    const branchId = await getCurrentOrganizationBranchId();
-
-    if (!branchId) {
-      return { error: true, message: 'Branch not found' };
-    }
+    const { id: branchId } = await getBranchConfig();
 
     await updateVehicleInDB(id, {
       ...data,
       branchId,
-      createdBy: userId,
+      createdBy: userId!,
     });
 
     return {
@@ -105,17 +88,7 @@ export async function updateVehicle(
  */
 export async function deleteVehicle(id: string): ActionReturnType {
   try {
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return { error: true, message: 'User not authenticated or not in an organization' };
-    }
-
-    const branchId = await getCurrentOrganizationBranchId();
-
-    if (!branchId) {
-      return { error: true, message: 'Branch not found' };
-    }
+    const { id: branchId } = await getBranchConfig();
 
     await deleteVehicleInDB(id, branchId);
 

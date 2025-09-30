@@ -11,9 +11,24 @@ interface SettingsPageProps {
 }
 
 export const SettingsPage = ({ branchId }: SettingsPageProps) => {
-  const { data: settings, isLoading, error } = useBranchSettings(branchId);
+  const { data: settings, isLoading, error } = useBranchSettings();
 
   if (error) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle>Error Loading Settings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-destructive">Failed to load branch settings. Please try again.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!isLoading && !settings) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
         <Card>

@@ -7,48 +7,18 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, X } from 'lucide-react';
 import { getSessions } from '@/server/actions/sessions';
 import type { Session } from '@/server/db/sessions';
+import { BranchConfig } from '@/server/db/branch';
+import { generateTimeSlots } from '@/lib/sessions';
 
-interface SessionAvailabilityModalProps {
+type SessionAvailabilityModalProps = {
   isOpen: boolean;
   onClose: () => void;
   vehicleId: string;
   selectedDate: Date;
-  branchConfig: {
-    workingDays: number[];
-    operatingHours: { start: string; end: string };
-  };
+  branchConfig: BranchConfig;
   onTimeSelect?: (time: string) => void;
   currentClientId?: string; // To highlight current client's sessions
   numberOfSessions?: number; // Number of sessions to check availability for
-}
-
-// Generate time slots based on branch operating hours
-const generateTimeSlots = (operatingHours: { start: string; end: string }) => {
-  const slots = [];
-
-  // Parse start and end hours
-  const [startHour, startMinute] = operatingHours.start.split(':').map(Number);
-  const [endHour, endMinute] = operatingHours.end.split(':').map(Number);
-
-  const startTime = startHour * 60 + startMinute; // Convert to minutes
-  const endTime = endHour * 60 + endMinute; // Convert to minutes
-
-  // Generate 30-minute slots within operating hours
-  for (let timeInMinutes = startTime; timeInMinutes < endTime; timeInMinutes += 30) {
-    const hour = Math.floor(timeInMinutes / 60);
-    const minute = timeInMinutes % 60;
-
-    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-    const displayTime = new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-
-    slots.push({ value: timeString, label: displayTime });
-  }
-
-  return slots;
 };
 
 export const SessionAvailabilityModal = ({
@@ -64,7 +34,7 @@ export const SessionAvailabilityModal = ({
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const timeSlots = generateTimeSlots(branchConfig.operatingHours);
+  const timeSlots = generateTimeSlots(branchConfig.operatingHours!);
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
 
   // Get session details for each time slot on the selected date
@@ -102,7 +72,7 @@ export const SessionAvailabilityModal = ({
       while (sessionsScheduled < numberOfSessions && currentDate <= addDays(selectedDate, 365)) {
         const dayOfWeek = currentDate.getDay();
 
-        if (branchConfig.workingDays.includes(dayOfWeek)) {
+        if (branchConfig.workingDays?.includes(dayOfWeek)) {
           sessionDates.push(new Date(currentDate));
           sessionsScheduled++;
         }
@@ -204,8 +174,8 @@ export const SessionAvailabilityModal = ({
         <div className="space-y-4">
           <div className="text-sm text-gray-600 space-y-1">
             <div>
-              Operating Hours: {branchConfig.operatingHours.start} -{' '}
-              {branchConfig.operatingHours.end}
+              Operating Hours: {branchConfig.operatingHours?.start} -{' '}
+              {branchConfig.operatingHours?.end}
             </div>
             {numberOfSessions > 1 && (
               <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
@@ -322,8 +292,8 @@ export const SessionAvailabilityModal = ({
                 <div className="text-center py-8 text-gray-500">
                   <p>No time slots available for the current operating hours.</p>
                   <p className="text-sm mt-2">
-                    Operating Hours: {branchConfig.operatingHours.start} -{' '}
-                    {branchConfig.operatingHours.end}
+                    Operating Hours: {branchConfig.operatingHours?.start} -{' '}
+                    {branchConfig.operatingHours?.end}
                   </p>
                 </div>
               )}

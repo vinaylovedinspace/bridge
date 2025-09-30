@@ -1,5 +1,6 @@
 import { addDays, format, parse } from 'date-fns';
 import { parseDate, dateToString } from './date-utils';
+import { BranchConfig } from '@/server/db/branch';
 
 export type TimeSlot = {
   time: string;
@@ -17,24 +18,32 @@ export type SessionBooking = {
   clientName: string;
 };
 
-export type BranchConfig = {
-  workingDays: number[]; // Array of day numbers (0=Sunday, 6=Saturday)
-  operatingHours: { start: string; end: string };
-};
-
-// Generate time slots for a day based on branch operating hours
-export const generateTimeSlots = (branchConfig?: BranchConfig): string[] => {
+// Generate time slots based on branch operating hours
+export const generateTimeSlots = (operatingHours: { start: string; end: string }) => {
   const slots = [];
-  const startHour = branchConfig ? parseInt(branchConfig.operatingHours.start.split(':')[0]) : 6;
-  const endHour = branchConfig ? parseInt(branchConfig.operatingHours.end.split(':')[0]) : 20;
 
-  for (let hour = startHour; hour <= endHour; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
-      if (hour === endHour && minute > 0) break;
-      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-      slots.push(timeString);
-    }
+  // Parse start and end hours
+  const [startHour, startMinute] = operatingHours.start.split(':').map(Number);
+  const [endHour, endMinute] = operatingHours.end.split(':').map(Number);
+
+  const startTime = startHour * 60 + startMinute; // Convert to minutes
+  const endTime = endHour * 60 + endMinute; // Convert to minutes
+
+  // Generate 30-minute slots within operating hours
+  for (let timeInMinutes = startTime; timeInMinutes < endTime; timeInMinutes += 30) {
+    const hour = Math.floor(timeInMinutes / 60);
+    const minute = timeInMinutes % 60;
+
+    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    const displayTime = new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    slots.push({ value: timeString, label: displayTime });
   }
+
   return slots;
 };
 
@@ -54,7 +63,7 @@ export const isTimeSlotAvailable = (
 ): boolean => {
   // Check if it's a working day
   const dayOfWeek = date.getDay();
-  if (!branchConfig.workingDays.includes(dayOfWeek)) return false;
+  if (!branchConfig.workingDays?.includes(dayOfWeek)) return false;
 
   // Check for existing sessions
   const conflictingSessions = existingSessions.filter(
@@ -214,7 +223,7 @@ export const generateSessionsFromPlan = (
     const dayOfWeek = currentDate.getDay();
 
     // Check if it's a working day
-    const isWorkingDay = branchConfig.workingDays.includes(dayOfWeek);
+    const isWorkingDay = branchConfig.workingDays?.includes(dayOfWeek);
 
     if (isWorkingDay) {
       sessions.push({

@@ -5,16 +5,17 @@ export const BranchTable = pgTable('branches', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
 
-  orgId: text('org_id').notNull().unique(),
+  orgId: text('org_id').notNull().unique(), // from clerk
 
   // Working days and operating hours configuration
-  workingDays: json('working_days').$type<Array<number>>().default(DEFAULT_WORKING_DAYS), // 0=Sunday, 6=Saturday (all days by default)
+  workingDays: json('working_days').$type<Array<number>>().default(DEFAULT_WORKING_DAYS).notNull(), // 0=Sunday, 6=Saturday (all days by default)
   operatingHours: json('operating_hours')
     .$type<{ start: string; end: string }>()
-    .default(DEFAULT_OPERATING_HOURS),
+    .default(DEFAULT_OPERATING_HOURS)
+    .notNull(),
 
   // Service charges configuration
-  licenseServiceCharge: integer('license_service_charge').default(500), // Charge for handling license process
+  licenseServiceCharge: integer('license_service_charge').default(500).notNull(), // Charge for handling license process
 
   // Default RTO office for this branch
   defaultRtoOffice: text('default_rto_office'), // RTO office name (e.g., 'Mumbai South RTO')

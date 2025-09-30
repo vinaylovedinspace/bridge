@@ -9,7 +9,7 @@ import {
 } from '@/db/schema';
 import { auth } from '@clerk/nextjs/server';
 import { eq, ilike, and, desc, or, count, gte, sql } from 'drizzle-orm';
-import { getCurrentOrganizationBranchId } from '@/server/db/branch';
+import { getBranchConfig } from './branch';
 
 const _getClients = async (
   branchId: string,
@@ -136,7 +136,7 @@ export const getClients = async (
   needsLearningTest?: boolean
 ) => {
   const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
+  const { id: branchId } = await getBranchConfig();
 
   if (!userId || !branchId) {
     return [];
@@ -202,7 +202,7 @@ const _getClientsWithUnassignedSessions = async (branchId: string) => {
 
 export const getClientsWithUnassignedSessions = async () => {
   const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
+  const { id: branchId } = await getBranchConfig();
 
   if (!userId || !branchId) {
     return [];
@@ -280,12 +280,7 @@ const _getAdmissionStatistics = async (branchId: string, months: number = 6) => 
 };
 
 export const getAdmissionStatistics = async (months: number = 6) => {
-  const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    return [];
-  }
+  const { id: branchId } = await getBranchConfig();
 
   return await _getAdmissionStatistics(branchId, months);
 };

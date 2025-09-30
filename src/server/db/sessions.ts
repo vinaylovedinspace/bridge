@@ -2,7 +2,7 @@ import { db } from '@/db';
 import { SessionTable } from '@/db/schema';
 import { auth } from '@clerk/nextjs/server';
 import { eq, and, ne } from 'drizzle-orm';
-import { getCurrentOrganizationBranchId } from '@/server/db/branch';
+import { getBranchConfig } from './branch';
 
 const _getSessions = async (branchId: string, vehicleId?: string, clientId?: string) => {
   const conditions = [
@@ -42,12 +42,7 @@ const _getSessions = async (branchId: string, vehicleId?: string, clientId?: str
 };
 
 export const getSessions = async (vehicleId?: string, clientId?: string) => {
-  const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    return [];
-  }
+  const { id: branchId } = await getBranchConfig();
 
   return await _getSessions(branchId, vehicleId, clientId);
 };
@@ -64,16 +59,12 @@ export const createSessions = async (
   }>
 ) => {
   const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    throw new Error('Unauthorized');
-  }
+  const { id: branchId } = await getBranchConfig();
 
   const sessionsWithMetadata = sessions.map((session) => ({
     ...session,
     branchId,
-    createdBy: userId,
+    createdBy: userId!,
   }));
 
   const createdSessions = await db.insert(SessionTable).values(sessionsWithMetadata).returning();
@@ -89,12 +80,7 @@ export const updateSession = async (
     status?: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'NO_SHOW' | 'CANCELLED' | 'RESCHEDULED';
   }
 ) => {
-  const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    throw new Error('Unauthorized');
-  }
+  const { id: branchId } = await getBranchConfig();
 
   const updatedSession = await db
     .update(SessionTable)
@@ -109,12 +95,7 @@ export const updateSession = async (
 };
 
 export const cancelSession = async (sessionId: string) => {
-  const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    throw new Error('Unauthorized');
-  }
+  const { id: branchId } = await getBranchConfig();
 
   const cancelledSession = await db
     .update(SessionTable)
@@ -135,12 +116,7 @@ export const assignSessionToSlot = async (
   startTime: string,
   endTime: string
 ) => {
-  const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    throw new Error('Unauthorized');
-  }
+  const { id: branchId } = await getBranchConfig();
 
   // Find a cancelled session for this client
   const cancelledSession = await db.query.SessionTable.findFirst({
@@ -173,12 +149,7 @@ export const assignSessionToSlot = async (
 };
 
 export const getSessionsByClientId = async (clientId: string) => {
-  const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    return [];
-  }
+  const { id: branchId } = await getBranchConfig();
 
   return await _getSessions(branchId, undefined, clientId);
 };
@@ -194,11 +165,7 @@ export const updateScheduledSessionsForClient = async (
   }>
 ) => {
   const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    throw new Error('Unauthorized');
-  }
+  const { id: branchId } = await getBranchConfig();
 
   // Get ALL existing sessions for this client to understand what's been "touched"
   const allExistingSessions = await db.query.SessionTable.findMany({
@@ -273,7 +240,7 @@ export const updateScheduledSessionsForClient = async (
           sessionNumber: nextSessionNumber,
           clientId,
           branchId,
-          createdBy: userId,
+          createdBy: userId!,
           status: 'SCHEDULED' as const,
         });
         usedSessionNumbers.add(nextSessionNumber);

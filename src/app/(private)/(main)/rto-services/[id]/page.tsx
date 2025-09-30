@@ -1,16 +1,13 @@
 import { TypographyH4 } from '@/components/ui/typography';
 import { RTOServiceForm } from '@/features/rto-services/components/form';
 import { getRTOService } from '@/features/rto-services/server/db';
-import { getCurrentOrganizationBranch } from '@/server/db/branch';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { getBranchConfig } from '@/server/db/branch';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [rtoService, branch] = await Promise.all([
-    getRTOService(id),
-    getCurrentOrganizationBranch(),
-  ]);
+  const [rtoService, branch] = await Promise.all([getRTOService(id), getBranchConfig()]);
 
   return (
     <div>

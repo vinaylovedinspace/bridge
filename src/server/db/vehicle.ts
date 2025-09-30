@@ -1,8 +1,7 @@
 import { db } from '@/db';
 import { VehicleTable } from '@/db/schema';
-import { auth } from '@clerk/nextjs/server';
 import { eq, ilike, and, or, lte, isNotNull, isNull } from 'drizzle-orm';
-import { getCurrentOrganizationBranchId } from '@/server/db/branch';
+import { getBranchConfig } from './branch';
 
 const _getVehicles = async (branchId: string, name?: string) => {
   // Create a base condition for the organization
@@ -21,12 +20,7 @@ const _getVehicles = async (branchId: string, name?: string) => {
 };
 
 export const getVehicles = async (name?: string) => {
-  const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    return [];
-  }
+  const { id: branchId } = await getBranchConfig();
 
   return await _getVehicles(branchId, name);
 };
@@ -40,12 +34,6 @@ const _getVehicle = async (id: string) => {
 };
 
 export const getVehicle = async (id: string) => {
-  const { userId } = await auth();
-
-  if (!userId || !id || id.trim() === '') {
-    return null;
-  }
-
   return await _getVehicle(id);
 };
 
@@ -133,12 +121,7 @@ const _getVehicleDocumentExpiry = async (branchId: string) => {
 };
 
 export const getVehicleDocumentExpiry = async () => {
-  const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    return [];
-  }
+  const { id: branchId } = await getBranchConfig();
 
   return await _getVehicleDocumentExpiry(branchId);
 };

@@ -1,6 +1,5 @@
 'use server';
 
-import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
 import {
   addRTOService as addRTOServiceInDB,
@@ -9,12 +8,12 @@ import {
 } from './db';
 import { ActionReturnType } from '@/types/actions';
 import { rtoServiceFormSchema } from '../schemas/rto-services';
-import { getCurrentOrganizationBranchId, getCurrentOrganizationTenantId } from '@/server/db/branch';
 import { db } from '@/db';
 import { RTOClientTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getRTOService } from './db';
 import { getNextRTOClientCode } from '@/db/utils/rto-client-code';
+import { getBranchConfig } from '@/server/db/branch';
 
 /**
  * Server action to add a new RTO service
@@ -23,12 +22,6 @@ export async function addRTOService(
   unsafeData: z.infer<typeof rtoServiceFormSchema>
 ): ActionReturnType {
   try {
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return { error: true, message: 'User not authenticated or not in an organization' };
-    }
-
     // Validate the data
     const { success, data, error: validationError } = rtoServiceFormSchema.safeParse(unsafeData);
 
@@ -41,12 +34,7 @@ export async function addRTOService(
       };
     }
 
-    const branchId = await getCurrentOrganizationBranchId();
-    const tenantId = await getCurrentOrganizationTenantId();
-
-    if (!branchId || !tenantId) {
-      return { error: true, message: 'Branch or tenant not found' };
-    }
+    const { id: branchId, tenantId } = await getBranchConfig();
 
     // First, create the RTO client with generated client code
     const clientCode = await getNextRTOClientCode(tenantId);
@@ -105,12 +93,6 @@ export async function updateRTOService(
   unsafeData: z.infer<typeof rtoServiceFormSchema>
 ): ActionReturnType {
   try {
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return { error: true, message: 'User not authenticated or not in an organization' };
-    }
-
     // Validate the data
     const { success, data, error: validationError } = rtoServiceFormSchema.safeParse(unsafeData);
 
@@ -121,13 +103,6 @@ export async function updateRTOService(
         error: true,
         message: `Invalid RTO service data: ${validationError.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')}`,
       };
-    }
-
-    const branchId = await getCurrentOrganizationBranchId();
-    const tenantId = await getCurrentOrganizationTenantId();
-
-    if (!branchId || !tenantId) {
-      return { error: true, message: 'Branch or tenant not found' };
     }
 
     // Get the existing RTO service to find the RTO client ID
@@ -162,6 +137,8 @@ export async function updateRTOService(
         .where(eq(RTOClientTable.id, existingService.rtoClientId));
     }
 
+    const { id: branchId, tenantId } = await getBranchConfig();
+
     // Update the RTO service
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { clientInfo, ...rtoServiceData } = data;
@@ -189,17 +166,7 @@ export async function updateRTOService(
  */
 export async function deleteRTOService(id: string): ActionReturnType {
   try {
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return { error: true, message: 'User not authenticated or not in an organization' };
-    }
-
-    const branchId = await getCurrentOrganizationBranchId();
-
-    if (!branchId) {
-      return { error: true, message: 'Branch not found' };
-    }
+    const { id: branchId } = await getBranchConfig();
 
     await deleteRTOServiceInDB(id, branchId);
 
@@ -232,12 +199,6 @@ export async function updateRTOServiceStatus(
     | 'CANCELLED'
 ): ActionReturnType {
   try {
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return { error: true, message: 'User not authenticated or not in an organization' };
-    }
-
     await updateRTOServiceInDB(id, { status });
 
     return {

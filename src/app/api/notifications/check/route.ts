@@ -2,16 +2,15 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import {
   ClientTable as clients,
-  PaymentTable as payments,
   VehicleTable as vehicles,
   SessionTable as sessions,
   LearningLicenseTable as learningLicenses,
   BranchTable as branches,
 } from '@/db/schema';
 
-import { and, eq, lte, gte, isNull, or } from 'drizzle-orm';
+import { and, eq, lte, gte, isNull } from 'drizzle-orm';
 import { NotificationService } from '@/lib/notifications/notification-service';
-import { addDays, startOfDay } from 'date-fns';
+import { addDays } from 'date-fns';
 
 // This endpoint should be called by a cron job every hour
 export async function POST(request: Request) {

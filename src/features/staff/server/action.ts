@@ -9,18 +9,14 @@ import {
 } from './db';
 import { ActionReturnType } from '@/types/actions';
 import { staffFormSchema } from '../schemas/staff';
-import { getCurrentOrganizationBranchId } from '@/server/db/branch';
+import { getBranchConfig } from '@/server/db/branch';
 
 /**
  * Server action to add a new staff member
  */
 export async function addStaff(unsafeData: z.infer<typeof staffFormSchema>): ActionReturnType {
   try {
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return { error: true, message: 'User not authenticated or not in an organization' };
-    }
+    const { userId } = await auth();
 
     // Validate the data
     const { success, data } = staffFormSchema.safeParse(unsafeData);
@@ -29,7 +25,7 @@ export async function addStaff(unsafeData: z.infer<typeof staffFormSchema>): Act
       return { error: true, message: 'Invalid staff data' };
     }
 
-    const branchId = await getCurrentOrganizationBranchId();
+    const { id: branchId } = await getBranchConfig();
 
     if (!branchId) {
       return { error: true, message: 'Branch not found' };
@@ -38,7 +34,7 @@ export async function addStaff(unsafeData: z.infer<typeof staffFormSchema>): Act
     await addStaffInDB({
       ...data,
       branchId,
-      createdBy: userId,
+      createdBy: userId!,
       assignedVehicleId: data.assignedVehicleId || null,
       licenseNumber: data.licenseNumber || null,
       licenseIssueDate: data.licenseIssueDate || null,
@@ -67,11 +63,7 @@ export async function updateStaff(
   unsafeData: z.infer<typeof staffFormSchema>
 ): ActionReturnType {
   try {
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return { error: true, message: 'User not authenticated or not in an organization' };
-    }
+    const { userId } = await auth();
 
     // Validate the data
     const { success, data } = staffFormSchema.safeParse(unsafeData);
@@ -79,17 +71,12 @@ export async function updateStaff(
     if (!success) {
       return { error: true, message: 'Invalid staff data' };
     }
-
-    const branchId = await getCurrentOrganizationBranchId();
-
-    if (!branchId) {
-      return { error: true, message: 'Branch not found' };
-    }
+    const { id: branchId } = await getBranchConfig();
 
     await updateStaffInDB(id, {
       ...data,
       branchId,
-      createdBy: userId,
+      createdBy: userId!,
       assignedVehicleId: data.assignedVehicleId || null,
       licenseNumber: data.licenseNumber || null,
       licenseIssueDate: data.licenseIssueDate || null,
@@ -115,17 +102,7 @@ export async function updateStaff(
  */
 export async function deleteStaff(id: string): ActionReturnType {
   try {
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
-      return { error: true, message: 'User not authenticated or not in an organization' };
-    }
-
-    const branchId = await getCurrentOrganizationBranchId();
-
-    if (!branchId) {
-      return { error: true, message: 'Branch not found' };
-    }
+    const { id: branchId } = await getBranchConfig();
 
     await deleteStaffInDB(id, branchId);
 

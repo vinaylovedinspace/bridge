@@ -1,8 +1,7 @@
 import { db } from '@/db';
 import { StaffTable, StaffRoleEnum, SessionTable } from '@/db/schema';
-import { auth } from '@clerk/nextjs/server';
 import { eq, ilike, and, desc, or, isNull, count } from 'drizzle-orm';
-import { getCurrentOrganizationBranchId } from '@/server/db/branch';
+import { getBranchConfig } from './branch';
 
 const _getStaff = async (branchId: string, name?: string, role?: string | 'ALL') => {
   const conditions = [eq(StaffTable.branchId, branchId), isNull(StaffTable.deletedAt)];
@@ -34,12 +33,7 @@ const _getStaff = async (branchId: string, name?: string, role?: string | 'ALL')
 };
 
 export const getStaff = async (name?: string, role?: string | 'ALL') => {
-  const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    return [];
-  }
+  const { id: branchId } = await getBranchConfig();
 
   return await _getStaff(branchId, name, role);
 };
@@ -60,12 +54,7 @@ const _getStaffMember = async (id: string, branchId: string) => {
 };
 
 export const getStaffMember = async (id: string) => {
-  const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    return null;
-  }
+  const { id: branchId } = await getBranchConfig();
 
   return await _getStaffMember(id, branchId);
 };
@@ -113,16 +102,7 @@ const _getInstructorStatusCount = async (branchId: string) => {
 };
 
 export const getInstructorStatusCount = async () => {
-  const { userId } = await auth();
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!userId || !branchId) {
-    return {
-      active: 0,
-      inactive: 0,
-      total: 0,
-    };
-  }
+  const { id: branchId } = await getBranchConfig();
 
   return await _getInstructorStatusCount(branchId);
 };

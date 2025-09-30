@@ -3,10 +3,10 @@ import { ClientTable } from '@/db/schema/client/columns';
 import { LearningLicenseTable } from '@/db/schema/learning-licenses/columns';
 import { RTOServicesTable } from '@/db/schema/rto-services/columns';
 import { and, count, eq, inArray, sql } from 'drizzle-orm';
-import { getCurrentOrganizationTenantId } from '@/server/db/branch';
+import { getBranchConfig } from './branch';
 
 export async function getAppointmentStatistics() {
-  const tenantId = await getCurrentOrganizationTenantId();
+  const { tenantId } = await getBranchConfig();
 
   if (!tenantId) {
     console.error('getAppointmentStatistics: No tenant found - returning empty statistics');

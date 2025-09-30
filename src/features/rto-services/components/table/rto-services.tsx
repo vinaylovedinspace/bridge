@@ -3,7 +3,7 @@ import { getRTOServices } from '../../server/db';
 import { type RTOServiceStatus, type RTOServiceType } from '../../types';
 import { DataTable } from './data-table';
 import { columns } from './columns';
-import { getCurrentOrganizationBranchId } from '@/server/db/branch';
+import { getBranchConfig } from '@/server/db/branch';
 
 type RTOServicesProps = {
   status?: string;
@@ -12,11 +12,7 @@ type RTOServicesProps = {
 };
 
 export async function RTOServices({ status, serviceType, client }: RTOServicesProps) {
-  const branchId = await getCurrentOrganizationBranchId();
-
-  if (!branchId) {
-    return <div>No branch found</div>;
-  }
+  const { id: branchId } = await getBranchConfig();
 
   const filters = {
     ...(status && { status: status as RTOServiceStatus }),

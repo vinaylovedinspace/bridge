@@ -129,7 +129,6 @@ export const ProgressBar = <T extends string = string>({
 }: ProgressBarProps<T>) => {
   const { currentStep, goToStep } = useStepNavigation(steps, defaultStep, interactive);
 
-  console.log(currentStep);
   const handleStepClick = async (stepKey: T) => {
     if (!interactive) return;
 

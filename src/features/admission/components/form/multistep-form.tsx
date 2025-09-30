@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { useCallback, useState } from 'react';
-import { useForm, FormProvider, Path } from 'react-hook-form';
+import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import React from 'react';
 import {
@@ -32,13 +32,11 @@ import {
 } from '../../server/action';
 import { PaymentContainer } from './steps/payment';
 import { DEFAULT_STATE } from '@/lib/constants/business';
+import { getMultistepAdmissionStepValidationFields } from '../../lib/utils';
+import { BranchConfig } from '@/server/db/branch';
 
 type MultistepFormProps = {
-  branchConfig: {
-    workingDays: number[];
-    operatingHours: { start: string; end: string };
-    licenseServiceCharge: number;
-  };
+  branchConfig: BranchConfig;
 };
 
 export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
@@ -80,20 +78,6 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
 
   // Watch all form values to detect changes
   const watchedValues = watch();
-
-  // Helper function to generate field paths from type
-  const generateFieldPaths = (
-    prefix: keyof AdmissionFormValues,
-    excludeFields: string[] = []
-  ): Path<AdmissionFormValues>[] => {
-    // Get the value for the specified prefix and safely handle undefined
-    const value = getValues(prefix);
-    const fields = value ? Object.keys(value) : [];
-
-    return fields
-      .filter((field) => !excludeFields.includes(field))
-      .map((field) => `${String(prefix)}.${field}` as Path<AdmissionFormValues>);
-  };
 
   // Define step actions
   const handleServiceTypeStep = async (data: { serviceType: string }): ActionReturnType => {
@@ -313,7 +297,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
         getData: () => getValues('personalInfo'),
       },
       license: {
-        component: <LicenseStep branchServiceCharge={branchConfig.licenseServiceCharge} />,
+        component: <LicenseStep branchServiceCharge={branchConfig.licenseServiceCharge ?? 0} />,
         onSubmit: (data: unknown) =>
           handleLicenseStep(
             data as {
@@ -347,24 +331,6 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
     handlePlanStep,
     handlePersonalStep,
   ]);
-
-  // Function to get validation fields for a specific step
-  const getStepValidationFields = (step: string): Path<AdmissionFormValues>[] => {
-    switch (step) {
-      case 'service':
-        return ['personalInfo.serviceType'];
-      case 'personal':
-        return generateFieldPaths('personalInfo');
-      case 'license':
-        return [...generateFieldPaths('learningLicense'), ...generateFieldPaths('drivingLicense')];
-      case 'plan':
-        return generateFieldPaths('plan');
-      case 'payment':
-        return generateFieldPaths('payment');
-      default:
-        return [];
-    }
-  };
 
   // Get initial default values for comparison (reuse form's defaultValues)
   const getInitialValues = (): AdmissionFormValues => {
@@ -429,7 +395,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
     try {
       // Step 1: Generate validation fields on demand for the current step
       const currentStepKey = currentStep;
-      const fieldsToValidate = getStepValidationFields(currentStepKey);
+      const fieldsToValidate = getMultistepAdmissionStepValidationFields(currentStepKey, getValues);
 
       console.log('Fields to validate:', fieldsToValidate);
       const isStepValid = await trigger(fieldsToValidate);

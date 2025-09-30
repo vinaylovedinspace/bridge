@@ -24,7 +24,6 @@ import { cn } from '@/lib/utils';
 import { SessionTimeEditor } from './session-time-editor';
 import { SessionAssignmentModal } from './session-assignment-modal';
 import {
-  generateTimeSlots,
   getAvatarColor,
   getStatusStyles,
   calculateEndTime,
@@ -39,12 +38,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { generateTimeSlots } from '@/lib/sessions';
 
-interface CalendarViewProps {
-  branchId: string;
-}
-
-export const CalendarView = ({ branchId }: CalendarViewProps) => {
+export const CalendarView = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedVehicle, setSelectedVehicle] = useState<string>('');
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -61,15 +57,13 @@ export const CalendarView = ({ branchId }: CalendarViewProps) => {
 
   const { data: vehicles, isLoading } = useVehicles();
   const { data: sessions = [], mutate } = useSessions(selectedVehicle);
-  const { data: branchSettings, isLoading: isLoadingSettings } = useBranchSettings(branchId);
+  const { data: branchSettings, isLoading: isLoadingSettings } = useBranchSettings();
 
   // Generate time slots based on branch settings
   const timeSlots = useMemo(() => {
     if (!branchSettings) return [];
 
-    const [startHour, startMinute] = branchSettings.operatingHours.start.split(':').map(Number);
-    const [endHour, endMinute] = branchSettings.operatingHours.end.split(':').map(Number);
-    return generateTimeSlots(startHour, startMinute, endHour, endMinute);
+    return generateTimeSlots(branchSettings.operatingHours);
   }, [branchSettings]);
 
   // Generate week dates for week view - memoized for performance
@@ -316,11 +310,12 @@ export const CalendarView = ({ branchId }: CalendarViewProps) => {
           /* Day View */
           <div className="max-h-[calc(100vh-16rem)] overflow-y-auto">
             {timeSlots.map((timeSlot, timeIndex) => {
-              const session = getSessionForSlot(timeSlot);
+              const [hour, minute] = timeSlot.value.split(':').map(Number);
+              const session = getSessionForSlot({ hour, minute });
               return (
                 <div key={timeIndex} className="flex items-center border-b border-gray-100 h-12">
                   {/* Time Column */}
-                  <div className="w-24 p-4 text-sm text-gray-600 font-medium">{timeSlot.time}</div>
+                  <div className="w-24 p-4 text-sm text-gray-600 font-medium">{timeSlot.label}</div>
 
                   {/* Session Column */}
                   <div className="flex-1 h-full">
@@ -373,7 +368,7 @@ export const CalendarView = ({ branchId }: CalendarViewProps) => {
                     ) : (
                       <div
                         className="h-12 cursor-pointer hover:bg-blue-50 flex items-center justify-center text-gray-400 text-sm transition-colors border-2 border-dashed border-transparent hover:border-blue-300"
-                        onClick={() => handleEmptySlotClick(timeSlot)}
+                        onClick={() => handleEmptySlotClick({ time: timeSlot.label, hour, minute })}
                         title="Click to assign a session"
                       ></div>
                     )}
@@ -406,12 +401,13 @@ export const CalendarView = ({ branchId }: CalendarViewProps) => {
               <div key={timeIndex} className="flex border-b border-gray-100">
                 {/* Time Column */}
                 <div className="w-20 p-2 text-xs text-gray-600 font-medium border-r border-gray-200 flex items-center">
-                  {format(new Date().setHours(timeSlot.hour, timeSlot.minute, 0, 0), 'h:mm a')}
+                  {timeSlot.label}
                 </div>
 
                 {/* Day Columns */}
                 {weekDates.map((date, dayIndex) => {
-                  const session = getSessionForSlot(timeSlot, date);
+                  const [hour, minute] = timeSlot.value.split(':').map(Number);
+                  const session = getSessionForSlot({ hour, minute }, date);
                   return (
                     <div
                       key={dayIndex}
@@ -463,7 +459,9 @@ export const CalendarView = ({ branchId }: CalendarViewProps) => {
                       ) : (
                         <div
                           className="h-full cursor-pointer hover:bg-blue-50 transition-colors border-2 border-dashed border-transparent hover:border-blue-300"
-                          onClick={() => handleEmptySlotClick(timeSlot, date)}
+                          onClick={() =>
+                            handleEmptySlotClick({ time: timeSlot.label, hour, minute }, date)
+                          }
                           title="Click to assign a session"
                         ></div>
                       )}
