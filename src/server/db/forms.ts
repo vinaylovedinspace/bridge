@@ -12,7 +12,7 @@ export const getEligibleStudentsForLearnersLicense = async (filter: FilterType =
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
   const results = await db.query.ClientTable.findMany({
-    where: and(eq(ClientTable.branchId, branchId), eq(ClientTable.serviceType, 'FULL_SERVICE')),
+    where: eq(ClientTable.branchId, branchId),
     orderBy: [desc(ClientTable.createdAt)],
     columns: {
       id: true,
@@ -22,6 +22,11 @@ export const getEligibleStudentsForLearnersLicense = async (filter: FilterType =
       clientCode: true,
     },
     with: {
+      plan: {
+        columns: {
+          serviceType: true,
+        },
+      },
       learningLicense: {
         columns: {
           licenseNumber: true,
@@ -41,7 +46,10 @@ export const getEligibleStudentsForLearnersLicense = async (filter: FilterType =
 
   return results
     .filter((result) => {
-      // Only include clients who need learning test (no learning license or empty license number)
+      // Only include clients with FULL_SERVICE plan who need learning test
+      const hasFullServicePlan = result.plan.some((p) => p.serviceType === 'FULL_SERVICE');
+      if (!hasFullServicePlan) return false;
+
       const hasNoLearningLicense =
         !result.learningLicense?.licenseNumber || result.learningLicense.licenseNumber === '';
 

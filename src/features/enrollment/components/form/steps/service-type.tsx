@@ -35,7 +35,7 @@ export const ServiceTypeStep = ({ disabled = false }: ServiceTypeStepProps) => {
 
       <FormField
         control={control}
-        name="personalInfo.serviceType"
+        name="serviceType"
         render={({ field }) => (
           <FormItem className="space-y-6">
             <FormControl>

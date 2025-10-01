@@ -23,7 +23,7 @@ export const useUnsavedChanges = (
   const getCurrentStepValues = (stepKey: AdmissionFormStepKey) => {
     switch (stepKey) {
       case 'service':
-        return { serviceType: watchedValues.personalInfo?.serviceType };
+        return { serviceType: watchedValues.serviceType };
       case 'personal':
         return watchedValues.personalInfo;
       case 'license':
@@ -43,7 +43,7 @@ export const useUnsavedChanges = (
   const getOriginalStepValues = (stepKey: AdmissionFormStepKey) => {
     switch (stepKey) {
       case 'service':
-        return { serviceType: originalValues.personalInfo.serviceType };
+        return { serviceType: originalValues.serviceType };
       case 'personal':
         return originalValues.personalInfo;
       case 'license':
@@ -80,10 +80,7 @@ export const useUnsavedChanges = (
       case 'service':
         reset({
           ...getValues(),
-          personalInfo: {
-            ...getValues('personalInfo'),
-            serviceType: originalValues.personalInfo.serviceType,
-          },
+          serviceType: originalValues.serviceType,
         });
         break;
       case 'personal':

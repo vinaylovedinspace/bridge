@@ -54,7 +54,7 @@ export const EditAdmissionForm = ({ enrollment, branchConfig }: EditAdmissionFor
   const getStepData = (stepKey: StepKey) => {
     switch (stepKey) {
       case 'service':
-        return { serviceType: getValues('personalInfo.serviceType') };
+        return { serviceType: getValues('serviceType') };
       case 'personal':
         return getValues('personalInfo');
       case 'license':

@@ -1,4 +1,5 @@
 import { pgTable, timestamp, uuid, integer, time, text, pgEnum } from 'drizzle-orm/pg-core';
+import { ServiceTypeEnum } from '../enums';
 
 export const PlanEnum = pgEnum('status', [
   'NOT_STARTED',
@@ -17,6 +18,8 @@ export const PlanTable = pgTable('plans', {
   sessionDurationInMinutes: integer('session_duration_in_minutes').notNull(),
   joiningDate: text('joining_date').notNull(),
   joiningTime: time('joining_time').notNull(),
+
+  serviceType: ServiceTypeEnum().notNull(),
 
   clientId: uuid('client_id').notNull(),
   status: PlanEnum().notNull().default('NOT_STARTED'),

@@ -28,7 +28,7 @@ export const getMultistepAdmissionStepValidationFields = (
 ): Path<AdmissionFormValues>[] => {
   switch (step) {
     case 'service':
-      return ['personalInfo.serviceType'];
+      return ['serviceType'];
     case 'personal':
       return generateFieldPaths({
         prefix: 'personalInfo',
@@ -82,6 +82,7 @@ export const transformClientToFormData = (
   const drivingLicense = client?.drivingLicense;
 
   return {
+    serviceType: enrollment.serviceType,
     personalInfo: {
       firstName: client.firstName,
       lastName: client.lastName,
@@ -104,7 +105,6 @@ export const transformClientToFormData = (
       permanentState: client.permanentState,
       permanentPincode: client.permanentPincode,
       citizenStatus: client.citizenStatus || 'BIRTH',
-      serviceType: client.serviceType,
       branchId: client.branchId,
       tenantId: client.tenantId,
       middleName: client.middleName || '',
@@ -141,6 +141,7 @@ export const transformClientToFormData = (
       sessionDurationInMinutes: enrollment.sessionDurationInMinutes,
       joiningDate: combineDateAndTime(enrollment.joiningDate, enrollment.joiningTime),
       joiningTime: enrollment.joiningTime,
+      serviceType: enrollment.serviceType,
       clientId: enrollment.clientId,
     },
     payment: payment

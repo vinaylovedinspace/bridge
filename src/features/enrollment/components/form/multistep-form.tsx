@@ -46,13 +46,13 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
   const methods = useForm<AdmissionFormValues>({
     resolver: zodResolver(admissionFormSchema),
     defaultValues: {
+      serviceType: 'FULL_SERVICE' as const,
       personalInfo: {
         educationalQualification: 'GRADUATE',
         citizenStatus: 'BIRTH',
         isCurrentAddressSameAsPermanentAddress: false,
         state: DEFAULT_STATE,
         permanentState: DEFAULT_STATE,
-        serviceType: 'FULL_SERVICE' as const,
       },
       learningLicense: {},
       drivingLicense: {},
@@ -62,6 +62,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
         sessionDurationInMinutes: 30,
         joiningDate: new Date(),
         joiningTime: '12:00',
+        serviceType: 'FULL_SERVICE' as const,
       },
       payment: {
         discount: 0,
@@ -193,6 +194,8 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
   const handlePlanStep = useCallback(
     async (data: PlanValues): ActionReturnType => {
       const clientId = getValues('clientId');
+      const serviceType = getValues('serviceType');
+
       if (!clientId) {
         return Promise.resolve({
           error: true,
@@ -235,6 +238,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
 
       const result = await createPlan({
         ...data,
+        serviceType: serviceType || data.serviceType,
         clientId,
       });
 
@@ -289,7 +293,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
       service: {
         component: <ServiceTypeStep />,
         onSubmit: (data: unknown) => handleServiceTypeStep(data as { serviceType: string }),
-        getData: () => ({ serviceType: getValues('personalInfo.serviceType') }),
+        getData: () => ({ serviceType: getValues('serviceType') }),
       },
       personal: {
         component: <PersonalInfoStep />,
@@ -345,7 +349,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
     const getCurrentStepValues = () => {
       switch (currentStepKey) {
         case 'service':
-          return { serviceType: watchedValues.personalInfo?.serviceType };
+          return { serviceType: watchedValues.serviceType };
         case 'personal':
           return watchedValues.personalInfo;
         case 'license':
@@ -365,7 +369,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
     const getInitialStepValues = () => {
       switch (currentStepKey) {
         case 'service':
-          return { serviceType: initialValues.personalInfo?.serviceType };
+          return { serviceType: initialValues.serviceType };
         case 'personal':
           return initialValues.personalInfo;
         case 'license':

@@ -15,7 +15,6 @@ const _getClients = async (branchId: string, name?: string, needsLearningTest?: 
 
   if (needsLearningTest) {
     conditions.push(
-      eq(ClientTable.serviceType, 'FULL_SERVICE'),
       sql`(${LearningLicenseTable.licenseNumber} IS NULL OR ${LearningLicenseTable.licenseNumber} = '')`
     );
   }
@@ -30,7 +29,6 @@ const _getClients = async (branchId: string, name?: string, needsLearningTest?: 
       lastName: true,
       phoneNumber: true,
       clientCode: true,
-      serviceType: true,
       createdAt: true,
     },
     with: {
@@ -79,7 +77,6 @@ const _getClient = async (branchId: string, clientId: string) => {
       lastName: true,
       phoneNumber: true,
       clientCode: true,
-      serviceType: true,
       createdAt: true,
     },
     with: {

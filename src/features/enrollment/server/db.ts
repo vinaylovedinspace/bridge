@@ -108,39 +108,39 @@ export const upsertDrivingLicenseInDB = async (data: typeof DrivingLicenseTable.
   };
 };
 
-export const upsertPlanInDB = async (
+export const createPlanInDB = async (
   data: Omit<typeof PlanTable.$inferInsert, 'planCode'> & { planCode?: string },
   tenantId: string
 ) => {
-  // Create a variable to track if this was an update operation
-  let isExistingPlan = false;
-
   // Generate plan code if not provided
   const planCode = data.planCode || (await getNextPlanCode(tenantId));
 
   const [plan] = await db
     .insert(PlanTable)
     .values({ ...data, planCode })
-    .onConflictDoUpdate({
-      target: PlanTable.clientId,
-      set: {
-        ...data,
-        planCode,
-        updatedAt: new Date(),
-      },
-    })
     .returning();
-
-  // Check if this was an update by comparing createdAt and updatedAt
-  // If they're different by more than a few seconds, it was an update
-  if (plan.createdAt && plan.updatedAt) {
-    const timeDiff = Math.abs(plan.updatedAt.getTime() - plan.createdAt.getTime());
-    isExistingPlan = timeDiff > 1000; // More than 1 second difference
-  }
 
   return {
     plan,
-    isExistingPlan,
+    planId: plan.id,
+  };
+};
+
+export const updatePlanInDB = async (
+  planId: string,
+  data: Partial<Omit<typeof PlanTable.$inferInsert, 'planCode' | 'clientId'>>
+) => {
+  const [plan] = await db
+    .update(PlanTable)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(PlanTable.id, planId))
+    .returning();
+
+  return {
+    plan,
     planId: plan.id,
   };
 };

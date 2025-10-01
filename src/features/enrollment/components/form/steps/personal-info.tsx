@@ -574,7 +574,7 @@ export const PersonalInfoStep = () => {
         <div className="grid grid-cols-3 col-span-9 gap-6 items-end">
           <FormField
             control={control}
-            name="personalInfo.serviceType"
+            name="serviceType"
             render={({ field }) => (
               <FormItem className="col-span-3">
                 <FormControl>

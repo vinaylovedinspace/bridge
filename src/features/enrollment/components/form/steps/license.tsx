@@ -19,7 +19,7 @@ export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: Lic
   const { control, watch } = useFormContext<AdmissionFormValues>();
 
   // Watch service type to conditionally show/hide fields
-  const serviceType = watch('personalInfo.serviceType');
+  const serviceType = watch('serviceType');
 
   // Watch selected license classes and existing license info for fee calculation
   const selectedLicenseClasses = watch('learningLicense.class') || [];

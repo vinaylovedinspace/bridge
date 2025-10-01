@@ -18,7 +18,8 @@ import {
   upsertLearningLicenseInDB,
   upsertDrivingLicenseInDB,
   getClientById as getClientByIdFromDB,
-  upsertPlanInDB,
+  createPlanInDB,
+  updatePlanInDB,
   upsertPaymentInDB,
   createFullPaymentInDB,
   createInstallmentPaymentsInDB,
@@ -248,16 +249,28 @@ export const createPlan = async (
     // Convert date to YYYY-MM-DD string (no timezone conversion)
     const dateString = dateToString(data.joiningDate);
 
-    // Make sure we're explicitly passing the joiningDate and joiningTime for update
+    // Make sure we're explicitly passing the joiningDate and joiningTime
     const planData = {
       ...parseResult.data,
       joiningDate: dateString, // Pass as YYYY-MM-DD string, no timezone conversion
       joiningTime: timeString, // Explicitly pass the formatted time
-      ...(existingPlan && { planCode: existingPlan.planCode }), // Preserve planCode for existing plans
     };
 
-    // Create or update the plan with separated date and time
-    const { isExistingPlan, planId } = await upsertPlanInDB(planData, tenantId);
+    // Create or update the plan
+    let planId: string;
+    let isExistingPlan = false;
+
+    if (data.id) {
+      // Update existing plan by ID
+      const result = await updatePlanInDB(data.id, planData);
+      planId = result.planId;
+      isExistingPlan = true;
+    } else {
+      // Create new plan
+      const result = await createPlanInDB(planData, tenantId);
+      planId = result.planId;
+      isExistingPlan = false;
+    }
 
     // Check if sessions already exist for this client
     const existingSessions = await getSessionsByClientId(data.clientId);

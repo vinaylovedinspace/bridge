@@ -61,10 +61,6 @@ export const personalInfoSchema = createInsertSchema(ClientTable, {
     required_error: 'Citizen status is required',
   }),
 
-  serviceType: z.enum(ServiceTypeEnum.enumValues, {
-    required_error: 'Service type is required',
-  }),
-
   guardianFirstName: z.string().min(1, 'Guardian first name is required'),
   guardianLastName: z.string().min(1, 'Guardian last name is required'),
 
@@ -109,6 +105,9 @@ export const basePlanSchema = createInsertSchema(PlanTable, {
   numberOfSessions: z.number().min(1, 'Number of sessions is required'),
   sessionDurationInMinutes: z.number().min(1, 'Session duration is required'),
   joiningDate: z.date().min(new Date('1900-01-01'), 'Invalid joining date'),
+  serviceType: z.enum(ServiceTypeEnum.enumValues, {
+    required_error: 'Service type is required',
+  }),
 }).omit({ createdAt: true, updatedAt: true });
 
 // Function to create plan schema with operating hours validation
@@ -192,6 +191,9 @@ export const createAdmissionFormSchema = (operatingHours?: { start: string; end:
 
 // Default admission form schema for backward compatibility
 export const admissionFormSchema = z.object({
+  serviceType: z.enum(ServiceTypeEnum.enumValues, {
+    required_error: 'Service type is required',
+  }),
   personalInfo: personalInfoSchema,
   learningLicense: learningLicenseSchema.optional(),
   drivingLicense: drivingLicenseSchema.optional(),
