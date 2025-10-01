@@ -23,8 +23,6 @@ const availableColumns = [
   'clientCode',
   'name',
   'phoneNumber',
-  'email',
-  'location',
   'paymentStatus',
   'completedSessions',
   'cancelledSessions',

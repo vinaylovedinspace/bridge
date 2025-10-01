@@ -31,7 +31,7 @@ export const personalInfoSchema = createInsertSchema(ClientTable, {
     .regex(/^\d{12}$/, 'Aadhaar number must contain only digits'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
-  phoneNumber: z.string().min(1, 'Phone number is required'),
+  phoneNumber: z.string().min(10, 'Phone number is required').max(10, 'Phone number is not valid'),
   email: z.string().email('Invalid email address').or(z.literal('')).optional().nullable(),
 
   birthDate: z.date().min(new Date('1900-01-01'), 'Invalid birth date'),
@@ -134,7 +134,7 @@ export const createPlanSchema = (operatingHours?: { start: string; end: string }
 };
 
 // Default plan schema for backward compatibility
-export const planSchema = basePlanSchema;
+export const planSchema = basePlanSchema.omit({ planCode: true });
 
 export const paymentSchema = createInsertSchema(PaymentTable, {
   discount: z.number().default(0),

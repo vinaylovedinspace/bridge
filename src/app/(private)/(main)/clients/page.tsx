@@ -8,7 +8,6 @@ export default async function ClientsPage({
 }: {
   searchParams: Promise<{
     name?: string;
-    paymentStatus?: string;
     columns?: string;
   }>;
 }) {
@@ -19,7 +18,7 @@ export default async function ClientsPage({
       <Suspense fallback={<div>Loading filters...</div>}>
         <ClientFilters />
       </Suspense>
-      <Clients name={params.name} paymentStatus={params.paymentStatus} />
+      <Clients name={params.name} />
     </div>
   );
 }

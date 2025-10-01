@@ -43,10 +43,10 @@ export const ClientFilters = () => {
     throttleMs: 500,
   });
 
-  const [paymentStatus, setPaymentStatus] = useQueryState('paymentStatus', {
-    shallow: false,
-    defaultValue: 'ALL',
-  });
+  // const [paymentStatus, setPaymentStatus] = useQueryState('paymentStatus', {
+  //   shallow: false,
+  //   defaultValue: 'ALL',
+  // });
 
   const { visibleColumns, setVisibleColumns } = useColumnPreferences();
   const visibleColumnsArray = visibleColumns?.split(',') || [];
@@ -70,7 +70,7 @@ export const ClientFilters = () => {
           placeholder="Search by name"
           className="w-96"
         />
-
+        {/* 
         <Select
           value={paymentStatus || 'ALL'}
           onValueChange={(value) => setPaymentStatus(value === 'ALL' ? null : value)}
@@ -85,7 +85,7 @@ export const ClientFilters = () => {
               </SelectItem>
             ))}
           </SelectContent>
-        </Select>
+        </Select> */}
       </div>
       <div className="flex gap-2">
         <Popover>

@@ -456,13 +456,13 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
   return (
     <FormProvider {...methods}>
       <div
-        className="h-full flex flex-col py-10 gap-4"
+        className="h-full flex flex-col py-4 gap-10"
         data-testid={`admission-step-${currentStep}`}
       >
         <ProgressBar interactive={false} currentStep={currentStep} onStepChange={goToStep} />
 
         {/* Form content - scrollable area */}
-        <ScrollArea className="h-[calc(100vh-340px)] pr-10">
+        <ScrollArea className="h-[calc(100vh-316px)] pr-10">
           <form className="space-y-8 pb-24" data-testid="admission-multistep-form">
             {stepComponents[currentStep as keyof typeof stepComponents]?.component}
           </form>

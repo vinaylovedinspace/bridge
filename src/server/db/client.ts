@@ -1,22 +1,10 @@
 import { db } from '@/db';
-import {
-  ClientTable,
-  PaymentTable,
-  SessionTable,
-  LearningLicenseTable,
-  DrivingLicenseTable,
-  PlanTable,
-} from '@/db/schema';
+import { ClientTable, SessionTable, LearningLicenseTable } from '@/db/schema';
 import { auth } from '@clerk/nextjs/server';
 import { eq, ilike, and, desc, or, count, gte, sql } from 'drizzle-orm';
 import { getBranchConfig } from './branch';
 
-const _getClients = async (
-  branchId: string,
-  name?: string,
-  paymentStatus?: string,
-  needsLearningTest?: boolean
-) => {
+const _getClients = async (branchId: string, name?: string, needsLearningTest?: boolean) => {
   const conditions = [eq(ClientTable.branchId, branchId)];
 
   if (name) {
@@ -32,109 +20,34 @@ const _getClients = async (
     );
   }
 
-  // First, get the basic client information
-  const baseQuery = db
-    .select({
-      id: ClientTable.id,
-      firstName: ClientTable.firstName,
-      middleName: ClientTable.middleName,
-      lastName: ClientTable.lastName,
-      phoneNumber: ClientTable.phoneNumber,
-      email: ClientTable.email,
-      address: ClientTable.address,
-      city: ClientTable.city,
-      state: ClientTable.state,
-      clientCode: ClientTable.clientCode,
-      serviceType: ClientTable.serviceType,
-      createdAt: ClientTable.createdAt,
-      paymentStatus: PaymentTable.paymentStatus,
-      hasLearningLicense: LearningLicenseTable.id,
-      learningLicenseNumber: LearningLicenseTable.licenseNumber,
-      hasDrivingLicense: DrivingLicenseTable.id,
-      hasPlan: PlanTable.id,
-      hasPayment: PaymentTable.id,
-    })
-    .from(ClientTable)
-    .leftJoin(PaymentTable, eq(ClientTable.id, PaymentTable.clientId))
-    .leftJoin(LearningLicenseTable, eq(ClientTable.id, LearningLicenseTable.clientId))
-    .leftJoin(DrivingLicenseTable, eq(ClientTable.id, DrivingLicenseTable.clientId))
-    .leftJoin(PlanTable, eq(ClientTable.id, PlanTable.clientId))
-    .where(and(...conditions))
-    .orderBy(desc(ClientTable.createdAt));
+  const clients = await db.query.ClientTable.findMany({
+    where: and(...conditions),
+    orderBy: desc(ClientTable.createdAt),
+    columns: {
+      id: true,
+      firstName: true,
+      middleName: true,
+      lastName: true,
+      phoneNumber: true,
+      clientCode: true,
+      serviceType: true,
+      createdAt: true,
+    },
+    with: {
+      sessions: true,
+      learningLicense: true,
+      drivingLicense: true,
+      plan: true,
+    },
+  });
 
-  const clients = await baseQuery;
-
-  // Get session counts for each client
-  const clientsWithSessions = await Promise.all(
-    clients.map(async (client) => {
-      // Count total sessions
-      const totalSessions = await db
-        .select({ count: count() })
-        .from(SessionTable)
-        .where(eq(SessionTable.clientId, client.id));
-
-      // Count completed sessions
-      const completedSessions = await db
-        .select({ count: count() })
-        .from(SessionTable)
-        .where(and(eq(SessionTable.clientId, client.id), eq(SessionTable.status, 'COMPLETED')));
-
-      // Count cancelled sessions
-      const cancelledSessions = await db
-        .select({ count: count() })
-        .from(SessionTable)
-        .where(and(eq(SessionTable.clientId, client.id), eq(SessionTable.status, 'CANCELLED')));
-
-      // Count remaining sessions (scheduled or rescheduled)
-      const remainingSessions = await db
-        .select({ count: count() })
-        .from(SessionTable)
-        .where(
-          and(
-            eq(SessionTable.clientId, client.id),
-            or(eq(SessionTable.status, 'SCHEDULED'), eq(SessionTable.status, 'RESCHEDULED'))
-          )
-        );
-
-      const unassignedSessions = await db
-        .select({ count: count() })
-        .from(SessionTable)
-        .where(and(eq(SessionTable.clientId, client.id), eq(SessionTable.status, 'CANCELLED')));
-
-      // Determine completion status
-      // A client is complete if they have at least a plan and payment
-      // Licenses are optional but plan and payment are required
-      const isComplete = !!(client.hasPlan && client.hasPayment);
-
-      return {
-        ...client,
-        totalSessions: totalSessions[0]?.count || 0,
-        completedSessions: completedSessions[0]?.count || 0,
-        cancelledSessions: cancelledSessions[0]?.count || 0,
-        remainingSessions: remainingSessions[0]?.count || 0,
-        unassignedSessions: unassignedSessions[0]?.count || 0,
-        isComplete,
-        completionStatus: isComplete ? ('COMPLETE' as const) : ('INCOMPLETE' as const),
-      };
-    })
-  );
-
-  if (paymentStatus && paymentStatus !== 'ALL') {
-    return clientsWithSessions.filter(
-      (client) =>
-        client.paymentStatus === paymentStatus ||
-        (paymentStatus === 'NO_PAYMENT' && !client.paymentStatus)
-    );
-  }
-
-  return clientsWithSessions;
+  return clients.map((client) => ({
+    ...client,
+    hasPlan: client.plan.length > 0,
+  }));
 };
 
-export const getClients = async (
-  name?: string,
-  paymentStatus?: string,
-  needsLearningTest?: boolean
-) => {
+export const getClients = async (name?: string, needsLearningTest?: boolean) => {
   const { userId } = await auth();
   const { id: branchId } = await getBranchConfig();
 
@@ -142,7 +55,7 @@ export const getClients = async (
     return [];
   }
 
-  return await _getClients(branchId, name, paymentStatus, needsLearningTest);
+  return await _getClients(branchId, name, needsLearningTest);
 };
 
 const _getClientsWithUnassignedSessions = async (branchId: string) => {
@@ -258,7 +171,7 @@ export const getAdmissionStatistics = async (months: number = 6) => {
 };
 
 export type Client = Awaited<ReturnType<typeof getClients>>[0];
-export type ClientDetail = Awaited<ReturnType<typeof getClient>>;
+export type ClientDetail = Awaited<ReturnType<typeof getClients>>;
 export type ClientWithUnassignedSessions = Awaited<
   ReturnType<typeof getClientsWithUnassignedSessions>
 >[0];
