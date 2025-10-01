@@ -69,7 +69,7 @@ export const personalInfoSchema = createInsertSchema(ClientTable, {
   guardianLastName: z.string().min(1, 'Guardian last name is required'),
 
   photoUrl: z.string().optional(),
-});
+}).omit({ clientCode: true });
 
 export const learningLicenseSchema = createInsertSchema(LearningLicenseTable, {
   class: z

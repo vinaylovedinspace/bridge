@@ -253,6 +253,7 @@ export const createPlan = async (
       ...parseResult.data,
       joiningDate: dateString, // Pass as YYYY-MM-DD string, no timezone conversion
       joiningTime: timeString, // Explicitly pass the formatted time
+      ...(existingPlan && { planCode: existingPlan.planCode }), // Preserve planCode for existing plans
     };
 
     // Create or update the plan with separated date and time
@@ -294,6 +295,7 @@ export const createPlan = async (
           joiningTime: timeString,
           numberOfSessions: data.numberOfSessions,
           vehicleId: data.vehicleId,
+          planId,
         },
         {
           id: clientDetails.id,
@@ -313,6 +315,7 @@ export const createPlan = async (
               startTime: session.startTime,
               endTime: session.endTime,
               vehicleId: session.vehicleId,
+              planId: session.planId,
               sessionNumber: session.sessionNumber,
             }))
           );
@@ -456,6 +459,7 @@ export const createPayment = async (
                   joiningTime: plan.joiningTime,
                   numberOfSessions: plan.numberOfSessions,
                   vehicleId: plan.vehicleId,
+                  planId: plan.id,
                 },
                 {
                   firstName: client.firstName,

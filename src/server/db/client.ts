@@ -58,6 +58,41 @@ export const getClients = async (name?: string, needsLearningTest?: boolean) => 
   return await _getClients(branchId, name, needsLearningTest);
 };
 
+export const getClient = async (clientId: string) => {
+  const { userId } = await auth();
+  const { id: branchId } = await getBranchConfig();
+
+  if (!userId || !branchId) {
+    return null;
+  }
+
+  return await _getClient(branchId, clientId);
+};
+
+const _getClient = async (branchId: string, clientId: string) => {
+  const client = await db.query.ClientTable.findFirst({
+    where: and(eq(ClientTable.branchId, branchId), eq(ClientTable.id, clientId)),
+    columns: {
+      id: true,
+      firstName: true,
+      middleName: true,
+      lastName: true,
+      phoneNumber: true,
+      clientCode: true,
+      serviceType: true,
+      createdAt: true,
+    },
+    with: {
+      sessions: true,
+      learningLicense: true,
+      drivingLicense: true,
+      plan: true,
+    },
+  });
+
+  return client;
+};
+
 const _getClientsWithUnassignedSessions = async (branchId: string) => {
   // Get clients who have cancelled sessions (unassigned sessions)
   const clients = await db

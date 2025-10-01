@@ -2,26 +2,11 @@
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useQueryState } from 'nuqs';
 import { useColumnPreferences } from '@/hooks/use-column-preferences';
 import { Settings } from 'lucide-react';
-
-const paymentStatusOptions = [
-  { value: 'ALL', label: 'All Status' },
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'PARTIALLY_PAID', label: 'Partially Paid' },
-  { value: 'FULLY_PAID', label: 'Fully Paid' },
-  { value: 'NO_PAYMENT', label: 'No Payment' },
-];
 
 const columnOptions = [
   { key: 'clientCode', label: 'Client Code' },

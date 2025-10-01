@@ -12,23 +12,24 @@ import { eq } from 'drizzle-orm';
 import { getNextClientCode } from '@/db/utils/client-code';
 import { getNextPlanCode } from '@/db/utils/plan-code';
 
-export const upsertClientInDB = async (data: typeof ClientTable.$inferInsert) => {
+export const upsertClientInDB = async (
+  data: Omit<typeof ClientTable.$inferInsert, 'clientCode'> & { clientCode?: string }
+) => {
   // Create a variable to track if this was an update operation
   let isExistingClient = false;
 
   // Generate client code if not provided
-  if (!data.clientCode) {
-    data.clientCode = await getNextClientCode(data.tenantId);
-  }
+  const clientCode = data.clientCode || (await getNextClientCode(data.tenantId));
 
   // Use onConflictDoUpdate to handle the case where a client with the same phone number and tenant already exists
   const [client] = await db
     .insert(ClientTable)
-    .values(data)
+    .values({ ...data, clientCode })
     .onConflictDoUpdate({
       target: [ClientTable.phoneNumber, ClientTable.tenantId],
       set: {
         ...data,
+        clientCode,
         updatedAt: new Date(),
       },
     })
@@ -107,22 +108,24 @@ export const upsertDrivingLicenseInDB = async (data: typeof DrivingLicenseTable.
   };
 };
 
-export const upsertPlanInDB = async (data: typeof PlanTable.$inferInsert, tenantId: string) => {
+export const upsertPlanInDB = async (
+  data: Omit<typeof PlanTable.$inferInsert, 'planCode'> & { planCode?: string },
+  tenantId: string
+) => {
   // Create a variable to track if this was an update operation
   let isExistingPlan = false;
 
   // Generate plan code if not provided
-  if (!data.planCode) {
-    data.planCode = await getNextPlanCode(tenantId);
-  }
+  const planCode = data.planCode || (await getNextPlanCode(tenantId));
 
   const [plan] = await db
     .insert(PlanTable)
-    .values(data)
+    .values({ ...data, planCode })
     .onConflictDoUpdate({
       target: PlanTable.clientId,
       set: {
         ...data,
+        planCode,
         updatedAt: new Date(),
       },
     })

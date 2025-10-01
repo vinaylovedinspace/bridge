@@ -13,6 +13,7 @@ export const SessionTable = pgTable('sessions', {
   id: uuid('id').primaryKey().defaultRandom(),
   clientId: uuid('client_id').notNull(),
   vehicleId: uuid('vehicle_id').notNull(),
+  planId: uuid('plan_id').notNull(),
 
   sessionDate: text('session_date').notNull(), // YYYY-MM-DD string to avoid timezone issues
   startTime: time('start_time').notNull(),

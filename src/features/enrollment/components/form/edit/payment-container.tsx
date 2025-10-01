@@ -6,13 +6,9 @@ import {
   PaymentOverview,
   PAYMENT_INFO,
 } from '@/features/enrollment/components/form/steps/payment';
-import { ClientType } from '@/server/db/client';
+import { Enrollment } from '@/server/db/plan';
 
-export const PaymentContainer = ({
-  payment,
-}: {
-  payment: ClientType['plan'][number]['payment'];
-}) => {
+export const PaymentContainer = ({ payment }: { payment: NonNullable<Enrollment>['payment'] }) => {
   const [paymentCheckboxes, setPaymentCheckboxes] = useState(() => {
     // Initialize with existing payment data if available
     if (payment) {
@@ -25,6 +21,7 @@ export const PaymentContainer = ({
         installments: {
           label: 'Pay in Installments',
           isChecked: payment.paymentType === 'INSTALLMENTS',
+          date: null,
         },
       };
     }
@@ -32,8 +29,6 @@ export const PaymentContainer = ({
     // Default state for new payments
     return PAYMENT_INFO;
   });
-
-  console.log(payment);
 
   // If payment is fully paid, show only the payment summary
   if (payment?.paymentStatus === 'FULLY_PAID') {
@@ -65,7 +60,7 @@ export const PaymentContainer = ({
       <PaymentStep
         paymentCheckboxes={paymentCheckboxes}
         setPaymentCheckboxes={setPaymentCheckboxes}
-        payment={payment}
+        existingPayment={payment}
       />
       <div className="col-span-4">
         <PaymentOverview

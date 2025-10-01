@@ -85,7 +85,6 @@ export const transformClientToFormData = (
     personalInfo: {
       firstName: client.firstName,
       lastName: client.lastName,
-      clientCode: client.clientCode,
       aadhaarNumber: client.aadhaarNumber,
       guardianFirstName: client.guardianFirstName || '',
       guardianLastName: client.guardianLastName || '',
@@ -138,7 +137,6 @@ export const transformClientToFormData = (
       : undefined,
     plan: {
       vehicleId: enrollment.vehicleId,
-      planCode: enrollment.planCode,
       numberOfSessions: enrollment.numberOfSessions,
       sessionDurationInMinutes: enrollment.sessionDurationInMinutes,
       joiningDate: combineDateAndTime(enrollment.joiningDate, enrollment.joiningTime),

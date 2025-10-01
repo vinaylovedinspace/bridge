@@ -51,6 +51,7 @@ export const createSessions = async (
   sessions: Array<{
     clientId: string;
     vehicleId: string;
+    planId: string;
     sessionDate: string; // YYYY-MM-DD string
     startTime: string;
     endTime: string;
@@ -161,6 +162,7 @@ export const updateScheduledSessionsForClient = async (
     startTime: string;
     endTime: string;
     vehicleId: string;
+    planId: string;
     sessionNumber: number;
   }>
 ) => {

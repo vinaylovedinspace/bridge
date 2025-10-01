@@ -184,6 +184,7 @@ export const generateSessionsFromPlan = (
     joiningTime: string;
     numberOfSessions: number;
     vehicleId: string;
+    planId: string;
   },
   client: {
     firstName: string;
@@ -195,6 +196,7 @@ export const generateSessionsFromPlan = (
   clientId: string;
   clientName: string;
   vehicleId: string;
+  planId: string;
   sessionDate: string; // YYYY-MM-DD string
   startTime: string;
   endTime: string;
@@ -230,6 +232,7 @@ export const generateSessionsFromPlan = (
         clientId: client.id,
         clientName: `${client.firstName} ${client.lastName}`,
         vehicleId: plan.vehicleId,
+        planId: plan.planId,
         sessionDate: dateToString(currentDate), // Store as YYYY-MM-DD string
         startTime: plan.joiningTime,
         endTime: calculateEndTime(plan.joiningTime, 30), // Default 30 minutes
