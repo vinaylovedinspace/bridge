@@ -22,16 +22,20 @@ export const useClientDetailStepNavigation = () => {
 type ClientDetailProgressBarProps = {
   currentStep: ClientDetailStepKey;
   onStepChange: (stepKey: ClientDetailStepKey) => void;
+  onStepClick?: (stepKey: ClientDetailStepKey) => Promise<boolean>;
 };
 
 export const ClientDetailProgressBar = ({
   currentStep,
   onStepChange,
+  onStepClick,
 }: ClientDetailProgressBarProps) => {
   return (
     <ProgressBar
+      interactive={true}
       currentStep={currentStep}
       onStepChange={onStepChange}
+      onStepClick={onStepClick}
       steps={CLIENT_DETAIL_STEPS}
     />
   );

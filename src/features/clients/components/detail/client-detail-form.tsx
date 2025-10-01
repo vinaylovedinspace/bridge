@@ -6,11 +6,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BranchConfig } from '@/server/db/branch';
 import { Client } from '@/server/db/client';
-import { ClientDetailProgressBar, useClientDetailStepNavigation } from './progress-bar';
+import {
+  ClientDetailProgressBar,
+  useClientDetailStepNavigation,
+  ClientDetailStepKey,
+} from './progress-bar';
 import { ClientDetailSteps } from './client-detail-steps';
-import { ClientDetailNavigation } from './client-detail-navigation';
 import { clientDetailFormSchema, ClientDetailFormValues } from '../../types/client-detail';
 import { transformClientToFormData } from '../../lib/transform-client-data';
+import { useUnsavedChanges } from '../../hooks/use-unsaved-changes';
+import { FormNavigation } from '@/components/ui/form-navigation';
+import { UnsavedChangesDialog } from '@/components/ui/unsaved-changes-dialog';
 
 type ClientDetailFormProps = {
   client: NonNullable<Client>;
@@ -20,15 +26,26 @@ type ClientDetailFormProps = {
 export const ClientDetailForm = ({ client, branchConfig }: ClientDetailFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const defaultValues = transformClientToFormData(client);
   const methods = useForm<ClientDetailFormValues>({
     resolver: zodResolver(clientDetailFormSchema),
-    defaultValues: transformClientToFormData(client),
+    defaultValues,
     mode: 'onChange',
   });
 
   const { trigger } = methods;
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
     useClientDetailStepNavigation();
+
+  const {
+    showUnsavedChangesDialog,
+    setShowUnsavedChangesDialog,
+    hasCurrentStepChanges,
+    handleDiscardChanges,
+    handleStepNavigation,
+    handleConfirmNavigation,
+    handleCancelNavigation,
+  } = useUnsavedChanges(methods, currentStep, defaultValues);
 
   const handleNext = async () => {
     try {
@@ -59,7 +76,17 @@ export const ClientDetailForm = ({ client, branchConfig }: ClientDetailFormProps
   return (
     <FormProvider {...methods}>
       <div className="h-full flex flex-col py-2 gap-4">
-        <ClientDetailProgressBar currentStep={currentStep} onStepChange={goToStep} />
+        <ClientDetailProgressBar
+          currentStep={currentStep}
+          onStepChange={goToStep}
+          onStepClick={async (step) => {
+            const canNavigate = await handleStepNavigation(step as ClientDetailStepKey);
+            if (canNavigate) {
+              goToStep(step as ClientDetailStepKey);
+            }
+            return canNavigate;
+          }}
+        />
 
         <ScrollArea className="h-[calc(100vh-20rem)] pr-10">
           <form className="space-y-8 pb-24">
@@ -71,14 +98,23 @@ export const ClientDetailForm = ({ client, branchConfig }: ClientDetailFormProps
           </form>
         </ScrollArea>
 
-        <ClientDetailNavigation
+        <FormNavigation
           isFirstStep={isFirstStep}
           isLastStep={isLastStep}
           isSubmitting={isSubmitting}
+          hasCurrentStepChanges={hasCurrentStepChanges()}
           onPrevious={goToPrevious}
           onNext={handleNext}
+          onDiscardChanges={handleDiscardChanges}
         />
       </div>
+
+      <UnsavedChangesDialog
+        open={showUnsavedChangesDialog}
+        onOpenChange={setShowUnsavedChangesDialog}
+        onConfirm={() => handleConfirmNavigation(goToStep)}
+        onCancel={handleCancelNavigation}
+      />
     </FormProvider>
   );
 };

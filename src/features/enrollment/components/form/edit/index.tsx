@@ -14,8 +14,8 @@ import { useEditAdmissionForm } from '../../../hooks/use-admission-form';
 import { useEditFormSubmissions } from '../../../hooks/use-edit-form-submissions';
 import { useUnsavedChanges } from '../../../hooks/use-unsaved-changes';
 import { EditFormSteps } from './form-steps';
-import { FormNavigation } from './form-navigation';
-import { UnsavedChangesDialog } from './unsaved-changes-dialog';
+import { FormNavigation } from '@/components/ui/form-navigation';
+import { UnsavedChangesDialog } from '@/components/ui/unsaved-changes-dialog';
 import { Enrollment } from '@/server/db/plan';
 
 type StepKey = 'service' | 'personal' | 'license' | 'plan' | 'payment';
@@ -138,8 +138,9 @@ export const EditAdmissionForm = ({ enrollment, branchConfig }: EditAdmissionFor
           isFirstStep={isFirstStep}
           isLastStep={isLastStep}
           isSubmitting={isSubmitting}
-          shouldDisablePaymentEdit={shouldDisablePaymentEdit}
           hasCurrentStepChanges={hasCurrentStepChanges()}
+          shouldDisableNext={shouldDisablePaymentEdit}
+          nextButtonText={shouldDisablePaymentEdit ? 'Payment Processed' : undefined}
           onPrevious={goToPrevious}
           onNext={handleNext}
           onDiscardChanges={handleDiscardChanges}

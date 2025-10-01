@@ -30,9 +30,9 @@ export function EnrollmentDataTable<TData, TValue>({
   });
 
   const handleRowClick = (row: Row<TData>) => {
-    const original = row.original as { clientId?: string };
-    if (original && original.clientId) {
-      router.push(`/enrollment/${original.clientId}?step=personal`);
+    const original = row.original as { id?: string };
+    if (original && original.id) {
+      router.push(`/enrollment/${original.id}?step=personal`);
     }
   };
 

@@ -6,8 +6,9 @@ type FormNavigationProps = {
   isFirstStep: boolean;
   isLastStep: boolean;
   isSubmitting: boolean;
-  shouldDisablePaymentEdit: boolean;
   hasCurrentStepChanges: boolean;
+  shouldDisableNext?: boolean;
+  nextButtonText?: string;
   onPrevious: () => void;
   onNext: () => void;
   onDiscardChanges: () => void;
@@ -17,14 +18,22 @@ export const FormNavigation = ({
   isFirstStep,
   isLastStep,
   isSubmitting,
-  shouldDisablePaymentEdit,
   hasCurrentStepChanges,
+  shouldDisableNext = false,
+  nextButtonText,
   onPrevious,
   onNext,
   onDiscardChanges,
 }: FormNavigationProps) => {
+  const getNextButtonText = () => {
+    if (nextButtonText) return nextButtonText;
+    if (isSubmitting) return 'Saving...';
+    if (isLastStep) return 'Done';
+    return 'Next';
+  };
+
   return (
-    <div className="bg-white py-4 px-6 border-t flex justify-between">
+    <div className="flex justify-between items-center pt-4 border-t">
       <Button
         type="button"
         variant="outline"
@@ -47,10 +56,10 @@ export const FormNavigation = ({
         <Button
           type="button"
           onClick={onNext}
-          disabled={isSubmitting || shouldDisablePaymentEdit}
+          disabled={isSubmitting || shouldDisableNext}
           isLoading={isSubmitting}
         >
-          {shouldDisablePaymentEdit ? 'Payment Processed' : isLastStep ? 'Save Changes' : 'Next'}
+          {getNextButtonText()}
         </Button>
       </div>
     </div>
