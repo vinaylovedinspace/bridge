@@ -127,3 +127,5 @@ export type LicenseStepValues = LearningLicenseValues | DrivingLicenseValues;
 export type PlanValues = z.infer<typeof planSchema>;
 export type PaymentValues = z.infer<typeof paymentSchema>;
 export type AdmissionFormValues = z.infer<typeof admissionFormSchema>;
+
+export type AdmissionFormStepKey = 'service' | 'personal' | 'license' | 'plan' | 'payment';

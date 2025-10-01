@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { StepConfig } from '@/features/enrollment/components/progress-bar/progress-bar';
+import { type StepConfig } from '@/components/ui/progress-bar';
 import { PersonalInfoStep } from './steps/personal-info';
 import { ServiceDetailsStep } from './steps/service-details';
 import { rtoServiceFormSchema, type RTOServiceFormData } from '../../schemas/rto-services';
