@@ -197,7 +197,7 @@ export const getClientById = async (
 export const createPlan = async (
   data: PlanValues
 ): Promise<{ error: boolean; message: string } & { planId?: string }> => {
-  const { tenantId } = await getBranchConfig();
+  const { tenantId, id: branchId } = await getBranchConfig();
 
   try {
     // Extract time from the joiningDate and format it as a string
@@ -254,6 +254,7 @@ export const createPlan = async (
       ...parseResult.data,
       joiningDate: dateString, // Pass as YYYY-MM-DD string, no timezone conversion
       joiningTime: timeString, // Explicitly pass the formatted time
+      branchId, // Add branchId to the plan data
     };
 
     // Create or update the plan

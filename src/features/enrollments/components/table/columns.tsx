@@ -3,25 +3,7 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-
-export type Enrollment = {
-  planId: string;
-  planCode: string;
-  clientId: string;
-  clientCode: string;
-  firstName: string;
-  middleName?: string | null;
-  lastName: string;
-  phoneNumber: string;
-  planStatus:
-    | 'NOT_STARTED'
-    | 'WAITING_FOR_LL_TEST'
-    | 'IN_PROGRESS'
-    | 'WAITING_FOR_DL_TEST'
-    | 'COMPLETED';
-  paymentStatus?: 'PENDING' | 'PARTIALLY_PAID' | 'FULLY_PAID' | null;
-  createdAt: Date;
-};
+import { Enrollments } from '@/server/db/enrollment';
 
 const getPaymentStatusBadge = (status?: string | null) => {
   if (!status) {
@@ -65,7 +47,7 @@ const getPlanStatusBadge = (status: string) => {
   }
 };
 
-export const columns: ColumnDef<Enrollment>[] = [
+export const columns: ColumnDef<Enrollments[number]>[] = [
   {
     accessorKey: 'planCode',
     header: 'Plan Code',
@@ -77,14 +59,14 @@ export const columns: ColumnDef<Enrollment>[] = [
     accessorKey: 'clientCode',
     header: 'Client Code',
     cell: ({ row }) => {
-      return <Badge variant="outline">CS-{row.original.clientCode}</Badge>;
+      return <Badge variant="outline">CS-{row.original.client.clientCode}</Badge>;
     },
   },
   {
     accessorKey: 'name',
     header: 'Client Name',
     cell: ({ row }) => {
-      const { firstName, middleName, lastName } = row.original;
+      const { firstName, middleName, lastName } = row.original.client;
       return `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}`;
     },
   },
@@ -96,14 +78,14 @@ export const columns: ColumnDef<Enrollment>[] = [
     accessorKey: 'paymentStatus',
     header: 'Payment Status',
     cell: ({ row }) => {
-      return getPaymentStatusBadge(row.original.paymentStatus);
+      return getPaymentStatusBadge(row.original.payment?.paymentStatus);
     },
   },
   {
     accessorKey: 'planStatus',
     header: 'Plan Status',
     cell: ({ row }) => {
-      return getPlanStatusBadge(row.original.planStatus);
+      return getPlanStatusBadge(row.original.status);
     },
   },
   {

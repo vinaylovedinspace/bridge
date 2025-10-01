@@ -44,13 +44,31 @@ export const columns: ColumnDef<Client>[] = [
     header: 'Phone Number',
   },
   {
-    accessorKey: 'planDetails',
-    header: 'Plan Details',
+    accessorKey: 'serviceType',
+    header: 'Service Type',
+    cell: ({ row }) => {
+      const { plan } = row.original;
+
+      if (!plan || plan.length === 0) {
+        return <Badge variant="secondary">No Plan</Badge>;
+      }
+
+      const clientPlan = plan[0];
+      return (
+        <Badge variant="default" className="bg-blue-500">
+          {clientPlan.serviceType === 'FULL_SERVICE' ? 'Full Service' : 'Driving Only'}
+        </Badge>
+      );
+    },
+  },
+  {
+    accessorKey: 'sessions',
+    header: 'Sessions',
     cell: ({ row }) => {
       const { plan, sessions } = row.original;
 
       if (!plan || plan.length === 0) {
-        return <Badge variant="secondary">No Plan</Badge>;
+        return <span className="text-xs text-gray-500">-</span>;
       }
 
       const clientPlan = plan[0];
@@ -59,20 +77,25 @@ export const columns: ColumnDef<Client>[] = [
       const pendingSessions = totalSessions - completedSessions;
 
       return (
-        <div className="flex flex-col gap-1">
-          <div className="flex gap-2 items-center">
-            <Badge variant="default" className="bg-blue-500">
-              {clientPlan.serviceType === 'FULL_SERVICE' ? 'Full Service' : 'Driving Only'}
-            </Badge>
-          </div>
-          <div className="text-xs text-gray-600">
-            Sessions: {completedSessions}/{totalSessions} ({pendingSessions} pending)
-          </div>
-          <div className="text-xs text-gray-500">
-            Joined: {new Date(clientPlan.joiningDate).toLocaleDateString()}
-          </div>
+        <div className="text-sm">
+          {completedSessions}/{totalSessions}{' '}
+          <span className="text-xs text-gray-500">({pendingSessions} pending)</span>
         </div>
       );
+    },
+  },
+  {
+    accessorKey: 'joiningDate',
+    header: 'Joining Date',
+    cell: ({ row }) => {
+      const { plan } = row.original;
+
+      if (!plan || plan.length === 0) {
+        return <span className="text-xs text-gray-500">-</span>;
+      }
+
+      const clientPlan = plan[0];
+      return <div className="text-sm">{new Date(clientPlan.joiningDate).toLocaleDateString()}</div>;
     },
   },
 ];

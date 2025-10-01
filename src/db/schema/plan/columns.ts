@@ -25,6 +25,7 @@ export const PlanTable = pgTable('plans', {
   status: PlanEnum().notNull().default('NOT_STARTED'),
 
   paymentId: uuid('payment_id').unique(),
+  branchId: uuid('branch_id').notNull(),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

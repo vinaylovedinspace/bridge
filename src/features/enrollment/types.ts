@@ -132,8 +132,7 @@ export const createPlanSchema = (operatingHours?: { start: string; end: string }
   });
 };
 
-// Default plan schema for backward compatibility
-export const planSchema = basePlanSchema.omit({ planCode: true });
+export const planSchema = basePlanSchema.omit({ planCode: true, branchId: true });
 
 export const paymentSchema = createInsertSchema(PaymentTable, {
   discount: z.number().default(0),
