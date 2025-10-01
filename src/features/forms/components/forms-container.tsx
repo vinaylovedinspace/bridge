@@ -2,7 +2,7 @@
 
 import { useQueryState } from 'nuqs';
 import { useMemo } from 'react';
-import type { Client } from '@/server/db/client';
+import type { Client, ClientDetail } from '@/server/db/client';
 import { FormCard } from './form-card';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -75,7 +75,7 @@ const primaryForms: FormItem[] = [
 ];
 
 type FormsContainerProps = {
-  clients: Client[];
+  clients: ClientDetail;
 };
 
 export function FormsContainer({ clients }: FormsContainerProps) {
@@ -101,14 +101,14 @@ export function FormsContainer({ clients }: FormsContainerProps) {
     }
   };
 
-  const getClientDisplayName = (client: Client) => {
+  const getClientDisplayName = (client: ClientDetail[number]) => {
     const middleName = client.middleName ? ` ${client.middleName}` : '';
     return `${client.firstName}${middleName} ${client.lastName} (${client.clientCode})`;
   };
 
   const clientOptions: ComboboxOption[] = useMemo(
     () =>
-      clients.map((client) => ({
+      clients.map((client: ClientDetail[number]) => ({
         value: client.id,
         label: getClientDisplayName(client),
       })),

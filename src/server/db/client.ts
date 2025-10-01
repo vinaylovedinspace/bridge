@@ -46,12 +46,7 @@ const _getClients = async (branchId: string, name?: string, needsLearningTest?: 
 };
 
 export const getClients = async (name?: string, needsLearningTest?: boolean) => {
-  const { userId } = await auth();
   const { id: branchId } = await getBranchConfig();
-
-  if (!userId || !branchId) {
-    return [];
-  }
 
   return await _getClients(branchId, name, needsLearningTest);
 };
@@ -70,20 +65,15 @@ export const getClient = async (clientId: string) => {
 const _getClient = async (branchId: string, clientId: string) => {
   const client = await db.query.ClientTable.findFirst({
     where: and(eq(ClientTable.branchId, branchId), eq(ClientTable.id, clientId)),
-    columns: {
-      id: true,
-      firstName: true,
-      middleName: true,
-      lastName: true,
-      phoneNumber: true,
-      clientCode: true,
-      createdAt: true,
-    },
     with: {
       sessions: true,
       learningLicense: true,
       drivingLicense: true,
-      plan: true,
+      plan: {
+        with: {
+          vehicle: true,
+        },
+      },
     },
   });
 
@@ -202,7 +192,7 @@ export const getAdmissionStatistics = async (months: number = 6) => {
   return await _getAdmissionStatistics(branchId, months);
 };
 
-export type Client = Awaited<ReturnType<typeof getClients>>[0];
+export type Client = Awaited<ReturnType<typeof getClient>>;
 export type ClientDetail = Awaited<ReturnType<typeof getClients>>;
 export type ClientWithUnassignedSessions = Awaited<
   ReturnType<typeof getClientsWithUnassignedSessions>

@@ -74,7 +74,7 @@ const combineDateAndTime = (dateString: string, timeString: string): Date => {
   return date;
 };
 
-export const transformClientToFormData = (
+export const getDefaultValuesForEnrollmentForm = (
   enrollment: NonNullable<Enrollment>
 ): AdmissionFormValues => {
   const { client, payment } = enrollment;

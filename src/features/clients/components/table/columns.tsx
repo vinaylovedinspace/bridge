@@ -2,6 +2,8 @@
 
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export type Client = {
   id: string;
@@ -28,7 +30,14 @@ export const columns: ColumnDef<Client>[] = [
     accessorKey: 'clientCode',
     header: 'Client Code',
     cell: ({ row }) => {
-      return <Badge variant="outline">CS-{row.original.clientCode}</Badge>;
+      const { id, clientCode } = row.original;
+      return (
+        <Link href={`/clients/${id}`}>
+          <Badge variant="outline" className="cursor-pointer hover:bg-gray-100">
+            CS-{clientCode}
+          </Badge>
+        </Link>
+      );
     },
   },
   {
@@ -96,6 +105,25 @@ export const columns: ColumnDef<Client>[] = [
 
       const clientPlan = plan[0];
       return <div className="text-sm">{new Date(clientPlan.joiningDate).toLocaleDateString()}</div>;
+    },
+  },
+  {
+    id: 'actions',
+    header: 'Actions',
+    cell: ({ row }) => {
+      const { plan, id } = row.original;
+
+      if (!plan || plan.length === 0) {
+        return (
+          <Link href={`/enrollment?clientId=${id}`}>
+            <Button size="sm" variant="outline" onClick={(e) => e.preventDefault()}>
+              Complete Enrollment
+            </Button>
+          </Link>
+        );
+      }
+
+      return null;
     },
   },
 ];

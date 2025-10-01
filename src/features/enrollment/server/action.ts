@@ -2,11 +2,8 @@
 
 import { z } from 'zod';
 import {
-  learningLicenseSchema,
   LearningLicenseValues,
   DrivingLicenseValues,
-  personalInfoSchema,
-  drivingLicenseSchema,
   PlanValues,
   planSchema,
   paymentSchema,
@@ -42,6 +39,8 @@ import {
   CreatePaymentLinkRequest,
   PaymentLinkResult,
 } from '@/lib/cashfree/payment-links';
+import { personalInfoSchema } from '@/types/zod/client';
+import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
 
 export const createClient = async (
   unsafeData: z.infer<typeof personalInfoSchema>

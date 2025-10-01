@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import { AdmissionFormStepKey } from '@/features/enrollment/components/progress-bar/progress-bar';
-import { transformClientToFormData } from '../lib/utils';
+import { getDefaultValuesForEnrollmentForm } from '../lib/utils';
 import { Enrollment } from '@/server/db/plan';
 import { AdmissionFormValues } from '@/features/enrollment/types';
 
@@ -18,7 +18,7 @@ export const useUnsavedChanges = (
 
   const { reset, getValues, watch } = methods;
   const watchedValues = watch();
-  const originalValues = transformClientToFormData(enrollment);
+  const originalValues = getDefaultValuesForEnrollmentForm(enrollment);
 
   const getCurrentStepValues = (stepKey: AdmissionFormStepKey) => {
     switch (stepKey) {
