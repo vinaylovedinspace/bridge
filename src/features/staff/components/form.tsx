@@ -448,9 +448,9 @@ export function StaffForm({ staff }: { staff?: Staff }) {
                   name="licenseNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel required>License Number</FormLabel>
+                      <FormLabel required>Licence Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter license number" type="text" {...field} />
+                        <Input placeholder="Enter licence number" type="text" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -464,7 +464,7 @@ export function StaffForm({ staff }: { staff?: Staff }) {
                   name="licenseIssueDate"
                   render={() => (
                     <FormItem>
-                      <FormLabel required>License Issue Date</FormLabel>
+                      <FormLabel required>Licence Issue Date</FormLabel>
                       <FormControl>
                         <DatePicker
                           name="licenseIssueDate"

@@ -63,7 +63,7 @@ export async function fillAndFlattenPdf(
   // Note: Flattening is disabled because it causes checkboxes to disappear
   // The PDF will remain editable but all fields will be filled
   // To make it non-editable, you need to fix the PDF template's appearance streams
-  // form.flatten();
+  form.flatten();
 
   // Convert to base64
   return pdfToBase64(pdfDoc);

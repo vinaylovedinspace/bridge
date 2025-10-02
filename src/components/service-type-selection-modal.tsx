@@ -46,8 +46,8 @@ export const ServiceTypeSelectionModal = ({ isOpen, onClose }: ServiceTypeSelect
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Full Service Package</h3>
                   <ul className="text-sm text-gray-600 space-y-2 text-left">
-                    <li>• We handle your license applications</li>
-                    <li>• Learner&apos;s → Driving license process</li>
+                    <li>• We handle your licence applications</li>
+                    <li>• Learner&apos;s → Driving licence process</li>
                     <li>• Professional driving training</li>
                     <li>• Documentation support</li>
                     <li>• End-to-end service</li>
@@ -76,8 +76,8 @@ export const ServiceTypeSelectionModal = ({ isOpen, onClose }: ServiceTypeSelect
                   </h3>
                   <ul className="text-sm text-gray-600 space-y-2 text-left">
                     <li>• Professional driving lessons</li>
-                    <li>• You manage your own licenses</li>
-                    <li>• Perfect for existing license holders</li>
+                    <li>• You manage your own licences</li>
+                    <li>• Perfect for existing licence holders</li>
                     <li>• Flexible training schedule</li>
                     <li>• Cost-effective option</li>
                   </ul>

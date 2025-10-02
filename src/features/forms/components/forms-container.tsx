@@ -58,7 +58,7 @@ const primaryForms: FormItem[] = [
     description:
       'Required along with your valid DL, Medical Certificate, passport & visa copies, photos & applicable fees',
     fileName: 'form-4a.pdf',
-    sections: ['Personal Info', 'Driving License', 'Passport', '+1'],
+    sections: ['Personal Info', 'Driving Licence', 'Passport', '+1'],
   },
   {
     id: 'form-5',

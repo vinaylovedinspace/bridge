@@ -80,12 +80,12 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
 
       return {
         error: false,
-        message: 'License information updated successfully',
+        message: 'Licence information updated successfully',
       };
     } catch {
       return Promise.resolve({
         error: true,
-        message: 'An unexpected error occurred while processing license data',
+        message: 'An unexpected error occurred while processing licence data',
       });
     }
   };

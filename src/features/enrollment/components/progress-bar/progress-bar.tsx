@@ -9,7 +9,7 @@ import { AdmissionFormStepKey } from '@/features/enrollment/types';
 export const ADMISSION_STEPS: StepConfig<AdmissionFormStepKey>[] = [
   { key: 'service', label: 'Service Type' },
   { key: 'personal', label: 'Personal Info' },
-  { key: 'license', label: 'License' },
+  { key: 'license', label: 'Licence' },
   { key: 'plan', label: 'Plan' },
   { key: 'payment', label: 'Payment' },
 ];

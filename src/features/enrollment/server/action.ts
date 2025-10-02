@@ -86,7 +86,7 @@ export const createLearningLicense = async (data: LearningLicenseValues): Action
     const parseResult = learningLicenseSchema.safeParse(data);
 
     if (!parseResult.success) {
-      return { error: true, message: 'Invalid learning license data' };
+      return { error: true, message: 'Invalid learning licence data' };
     }
 
     // Ensure clientId is present for database operation
@@ -111,11 +111,11 @@ export const createLearningLicense = async (data: LearningLicenseValues): Action
     const action = isExistingLicense ? 'updated' : 'created';
     return {
       error: false,
-      message: `Learning license ${action} successfully`,
+      message: `Learning licence ${action} successfully`,
     };
   } catch (error) {
     console.error('Error processing learning license data:', error);
-    return { error: true, message: 'Failed to save learning license information' };
+    return { error: true, message: 'Failed to save learning licence information' };
   }
 };
 
@@ -132,7 +132,7 @@ export const createDrivingLicense = async (data: DrivingLicenseValues): ActionRe
       );
       return {
         error: true,
-        message: `Invalid driving license data: ${parseResult.error.issues.map((i) => i.message).join(', ')}`,
+        message: `Invalid driving licence data: ${parseResult.error.issues.map((i) => i.message).join(', ')}`,
       };
     }
 
@@ -158,11 +158,11 @@ export const createDrivingLicense = async (data: DrivingLicenseValues): ActionRe
     const action = isExistingLicense ? 'updated' : 'created';
     return {
       error: false,
-      message: `Driving license ${action} successfully`,
+      message: `Driving licence ${action} successfully`,
     };
   } catch (error) {
     console.error('Error processing driving license data:', error);
-    return { error: true, message: 'Failed to save driving license information' };
+    return { error: true, message: 'Failed to save driving licence information' };
   }
 };
 

@@ -50,7 +50,6 @@ export const form2FieldNames = {
   gender_male: 'gender_male',
   gender_female: 'gender_female',
   gender_transgender: 'gender_transgender',
-  checkbox_80odhy: 'checkbox_80odhy',
   relationship_guardian: 'relationship_guardian',
   relationship_mother: 'relationship_mother',
   relationship_father: 'relationship_father',
@@ -71,9 +70,7 @@ export const form2FieldNames = {
   validity_period_to: 'validity_period_to',
   declaration_donate_organ_yes: 'declaration_donate_organ_yes',
   declaration_donate_organ_no: 'declaration_donate_organ_no',
-  declaration_name: 'declaration_name',
-  declaration_guardian_name: 'declaration_guardian_name',
-  declaration_guardian_relationship: 'declaration_guardian_relationship',
+
   declaration_designation: 'declaration_designation',
   declaration_epilepsy_yes: 'declaration_epilepsy_yes',
   declaration_epilepsy_no: 'declaration_epilepsy_no',
@@ -87,4 +84,7 @@ export const form2FieldNames = {
   declaration_deaf_no: 'declaration_deaf_no',
   declaration_other_disability_yes: 'declaration_other_disability_yes',
   declaration_other_disability_no: 'declaration_other_disability_no',
+  declaration_name: 'declaration_name',
+  declaration_guardian_name: 'declaration_guardian_name',
+  declaration_guardian_relationship: 'declaration_guardian_relationship',
 };

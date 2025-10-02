@@ -132,10 +132,10 @@ export const ServiceDetailsStep = () => {
             name="existingLicenseNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>License Number</FormLabel>
+                <FormLabel>Licence Number</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Enter license number"
+                    placeholder="Enter licence number"
                     value={field.value || ''}
                     onChange={field.onChange}
                   />

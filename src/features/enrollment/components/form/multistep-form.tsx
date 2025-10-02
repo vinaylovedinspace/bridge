@@ -161,30 +161,30 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
         if (learningResult && drivingResult) {
           return {
             error: false,
-            message: 'Learning and driving license information saved successfully',
+            message: 'Learning and driving licence information saved successfully',
           };
         } else if (learningResult) {
           return {
             error: false,
-            message: 'Learning license information saved successfully',
+            message: 'Learning licence information saved successfully',
           };
         } else if (drivingResult) {
           return {
             error: false,
-            message: 'Driving license information saved successfully',
+            message: 'Driving licence information saved successfully',
           };
         }
 
         // If no licenses were processed, allow progression (licenses are optional)
         return {
           error: false,
-          message: 'License step completed',
+          message: 'Licence step completed',
         };
       } catch (error) {
         console.error('Error processing license data:', error);
         return Promise.resolve({
           error: true,
-          message: 'An unexpected error occurred while processing license data',
+          message: 'An unexpected error occurred while processing licence data',
         });
       }
     },

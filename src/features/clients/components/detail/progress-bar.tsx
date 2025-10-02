@@ -6,7 +6,7 @@ export type ClientDetailStepKey = 'personal' | 'license' | 'plans';
 
 const CLIENT_DETAIL_STEPS: StepConfig<ClientDetailStepKey>[] = [
   { key: 'personal', label: 'Personal Info' },
-  { key: 'license', label: 'License' },
+  { key: 'license', label: 'Licence' },
   { key: 'plans', label: 'Plans' },
 ];
 

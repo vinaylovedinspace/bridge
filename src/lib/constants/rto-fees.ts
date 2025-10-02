@@ -74,19 +74,19 @@ export const RTO_SERVICE_FEES = {
     governmentFees: 200,
     serviceCharge: 800,
     urgentFees: 300,
-    description: 'Driving License Renewal',
+    description: 'Driving Licence Renewal',
   },
   ADDRESS_CHANGE: {
     governmentFees: 100,
     serviceCharge: 500,
     urgentFees: 200,
-    description: 'Address Change on License',
+    description: 'Address Change on Licence',
   },
   DUPLICATE_LICENSE: {
     governmentFees: 200,
     serviceCharge: 600,
     urgentFees: 300,
-    description: 'Duplicate License Issuance',
+    description: 'Duplicate Licence Issuance',
   },
   INTERNATIONAL_PERMIT: {
     governmentFees: 1000,
@@ -98,13 +98,13 @@ export const RTO_SERVICE_FEES = {
     governmentFees: 650, // Learning + Driving
     serviceCharge: 1200,
     urgentFees: 400,
-    description: 'New Driving License (Learning + Permanent)',
+    description: 'New Driving Licence (Learning + Permanent)',
   },
   LEARNER_LICENSE: {
     governmentFees: 200,
     serviceCharge: 600,
     urgentFees: 200,
-    description: 'Learner License Only',
+    description: 'Learner Licence Only',
   },
   CATEGORY_ADDITION: {
     governmentFees: 1016,
@@ -116,19 +116,19 @@ export const RTO_SERVICE_FEES = {
     governmentFees: 200,
     serviceCharge: 800,
     urgentFees: 300,
-    description: 'Transfer License to Another State',
+    description: 'Transfer Licence to Another State',
   },
   NAME_CHANGE: {
     governmentFees: 100,
     serviceCharge: 500,
     urgentFees: 200,
-    description: 'Name Change on License',
+    description: 'Name Change on Licence',
   },
   ENDORSEMENT_REMOVAL: {
     governmentFees: 200,
     serviceCharge: 600,
     urgentFees: 250,
-    description: 'Remove Endorsement from License',
+    description: 'Remove Endorsement from Licence',
   },
 } as const;
 

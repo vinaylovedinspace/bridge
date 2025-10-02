@@ -42,7 +42,7 @@ export const staffFormSchema = z
       return true;
     },
     {
-      message: 'License number is required for instructors',
+      message: 'Licence number is required for instructors',
       path: ['licenseNumber'],
     }
   )
@@ -55,7 +55,7 @@ export const staffFormSchema = z
       return true;
     },
     {
-      message: 'License issue date is required for instructors',
+      message: 'Licence issue date is required for instructors',
       path: ['licenseIssueDate'],
     }
   )

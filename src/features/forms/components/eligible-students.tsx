@@ -85,8 +85,8 @@ export function EligibleStudents({ list, type: inputType }: EligibleStudentsClie
           className="w-full "
         >
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="ll">Learning License (LL)</TabsTrigger>
-            <TabsTrigger value="dl">Driving License (DL)</TabsTrigger>
+            <TabsTrigger value="ll">Learning Licence (LL)</TabsTrigger>
+            <TabsTrigger value="dl">Driving Licence (DL)</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -96,8 +96,8 @@ export function EligibleStudents({ list, type: inputType }: EligibleStudentsClie
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             {type === 'll'
-              ? "Students for Learner's License Application"
-              : 'Eligible Students for Driver License Application'}
+              ? "Students for Learner's Licence Application"
+              : 'Eligible Students for Driver Licence Application'}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

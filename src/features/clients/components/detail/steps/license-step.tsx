@@ -14,17 +14,17 @@ export const LicenseStep = () => {
     <div className="space-y-10">
       {/* Learning License Section */}
       <div className="grid grid-cols-12">
-        <TypographyH5 className="col-span-3">Learning License</TypographyH5>
+        <TypographyH5 className="col-span-3">Learning Licence</TypographyH5>
         <div className="grid grid-cols-3 col-span-9 gap-6">
           <FormField
             control={control}
             name="learningLicense.licenseNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>License Number</FormLabel>
+                <FormLabel>Licence Number</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="License number"
+                    placeholder="Licence number"
                     value={field.value || ''}
                     onChange={field.onChange}
                   />
@@ -112,17 +112,17 @@ export const LicenseStep = () => {
 
       {/* Driving License Section */}
       <div className="grid grid-cols-12">
-        <TypographyH5 className="col-span-3">Driving License</TypographyH5>
+        <TypographyH5 className="col-span-3">Driving Licence</TypographyH5>
         <div className="grid grid-cols-3 col-span-9 gap-6">
           <FormField
             control={control}
             name="drivingLicense.licenseNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>License Number</FormLabel>
+                <FormLabel>Licence Number</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="License number"
+                    placeholder="Licence number"
                     value={field.value || ''}
                     onChange={field.onChange}
                   />

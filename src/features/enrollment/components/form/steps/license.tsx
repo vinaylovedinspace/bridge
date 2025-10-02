@@ -42,7 +42,7 @@ export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: Lic
     <div className="space-y-10">
       {/* License Classes - Always show, but change behavior based on service type */}
       <div className="grid grid-cols-12">
-        <TypographyH5 className="col-span-3">License Classes</TypographyH5>
+        <TypographyH5 className="col-span-3">Licence Classes</TypographyH5>
         <div className="col-span-4">
           <FormField
             control={control}
@@ -50,13 +50,13 @@ export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: Lic
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>
-                  {serviceType === 'DRIVING_ONLY' ? 'License Class' : 'Applying for'}
+                  {serviceType === 'DRIVING_ONLY' ? 'Licence Class' : 'Applying for'}
                 </FormLabel>
                 <MultiSelect
                   options={LICENSE_CLASS_OPTIONS}
                   onValueChange={field.onChange}
                   defaultValue={field.value}
-                  placeholder="Select license classes"
+                  placeholder="Select licence classes"
                   maxCount={5}
                 />
                 <FormMessage />
@@ -68,7 +68,7 @@ export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: Lic
           {selectedLicenseClasses.length > 0 && serviceType !== 'DRIVING_ONLY' && (
             <div className="text-right h-full flex flex-col justify-end">
               <div className="text-sm text-gray-600">
-                Estimated License Fees:{' '}
+                Estimated Licence Fees:{' '}
                 <span className="text-lg font-semibold text-blue-700">₹{feeCalculation.total}</span>
               </div>
 
@@ -82,17 +82,17 @@ export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: Lic
 
       {/* Learning License Section */}
       <div className="grid grid-cols-12">
-        <TypographyH5 className="col-span-3">Learning License</TypographyH5>
+        <TypographyH5 className="col-span-3">Learning Licence</TypographyH5>
         <div className="grid grid-cols-3 col-span-9 gap-6">
           <FormField
             control={control}
             name="learningLicense.licenseNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>License Number</FormLabel>
+                <FormLabel>Licence Number</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="License number"
+                    placeholder="Licence number"
                     value={field.value || ''}
                     onChange={field.onChange}
                   />
@@ -180,17 +180,17 @@ export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: Lic
 
       {/* Driving License Section */}
       <div className="grid grid-cols-12">
-        <TypographyH5 className="col-span-3">Driving License</TypographyH5>
+        <TypographyH5 className="col-span-3">Driving Licence</TypographyH5>
         <div className="grid grid-cols-3 col-span-9 gap-6">
           <FormField
             control={control}
             name="drivingLicense.licenseNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>License Number</FormLabel>
+                <FormLabel>Licence Number</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="License number"
+                    placeholder="Licence number"
                     value={field.value || ''}
                     onChange={field.onChange}
                   />

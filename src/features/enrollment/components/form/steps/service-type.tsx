@@ -15,13 +15,13 @@ const serviceTypeOptions = [
   {
     value: 'FULL_SERVICE' as const,
     label: 'Full Service Package',
-    description: 'We handle your license applications + professional driving training',
+    description: 'We handle your licence applications + professional driving training',
     icon: GraduationCap,
   },
   {
     value: 'DRIVING_ONLY' as const,
     label: 'Driving Training Only',
-    description: 'Professional driving lessons - we collect license info for our records',
+    description: 'Professional driving lessons - we collect licence info for our records',
     icon: Car,
   },
 ];

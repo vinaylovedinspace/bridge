@@ -216,10 +216,10 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
               <IndianRupee className="h-5 w-5" />
-              License Service Fee
+              Licence Service Fee
             </CardTitle>
             <CardDescription>
-              Set the service fee amount charged for handling license applications for
+              Set the service fee amount charged for handling licence applications for
               students/clients
             </CardDescription>
           </CardHeader>
@@ -245,8 +245,8 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
                 <strong>Current service fee:</strong> ₹{licenseServiceCharge || 500}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                This amount will be added to license applications when the branch handles the
-                license process
+                This amount will be added to licence applications when the branch handles the
+                licence process
               </p>
             </div>
           </CardContent>
