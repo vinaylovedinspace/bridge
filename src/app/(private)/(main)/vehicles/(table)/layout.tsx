@@ -14,9 +14,9 @@ export default function VehiclesTableLayout({ children }: { children: React.Reac
           <VehicleSearchBar />
         </Suspense>
         <Link href="/vehicles/add" id="add-vehicle">
-          <Button>
-            <Plus className="h-4 w-4" />
-            Add Vehicle
+          <Button variant="outline">
+            <Plus className="h-3 w-3" />
+            Add
           </Button>
         </Link>
       </div>

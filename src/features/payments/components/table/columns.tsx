@@ -32,6 +32,13 @@ const formatDate = (date?: Date | null) => {
 
 export const columns: ColumnDef<Payment>[] = [
   {
+    accessorKey: 'clientCode',
+    header: 'Client Code',
+    cell: ({ row }) => {
+      return <Badge variant="outline">CS-{row.original.clientCode}</Badge>;
+    },
+  },
+  {
     accessorKey: 'clientName',
     header: 'Name',
   },
@@ -77,9 +84,5 @@ export const columns: ColumnDef<Payment>[] = [
     cell: ({ row }) => {
       return formatDate(row.original.lastPaymentDate);
     },
-  },
-  {
-    accessorKey: 'clientCode',
-    header: 'Client Code',
   },
 ];

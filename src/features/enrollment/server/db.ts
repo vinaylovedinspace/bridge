@@ -149,30 +149,43 @@ export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert) 
   // Create a variable to track if this was an update operation
   let isExistingPayment = false;
 
-  const [payment] = await db
-    .insert(PaymentTable)
-    .values(data)
-    .onConflictDoUpdate({
-      target: PaymentTable.planId,
-      set: {
-        ...data,
+  const response = await db.transaction(async (tx) => {
+    const [payment] = await tx
+      .insert(PaymentTable)
+      .values(data)
+      .onConflictDoUpdate({
+        target: PaymentTable.planId,
+        set: {
+          ...data,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+
+    await tx
+      .update(PlanTable)
+      .set({
+        paymentId: payment.id,
         updatedAt: new Date(),
-      },
-    })
-    .returning();
+      })
+      .where(eq(PlanTable.id, data.planId))
+      .returning();
 
-  // Check if this was an update by comparing createdAt and updatedAt
-  // If they're different by more than a few seconds, it was an update
-  if (payment.createdAt && payment.updatedAt) {
-    const timeDiff = Math.abs(payment.updatedAt.getTime() - payment.createdAt.getTime());
-    isExistingPayment = timeDiff > 1000; // More than 1 second difference
-  }
+    // Check if this was an update by comparing createdAt and updatedAt
+    // If they're different by more than a few seconds, it was an update
+    if (payment.createdAt && payment.updatedAt) {
+      const timeDiff = Math.abs(payment.updatedAt.getTime() - payment.createdAt.getTime());
+      isExistingPayment = timeDiff > 1000; // More than 1 second difference
+    }
 
-  return {
-    payment,
-    isExistingPayment,
-    paymentId: payment.id,
-  };
+    return {
+      payment,
+      isExistingPayment,
+      paymentId: payment.id,
+    };
+  });
+
+  return response;
 };
 
 export const getClientById = async (clientId: string) => {

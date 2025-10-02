@@ -17,8 +17,8 @@ const getPaymentStatusBadge = (status?: string | null) => {
       return <Badge variant="secondary">Partially Paid</Badge>;
     case 'FULLY_PAID':
       return (
-        <Badge variant="default" className="bg-green-500 font-bold">
-          Fully Paid
+        <Badge variant="default" className="bg-green-600 font-bold">
+          PAID
         </Badge>
       );
     default:
@@ -73,6 +73,10 @@ export const columns: ColumnDef<Enrollments[number]>[] = [
   {
     accessorKey: 'phoneNumber',
     header: 'Phone Number',
+    cell: ({ row }) => {
+      const { phoneNumber } = row.original.client;
+      return phoneNumber;
+    },
   },
   {
     accessorKey: 'paymentStatus',

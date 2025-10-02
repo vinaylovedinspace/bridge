@@ -5,6 +5,7 @@ import { getEnrollments } from '@/server/db/enrollment';
 
 export async function Enrollments() {
   const data = await getEnrollments();
+  console.log(data);
 
   return (
     <Suspense fallback={<div>Loading...</div>}>

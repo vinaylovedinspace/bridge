@@ -39,7 +39,7 @@ export const PlansStep = ({ client }: PlansStepProps) => {
         </Badge>
       </div>
       <div className="grid gap-5">
-        {plans.map((plan, index) => {
+        {plans.map((plan) => {
           const completedSessions =
             client.sessions?.filter((s) => s.planId === plan.id && s.status === 'COMPLETED')
               .length || 0;
@@ -48,7 +48,7 @@ export const PlansStep = ({ client }: PlansStepProps) => {
 
           return (
             <Card key={plan.id} className="overflow-hidden border-l-4 border-l-primary">
-              <CardHeader className="pb-3">
+              <CardHeader>
                 <CardTitle className="flex items-center justify-end text-lg">
                   <Badge variant={plan.serviceType === 'FULL_SERVICE' ? 'default' : 'secondary'}>
                     {plan.serviceType === 'FULL_SERVICE' ? 'Full Service' : 'Driving Only'}
