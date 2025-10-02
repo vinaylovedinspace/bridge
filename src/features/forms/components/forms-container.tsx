@@ -2,12 +2,22 @@
 
 import { useQueryState } from 'nuqs';
 import { useMemo } from 'react';
-import type { Client, ClientDetail } from '@/server/db/client';
+import type { ClientDetail } from '@/server/db/client';
 import { FormCard } from './form-card';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { fillForm1A } from '@/features/forms/server/actions/form-1A';
+import { downloadPdfFromBase64, printPdfFromBase64 } from '@/features/forms/lib/utils';
+import { toast } from 'sonner';
+
+type FormServerAction = (clientId: string) => Promise<{
+  success: boolean;
+  pdfData?: string;
+  fileName?: string;
+  error?: string;
+}>;
 
 type FormItem = {
   id: string;
@@ -16,6 +26,7 @@ type FormItem = {
   description: string;
   fileName: string;
   sections: string[];
+  serverAction?: FormServerAction;
 };
 
 const primaryForms: FormItem[] = [
@@ -27,11 +38,12 @@ const primaryForms: FormItem[] = [
       'Required for applicants aged 40+, or those applying for commercial (transport) licences',
     fileName: 'form-1a.pdf',
     sections: ['Personal Info', 'Medical Details', 'Age Verification'],
+    serverAction: fillForm1A,
   },
   {
     id: 'form-2',
     name: 'Form 2',
-    title: 'Application for Learners Licence',
+    title: 'Application for Licence',
     description:
       'Covers new learners licence, permanent licence, addition of vehicle class, renewal, duplicate licence, and change/correction of DL',
     fileName: 'form-2.pdf',
@@ -83,7 +95,27 @@ export function FormsContainer({ clients }: FormsContainerProps) {
     shallow: false,
   });
 
-  const handleDownload = (fileName: string) => {
+  const handleDownload = async (fileName: string, serverAction?: FormServerAction) => {
+    if (!selectedClient) return;
+
+    // If form has a server action, use it to fill the PDF
+    if (serverAction) {
+      try {
+        const result = await serverAction(selectedClient);
+
+        if (result.success && result.pdfData) {
+          downloadPdfFromBase64(result.pdfData, result.fileName || fileName);
+        } else {
+          toast.error(result.error || 'Failed to fill PDF');
+        }
+      } catch (error) {
+        toast.error('Failed to download form');
+        console.error('Download error:', error);
+      }
+      return;
+    }
+
+    // Default behavior for forms without server action
     const link = document.createElement('a');
     link.href = `/${fileName}`;
     link.download = fileName;
@@ -92,7 +124,27 @@ export function FormsContainer({ clients }: FormsContainerProps) {
     document.body.removeChild(link);
   };
 
-  const handlePrint = (fileName: string) => {
+  const handlePrint = async (fileName: string, serverAction?: FormServerAction) => {
+    if (!selectedClient) return;
+
+    // If form has a server action, use it to fill the PDF
+    if (serverAction) {
+      try {
+        const result = await serverAction(selectedClient);
+
+        if (result.success && result.pdfData) {
+          printPdfFromBase64(result.pdfData);
+        } else {
+          toast.error(result.error || 'Failed to fill PDF');
+        }
+      } catch (error) {
+        toast.error('Failed to print form');
+        console.error('Print error:', error);
+      }
+      return;
+    }
+
+    // Default behavior for forms without server action
     const printWindow = window.open(`/${fileName}`, '_blank');
     if (printWindow) {
       printWindow.onload = () => {
@@ -153,8 +205,8 @@ export function FormsContainer({ clients }: FormsContainerProps) {
                   key={form.id}
                   form={form}
                   selectedClient={selectedClient}
-                  onPrint={handlePrint}
-                  onDownload={handleDownload}
+                  onPrint={(fileName) => handlePrint(fileName, form.serverAction)}
+                  onDownload={(fileName) => handleDownload(fileName, form.serverAction)}
                 />
               ))}
             </div>
