@@ -46,9 +46,15 @@ export async function addRTOService(
       tenantId,
       birthDate: data.clientInfo.birthDate.toISOString().split('T')[0], // Convert to YYYY-MM-DD
       // Handle permanent address - use current address if same
-      permanentAddress: data.clientInfo.isCurrentAddressSameAsPermanentAddress
-        ? data.clientInfo.address
-        : data.clientInfo.permanentAddress || data.clientInfo.address,
+      permanentAddressLine1: data.clientInfo.isCurrentAddressSameAsPermanentAddress
+        ? data.clientInfo.addressLine1
+        : data.clientInfo.permanentAddressLine1 || data.clientInfo.addressLine1,
+      permanentAddressLine2: data.clientInfo.isCurrentAddressSameAsPermanentAddress
+        ? data.clientInfo.addressLine2
+        : data.clientInfo.permanentAddressLine2 || data.clientInfo.addressLine2,
+      permanentAddressLine3: data.clientInfo.isCurrentAddressSameAsPermanentAddress
+        ? data.clientInfo.addressLine3
+        : data.clientInfo.permanentAddressLine3 || data.clientInfo.addressLine3,
       permanentCity: data.clientInfo.isCurrentAddressSameAsPermanentAddress
         ? data.clientInfo.city
         : data.clientInfo.permanentCity || data.clientInfo.city,
@@ -117,9 +123,15 @@ export async function updateRTOService(
         ...data.clientInfo,
         birthDate: data.clientInfo.birthDate.toISOString().split('T')[0],
         // Handle permanent address - use current address if same
-        permanentAddress: data.clientInfo.isCurrentAddressSameAsPermanentAddress
-          ? data.clientInfo.address
-          : data.clientInfo.permanentAddress || data.clientInfo.address,
+        permanentAddressLine1: data.clientInfo.isCurrentAddressSameAsPermanentAddress
+          ? data.clientInfo.addressLine1
+          : data.clientInfo.permanentAddressLine1 || data.clientInfo.addressLine1,
+        permanentAddressLine2: data.clientInfo.isCurrentAddressSameAsPermanentAddress
+          ? data.clientInfo.addressLine2
+          : data.clientInfo.permanentAddressLine2 || data.clientInfo.addressLine2,
+        permanentAddressLine3: data.clientInfo.isCurrentAddressSameAsPermanentAddress
+          ? data.clientInfo.addressLine3
+          : data.clientInfo.permanentAddressLine3 || data.clientInfo.addressLine3,
         permanentCity: data.clientInfo.isCurrentAddressSameAsPermanentAddress
           ? data.clientInfo.city
           : data.clientInfo.permanentCity || data.clientInfo.city,

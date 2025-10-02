@@ -29,7 +29,9 @@ export const RTOClientTable = pgTable(
     emergencyContactName: text('emergency_contact_name'),
 
     // Current address
-    address: text('address').notNull(),
+    addressLine1: text('address_line_1').notNull(), // House/Door/Flat No
+    addressLine2: text('address_line_2').notNull(), // Street/Locality/Police Station
+    addressLine3: text('address_line_3'), // Location/Landmark
     city: text('city').notNull(),
     state: text('state').notNull(),
     pincode: text('pincode').notNull(),
@@ -38,7 +40,9 @@ export const RTOClientTable = pgTable(
     isCurrentAddressSameAsPermanentAddress: boolean(
       'is_current_address_same_as_permanent_address'
     ).default(true),
-    permanentAddress: text('permanent_address'),
+    permanentAddressLine1: text('permanent_address_line_1'), // House/Door/Flat No
+    permanentAddressLine2: text('permanent_address_line_2'), // Street/Locality/Police Station
+    permanentAddressLine3: text('permanent_address_line_3'), // Location/Landmark
     permanentCity: text('permanent_city'),
     permanentState: text('permanent_state'),
     permanentPincode: text('permanent_pincode'),

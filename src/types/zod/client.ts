@@ -30,14 +30,18 @@ export const personalInfoSchema = createInsertSchema(ClientTable, {
     required_error: 'Educational qualification is required',
   }),
 
-  address: z.string().min(1, 'Address is required'),
+  addressLine1: z.string().min(1, 'House/Door/Flat No is required'),
+  addressLine2: z.string().min(1, 'Street/Locality/Police Station is required'),
+  addressLine3: z.string().optional(),
   city: z.string().min(1, 'City is required'),
   state: z.string().min(1, 'State is required'),
   pincode: z.string().min(1, 'Pincode is required'),
 
   isCurrentAddressSameAsPermanentAddress: z.boolean().default(false),
 
-  permanentAddress: z.string().min(1, 'Permanent address is required'),
+  permanentAddressLine1: z.string().min(1, 'House/Door/Flat No is required'),
+  permanentAddressLine2: z.string().min(1, 'Street/Locality/Police Station is required'),
+  permanentAddressLine3: z.string().optional(),
   permanentCity: z.string().min(1, 'Permanent city is required'),
   permanentState: z.string().min(1, 'Permanent state is required'),
   permanentPincode: z.string().min(1, 'Permanent pincode is required'),

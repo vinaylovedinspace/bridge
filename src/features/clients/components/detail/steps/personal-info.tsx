@@ -43,9 +43,19 @@ export const PersonalInfoStep = () => {
     name: 'personalInfo.isCurrentAddressSameAsPermanentAddress',
   });
 
-  const currentAddress = useWatch({
+  const currentAddressLine1 = useWatch({
     control,
-    name: 'personalInfo.address',
+    name: 'personalInfo.addressLine1',
+  });
+
+  const currentAddressLine2 = useWatch({
+    control,
+    name: 'personalInfo.addressLine2',
+  });
+
+  const currentAddressLine3 = useWatch({
+    control,
+    name: 'personalInfo.addressLine3',
   });
 
   const currentCity = useWatch({
@@ -66,14 +76,18 @@ export const PersonalInfoStep = () => {
   // Update permanent address fields when checkbox is checked or current address fields change
   useEffect(() => {
     if (isSameAddress) {
-      setValue('personalInfo.permanentAddress', currentAddress);
+      setValue('personalInfo.permanentAddressLine1', currentAddressLine1);
+      setValue('personalInfo.permanentAddressLine2', currentAddressLine2);
+      setValue('personalInfo.permanentAddressLine3', currentAddressLine3);
       setValue('personalInfo.permanentCity', currentCity);
       setValue('personalInfo.permanentState', currentState);
       setValue('personalInfo.permanentPincode', currentPincode);
 
       // Clear any validation errors from permanent address fields
       clearErrors([
-        'personalInfo.permanentAddress',
+        'personalInfo.permanentAddressLine1',
+        'personalInfo.permanentAddressLine2',
+        'personalInfo.permanentAddressLine3',
         'personalInfo.permanentCity',
         'personalInfo.permanentState',
         'personalInfo.permanentPincode',
@@ -81,7 +95,9 @@ export const PersonalInfoStep = () => {
     }
   }, [
     isSameAddress,
-    currentAddress,
+    currentAddressLine1,
+    currentAddressLine2,
+    currentAddressLine3,
     currentCity,
     currentState,
     currentPincode,
@@ -394,14 +410,52 @@ export const PersonalInfoStep = () => {
         <div className="grid grid-cols-3 col-span-9 gap-6 items-end">
           <FormField
             control={control}
-            name="personalInfo.address"
+            name="personalInfo.addressLine1"
             render={({ field }) => (
-              <FormItem className="col-span-3">
-                <FormLabel required>Full Address</FormLabel>
+              <FormItem>
+                <FormLabel required>House/Door/Flat No</FormLabel>
                 <FormControl>
                   <Input
-                    data-testid="admission-address-input"
-                    placeholder="Address"
+                    data-testid="admission-addressLine1-input"
+                    placeholder="House/Door/Flat No"
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name="personalInfo.addressLine2"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>Street/Locality/Police Station</FormLabel>
+                <FormControl>
+                  <Input
+                    data-testid="admission-addressLine2-input"
+                    placeholder="Street/Locality/Police Station"
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name="personalInfo.addressLine3"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Location/Landmark</FormLabel>
+                <FormControl>
+                  <Input
+                    data-testid="admission-addressLine3-input"
+                    placeholder="Location/Landmark"
                     value={field.value || ''}
                     onChange={field.onChange}
                   />
@@ -487,13 +541,51 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.permanentAddress"
+            name="personalInfo.permanentAddressLine1"
             render={({ field }) => (
-              <FormItem className="col-span-3">
-                <FormLabel required>Full Address</FormLabel>
+              <FormItem>
+                <FormLabel required>House/Door/Flat No</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Permanent address"
+                    placeholder="House/Door/Flat No"
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    disabled={isSameAddress === true}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name="personalInfo.permanentAddressLine2"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>Street/Locality/Police Station</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Street/Locality/Police Station"
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    disabled={isSameAddress === true}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name="personalInfo.permanentAddressLine3"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Location/Landmark</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Location/Landmark"
                     value={field.value || ''}
                     onChange={field.onChange}
                     disabled={isSameAddress === true}

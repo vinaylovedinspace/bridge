@@ -27,9 +27,19 @@ export const PersonalInfoStep = () => {
     name: 'clientInfo.isCurrentAddressSameAsPermanentAddress',
   });
 
-  const currentAddress = useWatch({
+  const currentAddressLine1 = useWatch({
     control,
-    name: 'clientInfo.address',
+    name: 'clientInfo.addressLine1',
+  });
+
+  const currentAddressLine2 = useWatch({
+    control,
+    name: 'clientInfo.addressLine2',
+  });
+
+  const currentAddressLine3 = useWatch({
+    control,
+    name: 'clientInfo.addressLine3',
   });
 
   const currentCity = useWatch({
@@ -50,20 +60,26 @@ export const PersonalInfoStep = () => {
   // Auto-fill permanent address when checkbox is checked
   useEffect(() => {
     if (isSameAddress) {
-      setValue('clientInfo.permanentAddress', currentAddress || '');
+      setValue('clientInfo.permanentAddressLine1', currentAddressLine1 || '');
+      setValue('clientInfo.permanentAddressLine2', currentAddressLine2 || '');
+      setValue('clientInfo.permanentAddressLine3', currentAddressLine3 || '');
       setValue('clientInfo.permanentCity', currentCity || '');
       setValue('clientInfo.permanentState', currentState || '');
       setValue('clientInfo.permanentPincode', currentPincode || '');
 
       // Clear any validation errors for permanent address fields
-      clearErrors('clientInfo.permanentAddress');
+      clearErrors('clientInfo.permanentAddressLine1');
+      clearErrors('clientInfo.permanentAddressLine2');
+      clearErrors('clientInfo.permanentAddressLine3');
       clearErrors('clientInfo.permanentCity');
       clearErrors('clientInfo.permanentState');
       clearErrors('clientInfo.permanentPincode');
     }
   }, [
     isSameAddress,
-    currentAddress,
+    currentAddressLine1,
+    currentAddressLine2,
+    currentAddressLine3,
     currentCity,
     currentState,
     currentPincode,
@@ -349,13 +365,49 @@ export const PersonalInfoStep = () => {
         <div className="grid grid-cols-3 col-span-9 gap-6 items-end">
           <FormField
             control={control}
-            name="clientInfo.address"
+            name="clientInfo.addressLine1"
             render={({ field }) => (
-              <FormItem className="col-span-3">
-                <FormLabel required>Full Address</FormLabel>
+              <FormItem>
+                <FormLabel required>House/Door/Flat No</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Address"
+                    placeholder="House/Door/Flat No"
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name="clientInfo.addressLine2"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>Street/Locality/Police Station</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Street/Locality/Police Station"
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name="clientInfo.addressLine3"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Location/Landmark</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Location/Landmark"
                     value={field.value || ''}
                     onChange={field.onChange}
                   />
@@ -436,13 +488,49 @@ export const PersonalInfoStep = () => {
             <>
               <FormField
                 control={control}
-                name="clientInfo.permanentAddress"
+                name="clientInfo.permanentAddressLine1"
                 render={({ field }) => (
-                  <FormItem className="col-span-3">
-                    <FormLabel required>Full Address</FormLabel>
+                  <FormItem>
+                    <FormLabel required>House/Door/Flat No</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Address"
+                        placeholder="House/Door/Flat No"
+                        value={field.value || ''}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="clientInfo.permanentAddressLine2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel required>Street/Locality/Police Station</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Street/Locality/Police Station"
+                        value={field.value || ''}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="clientInfo.permanentAddressLine3"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location/Landmark</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Location/Landmark"
                         value={field.value || ''}
                         onChange={field.onChange}
                       />

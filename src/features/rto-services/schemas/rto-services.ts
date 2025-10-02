@@ -76,7 +76,9 @@ export const rtoServiceFormSchema = baseRtoServiceSchema
       aadhaarNumber: z.string().regex(/^\d{12}$/, 'Aadhaar number must be 12 digits'),
       phoneNumber: z.string().min(10, 'Phone number is required'),
       email: z.string().email('Invalid email').optional().or(z.literal('')),
-      address: z.string().min(1, 'Address is required'),
+      addressLine1: z.string().min(1, 'House/Door/Flat No is required'),
+      addressLine2: z.string().min(1, 'Street/Locality/Police Station is required'),
+      addressLine3: z.string().optional(),
       city: z.string().min(1, 'City is required'),
       state: z.string().min(1, 'State is required'),
       pincode: z.string().regex(/^\d{6}$/, 'Pincode must be 6 digits'),
@@ -92,7 +94,9 @@ export const rtoServiceFormSchema = baseRtoServiceSchema
       emergencyContactName: z.string().optional(),
       // Permanent address fields
       isCurrentAddressSameAsPermanentAddress: z.boolean().default(true),
-      permanentAddress: z.string().optional(),
+      permanentAddressLine1: z.string().optional(),
+      permanentAddressLine2: z.string().optional(),
+      permanentAddressLine3: z.string().optional(),
       permanentCity: z.string().optional(),
       permanentState: z.string().optional(),
       permanentPincode: z.string().optional(),
@@ -114,7 +118,8 @@ export const rtoServiceFormSchema = baseRtoServiceSchema
       // If permanent address checkbox is false, permanent address fields are required
       if (!data.clientInfo.isCurrentAddressSameAsPermanentAddress) {
         return (
-          data.clientInfo.permanentAddress &&
+          data.clientInfo.permanentAddressLine1 &&
+          data.clientInfo.permanentAddressLine2 &&
           data.clientInfo.permanentCity &&
           data.clientInfo.permanentState &&
           data.clientInfo.permanentPincode
@@ -124,7 +129,7 @@ export const rtoServiceFormSchema = baseRtoServiceSchema
     },
     {
       message: 'Permanent address fields are required when different from current address',
-      path: ['clientInfo', 'permanentAddress'],
+      path: ['clientInfo', 'permanentAddressLine1'],
     }
   );
 
