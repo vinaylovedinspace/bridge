@@ -1,0 +1,17 @@
+export const form14FieldNames = {
+  register_for_the_year: 'register_for_the_year',
+  enrollment_number: 'enrollment_number',
+  trainee_name: 'trainee_name',
+  licence_class: 'licence_class',
+  guardian_name: 'guardian_name',
+  permanent_address: 'permanent_address',
+  temporary_address: 'temporary_address',
+  signature_of_instructor: 'signature_of_instructor',
+  remarks: 'remarks',
+  driving_licence_number_and_issue_date: 'driving_licence_number_and_issue_date',
+  driving_licence_test_passing_date: 'driving_licence_test_passing_date',
+  date_of_completion_of_course: 'date_of_completion_of_course',
+  learners_licence_number_and_issue_date: 'learners_licence_number_and_issue_date',
+  date_of_birth: 'date_of_birth',
+  date_of_enrollment: 'date_of_enrollment',
+};

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { notifications } from '@/db/schema';
+import { notifications, BranchTable } from '@/db/schema';
 import { and, eq, desc, sql } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
@@ -17,10 +17,17 @@ export async function GET(req: NextRequest) {
   const unreadOnly = searchParams.get('unread') === 'true';
 
   try {
-    const conditions = [
-      eq(notifications.userId, userId),
-      eq(notifications.branchId, parseInt(orgId)),
-    ];
+    // Get branch ID from orgId
+    const branch = await db.query.BranchTable.findFirst({
+      where: (table) => eq(table.orgId, orgId),
+      columns: { id: true },
+    });
+
+    if (!branch) {
+      return NextResponse.json({ error: 'Branch not found' }, { status: 404 });
+    }
+
+    const conditions = [eq(notifications.userId, userId), eq(notifications.branchId, branch.id)];
 
     if (unreadOnly) {
       conditions.push(eq(notifications.isRead, false));
@@ -49,7 +56,7 @@ export async function GET(req: NextRequest) {
             .where(
               and(
                 eq(notifications.userId, userId),
-                eq(notifications.branchId, parseInt(orgId)),
+                eq(notifications.branchId, branch.id),
                 eq(notifications.isRead, false)
               )
             )
@@ -75,6 +82,16 @@ export async function PATCH(req: NextRequest) {
   }
 
   try {
+    // Get branch ID from orgId
+    const branch = await db.query.BranchTable.findFirst({
+      where: (table) => eq(table.orgId, orgId),
+      columns: { id: true },
+    });
+
+    if (!branch) {
+      return NextResponse.json({ error: 'Branch not found' }, { status: 404 });
+    }
+
     const { notificationIds, markAllAsRead } = (await req.json()) as {
       notificationIds?: number[];
       markAllAsRead?: boolean;
@@ -87,7 +104,7 @@ export async function PATCH(req: NextRequest) {
         .where(
           and(
             eq(notifications.userId, userId),
-            eq(notifications.branchId, parseInt(orgId)),
+            eq(notifications.branchId, branch.id),
             eq(notifications.isRead, false)
           )
         );
@@ -98,7 +115,7 @@ export async function PATCH(req: NextRequest) {
         .where(
           and(
             eq(notifications.userId, userId),
-            eq(notifications.branchId, parseInt(orgId)),
+            eq(notifications.branchId, branch.id),
             sql`${notifications.id} = ANY(${notificationIds})`
           )
         );

@@ -12,6 +12,9 @@ import { fillForm1A } from '@/features/forms/server/actions/form-1A';
 import { downloadPdfFromBase64, printPdfFromBase64 } from '@/features/forms/lib/utils';
 import { toast } from 'sonner';
 import { fillForm2 } from '../server/actions/form-2';
+import { fillForm14 } from '../server/actions/form-14';
+import { fillForm5b } from '../server/actions/form-5b';
+import { fillForm4A } from '../server/actions/form-4A';
 
 type FormServerAction = (clientId: string) => Promise<{
   success: boolean;
@@ -59,6 +62,7 @@ const primaryForms: FormItem[] = [
       'Required along with your valid DL, Medical Certificate, passport & visa copies, photos & applicable fees',
     fileName: 'form-4a.pdf',
     sections: ['Personal Info', 'Driving Licence', 'Passport', '+1'],
+    serverAction: fillForm4A,
   },
   {
     id: 'form-5',
@@ -76,6 +80,7 @@ const primaryForms: FormItem[] = [
       'Certificate from Accredited Driver Training Centre (ADTC) — exempts from driving test',
     fileName: 'form-5B.pdf',
     sections: ['Personal Info', 'ADTC Details', 'Training Records', '+1'],
+    serverAction: fillForm5b,
   },
   {
     id: 'form-14',
@@ -85,6 +90,7 @@ const primaryForms: FormItem[] = [
       'Register showing the Enrolment of Trainee(s) in the Driving School Establishments',
     fileName: 'form-14.pdf',
     sections: ['Personal Info', 'Address'],
+    serverAction: fillForm14,
   },
 ];
 

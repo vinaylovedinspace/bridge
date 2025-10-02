@@ -1,0 +1,16 @@
+export const form5bFieldNames = {
+  name: 'name',
+  guardian_name: 'guardian_name',
+  address: 'address',
+  aadhaar_number: 'aadhaar_number',
+  start_date: 'start_date',
+  end_date: 'end_date',
+  licence_class_1: 'licence_class_1',
+  licence_class_2: 'licence_class_2',
+  license_class_3: 'license_class_3',
+  client_code: 'client_code',
+  enrollment_date: 'enrollment_date',
+  signature: 'signature',
+  name_and_designation: 'name_and_designation',
+  school_name_address_license_number: 'school_name_address_license_number',
+};
