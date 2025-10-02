@@ -8,6 +8,7 @@ import {
   text,
   jsonb,
   pgEnum,
+  uuid,
 } from 'drizzle-orm/pg-core';
 
 export const EntityTypeEnum = pgEnum('entity_type', [
@@ -45,8 +46,8 @@ export const NotificationTypeEnum = pgEnum('notification_type', [
 
 export const notifications = pgTable('notifications', {
   id: serial('id').primaryKey(),
-  tenantId: integer('tenant_id').notNull(),
-  branchId: integer('branch_id').notNull(),
+  tenantId: uuid('tenant_id').notNull(),
+  branchId: uuid('branch_id').notNull(),
   userId: varchar('user_id', { length: 255 }).notNull(),
   type: NotificationTypeEnum('type').notNull(),
   title: varchar('title', { length: 255 }).notNull(),

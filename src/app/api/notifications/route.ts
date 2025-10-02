@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { notifications, BranchTable } from '@/db/schema';
+import { notifications } from '@/db/schema';
 import { and, eq, desc, sql } from 'drizzle-orm';
+import { getBranchConfig } from '@/server/db/branch';
 
 export async function GET(req: NextRequest) {
   const { userId, orgId } = await auth();
@@ -83,14 +84,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     // Get branch ID from orgId
-    const branch = await db.query.BranchTable.findFirst({
-      where: (table) => eq(table.orgId, orgId),
-      columns: { id: true },
-    });
-
-    if (!branch) {
-      return NextResponse.json({ error: 'Branch not found' }, { status: 404 });
-    }
+    const branch = await getBranchConfig();
 
     const { notificationIds, markAllAsRead } = (await req.json()) as {
       notificationIds?: number[];

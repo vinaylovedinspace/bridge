@@ -2,8 +2,8 @@ import { db } from '@/db';
 import { notifications, NewNotification } from '@/db/schema';
 import { NOTIFICATION_TYPES, ENTITY_TYPES } from './types';
 import { ClientTable } from '@/db/schema/client/columns';
-import { PaymentTable } from '@/db/schema/payment/columns';
-import { eq } from 'drizzle-orm';
+import { PaymentTable, InstallmentPaymentTable } from '@/db/schema/payment/columns';
+import { eq, and } from 'drizzle-orm';
 
 export class NotificationService {
   static async create(data: Omit<NewNotification, 'createdAt'>) {
@@ -38,8 +38,8 @@ export class NotificationService {
     paymentId: string;
   }) {
     return this.create({
-      tenantId: parseInt(params.tenantId),
-      branchId: parseInt(params.branchId),
+      tenantId: params.tenantId,
+      branchId: params.branchId,
       userId: params.userId,
       type: NOTIFICATION_TYPES.PAYMENT_RECEIVED,
       title: 'Payment Received',
@@ -68,21 +68,26 @@ export class NotificationService {
 
     if (!client) return null;
 
-    const [payment] = await db
+    const [installment] = await db
       .select()
-      .from(PaymentTable)
-      .where(eq(PaymentTable.id, paymentId))
+      .from(InstallmentPaymentTable)
+      .where(
+        and(
+          eq(InstallmentPaymentTable.paymentId, paymentId),
+          eq(InstallmentPaymentTable.installmentNumber, installmentNumber)
+        )
+      )
       .limit(1);
 
-    if (!payment) return null;
+    if (!installment) return null;
 
     return this.create({
-      tenantId: parseInt(client.tenantId),
-      branchId: parseInt(branchId),
+      tenantId: client.tenantId,
+      branchId: branchId,
       userId: '',
       type: isOverdue ? NOTIFICATION_TYPES.INSTALLMENT_OVERDUE : NOTIFICATION_TYPES.INSTALLMENT_DUE,
       title: isOverdue ? 'Installment Overdue' : 'Installment Due Today',
-      message: `${client.firstName} ${client.lastName} has ${installmentNumber === 1 ? 'first' : 'second'} installment of ₹$} ${isOverdue ? 'overdue' : 'due today'}`,
+      message: `${client.firstName} ${client.lastName} has ${installmentNumber === 1 ? 'first' : 'second'} installment of ₹${installment.amount} ${isOverdue ? 'overdue' : 'due today'}`,
       entityType: ENTITY_TYPES.PAYMENT,
       entityId: parseInt(paymentId),
       isRead: false,
@@ -114,8 +119,8 @@ export class NotificationService {
     if (!payment) return null;
 
     return this.create({
-      tenantId: parseInt(client.tenantId),
-      branchId: parseInt(branchId),
+      tenantId: client.tenantId,
+      branchId: branchId,
       userId: '',
       type: NOTIFICATION_TYPES.PAY_LATER_REMINDER,
       title: isOverdue ? 'Payment Overdue' : 'Payment Reminder',
@@ -135,8 +140,8 @@ export class NotificationService {
     clientId: string;
   }) {
     return this.create({
-      tenantId: parseInt(params.tenantId),
-      branchId: parseInt(params.branchId),
+      tenantId: params.tenantId,
+      branchId: params.branchId,
       userId: params.userId,
       type: NOTIFICATION_TYPES.LEARNING_TEST_TODAY,
       title: 'Learning Test Scheduled',
@@ -155,8 +160,8 @@ export class NotificationService {
     clientId: string;
   }) {
     return this.create({
-      tenantId: parseInt(params.tenantId),
-      branchId: parseInt(params.branchId),
+      tenantId: params.tenantId,
+      branchId: params.branchId,
       userId: params.userId,
       type: NOTIFICATION_TYPES.ELIGIBLE_FOR_DRIVING_TEST,
       title: 'Eligible for Driving Test',
@@ -178,8 +183,8 @@ export class NotificationService {
     vehicleId: string;
   }) {
     return this.create({
-      tenantId: parseInt(params.tenantId),
-      branchId: parseInt(params.branchId),
+      tenantId: params.tenantId,
+      branchId: params.branchId,
       userId: params.userId,
       type: NOTIFICATION_TYPES.VEHICLE_DOCUMENT_EXPIRING,
       title: `${params.documentType} Expiring Soon`,
@@ -200,8 +205,8 @@ export class NotificationService {
     sessionId: string;
   }) {
     return this.create({
-      tenantId: parseInt(params.tenantId),
-      branchId: parseInt(params.branchId),
+      tenantId: params.tenantId,
+      branchId: params.branchId,
       userId: params.userId,
       type: NOTIFICATION_TYPES.SESSION_TODAY,
       title: 'Training Session Today',
@@ -222,8 +227,8 @@ export class NotificationService {
     rtoServiceId: string;
   }) {
     return this.create({
-      tenantId: parseInt(params.tenantId),
-      branchId: parseInt(params.branchId),
+      tenantId: params.tenantId,
+      branchId: params.branchId,
       userId: params.userId,
       type: NOTIFICATION_TYPES.RTO_STATUS_UPDATED,
       title: 'RTO Service Update',
@@ -243,8 +248,8 @@ export class NotificationService {
     clientId: string;
   }) {
     return this.create({
-      tenantId: parseInt(params.tenantId),
-      branchId: parseInt(params.branchId),
+      tenantId: params.tenantId,
+      branchId: params.branchId,
       userId: params.userId,
       type: NOTIFICATION_TYPES.NEW_CLIENT_ADMISSION,
       title: 'New Client Admission',
