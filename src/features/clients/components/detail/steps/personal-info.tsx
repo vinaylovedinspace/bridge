@@ -27,6 +27,7 @@ import {
   GenderEnum,
   CitizenStatusEnum,
   EducationalQualificationEnum,
+  GuardianRelationshipEnum,
 } from '@/db/schema/client/columns';
 import { useEffect } from 'react';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -94,7 +95,6 @@ export const PersonalInfoStep = () => {
         <TypographyH5 className="col-span-3" data-testid="admission-personal-info-heading">
           Personal Details
         </TypographyH5>
-
         <div className="grid grid-cols-3 col-span-9 gap-6 items-end">
           <div className="grid grid-cols-3 gap-6 col-span-3 items-top justify-between">
             <FormField
@@ -165,41 +165,29 @@ export const PersonalInfoStep = () => {
           />
           <FormField
             control={control}
-            name="personalInfo.guardianFirstName"
+            name="personalInfo.gender"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>Guardian Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="First" value={field.value || ''} onChange={field.onChange} />
-                </FormControl>
+                <FormLabel required>Gender</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {GenderEnum.enumValues.map((gender) => (
+                      <SelectItem key={gender} value={gender}>
+                        {gender.charAt(0) + gender.slice(1).toLowerCase()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <FormField
-            control={control}
-            name="personalInfo.guardianMiddleName"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <Input placeholder="Middle" value={field.value || ''} onChange={field.onChange} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="personalInfo.guardianLastName"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <Input placeholder="Last" value={field.value || ''} onChange={field.onChange} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+
           <FormField
             control={control}
             name="personalInfo.birthDate"
@@ -245,30 +233,6 @@ export const PersonalInfoStep = () => {
           />
           <FormField
             control={control}
-            name="personalInfo.gender"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel required>Gender</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select gender" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {GenderEnum.enumValues.map((gender) => (
-                      <SelectItem key={gender} value={gender}>
-                        {gender.charAt(0) + gender.slice(1).toLowerCase()}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
             name="personalInfo.educationalQualification"
             render={({ field }) => (
               <FormItem>
@@ -291,7 +255,71 @@ export const PersonalInfoStep = () => {
               </FormItem>
             )}
           />
+
           <div />
+          <div />
+
+          <FormField
+            control={control}
+            name="personalInfo.guardianFirstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>Guardian Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="First" value={field.value || ''} onChange={field.onChange} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="personalInfo.guardianMiddleName"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Input placeholder="Middle" value={field.value || ''} onChange={field.onChange} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="personalInfo.guardianLastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Input placeholder="Last" value={field.value || ''} onChange={field.onChange} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="personalInfo.guardianRelationship"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>Guardian Relationship</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select relationship" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {GuardianRelationshipEnum.enumValues.map((relationship) => (
+                      <SelectItem key={relationship} value={relationship}>
+                        {relationship.charAt(0) + relationship.slice(1).toLowerCase()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
       </div>
 

@@ -56,8 +56,14 @@ export async function fillAndFlattenPdf(
   // Fill the form fields
   fillFunction(form);
 
-  // Flatten the form to make fields non-editable
-  form.flatten();
+  // Update field appearances before flattening
+  // This regenerates appearance streams for all fields including checkboxes
+  form.updateFieldAppearances();
+
+  // Note: Flattening is disabled because it causes checkboxes to disappear
+  // The PDF will remain editable but all fields will be filled
+  // To make it non-editable, you need to fix the PDF template's appearance streams
+  // form.flatten();
 
   // Convert to base64
   return pdfToBase64(pdfDoc);

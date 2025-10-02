@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { fillForm1A } from '@/features/forms/server/actions/form-1A';
 import { downloadPdfFromBase64, printPdfFromBase64 } from '@/features/forms/lib/utils';
 import { toast } from 'sonner';
+import { fillForm2 } from '../server/actions/form-2';
 
 type FormServerAction = (clientId: string) => Promise<{
   success: boolean;
@@ -48,6 +49,7 @@ const primaryForms: FormItem[] = [
       'Covers new learners licence, permanent licence, addition of vehicle class, renewal, duplicate licence, and change/correction of DL',
     fileName: 'form-2.pdf',
     sections: ['Personal Info', 'Address', 'Guardian Info', '+1'],
+    serverAction: fillForm2,
   },
   {
     id: 'form-4a',
