@@ -34,29 +34,3 @@ export const fillForm1A = async (clientId: string) => {
     };
   }
 };
-
-// licencing_authority_1
-// licencing_authority_2
-
-// issue_new_learners_licence
-// issue_new_driving_licence
-// addition_of_vehicle_class
-// renewal_of_driving_licence
-// duplicate_driving_licence
-// change_address_in_driving_licence
-// change_name_in_driving_license
-
-// MCWOG
-// MCWG
-// LMV
-
-// declaration_epilepsy_yes
-// declaration_epilepsy_no
-// declaration_eye_yes
-// declaration_eye_no
-// declaration_limbs_yes
-// declaration_limbs_no
-// declaration_night_blindness_yes
-// declaration_night_blindness_no
-// declaration_deaf_yes
-// declaration_deaf_no

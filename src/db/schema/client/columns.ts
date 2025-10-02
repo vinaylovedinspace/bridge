@@ -29,6 +29,13 @@ export const EducationalQualificationEnum = pgEnum('educational_qualification', 
   'OTHERS',
 ]);
 
+export const GuardianRelationshipEnum = pgEnum('guardian_relationship', [
+  'FATHER',
+  'MOTHER',
+  'HUSBAND',
+  'GUARDIAN',
+]);
+
 export const ClientTable = pgTable(
   'clients',
   {
@@ -43,14 +50,15 @@ export const ClientTable = pgTable(
     photoUrl: text('photo_url'),
     signatureUrl: text('signature_url'),
 
-    guardianFirstName: text('guardian_first_name'),
+    guardianFirstName: text('guardian_first_name').notNull(),
     guardianMiddleName: text('guardian_middle_name'),
-    guardianLastName: text('guardian_last_name'),
+    guardianLastName: text('guardian_last_name').notNull(),
+    guardianRelationship: GuardianRelationshipEnum().notNull().default('GUARDIAN'),
 
     birthDate: text('birth_date').notNull(), // YYYY-MM-DD string to avoid timezone issues
     bloodGroup: BloodGroupEnum().notNull(),
     gender: GenderEnum().notNull(),
-    educationalQualification: EducationalQualificationEnum(),
+    educationalQualification: EducationalQualificationEnum().notNull().default('CLASS_12TH'),
 
     phoneNumber: text('phone_number').notNull(),
     alternativePhoneNumber: text('alternative_phone_number'),

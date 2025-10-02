@@ -23,6 +23,7 @@ export const PlanTable = pgTable('plans', {
 
   clientId: uuid('client_id').notNull(),
   status: PlanEnum().notNull().default('NOT_STARTED'),
+  completedAt: text('completed_at'),
 
   paymentId: uuid('payment_id').unique(),
   branchId: uuid('branch_id').notNull(),

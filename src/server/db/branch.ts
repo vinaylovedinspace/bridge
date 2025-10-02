@@ -20,4 +20,24 @@ export const getBranchConfig = async () => {
   return branch!;
 };
 
+export const getBranchConfigWithTenant = async () => {
+  const { orgId } = await auth();
+
+  const branch = await db.query.BranchTable.findFirst({
+    where: (table) => eq(table.orgId, orgId!),
+    columns: {
+      id: true,
+      workingDays: true,
+      operatingHours: true,
+      licenseServiceCharge: true,
+      defaultRtoOffice: true,
+    },
+    with: {
+      tenant: true,
+    },
+  });
+
+  return branch!;
+};
+
 export type BranchConfig = NonNullable<Awaited<ReturnType<typeof getBranchConfig>>>;
