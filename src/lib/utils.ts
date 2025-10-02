@@ -11,3 +11,7 @@ export function getTenantNameInitials(tenantName: string) {
     .map((word) => word[0])
     .join('');
 }
+export const formatDateToDDMMYYYY = (dateStr: string) => {
+  const [year, month, day] = dateStr.split('-');
+  return `${day}/${month}/${year}`;
+};

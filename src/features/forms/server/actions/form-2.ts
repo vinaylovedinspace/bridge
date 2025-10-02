@@ -6,7 +6,7 @@ import { getEnrollmentByPlanId } from '@/server/db/plan';
 import { form2FieldNames } from '@/features/forms/lib/field-names/form-2';
 import { LicenseClassEnum } from '@/db/schema';
 import { getBranchConfigWithTenant } from '@/server/db/branch';
-import { getTenantNameInitials } from '@/lib/utils';
+import { formatDateToDDMMYYYY } from '@/lib/utils';
 
 export const fillForm2 = async (clientId: string) => {
   try {
@@ -37,11 +37,22 @@ export const fillForm2 = async (clientId: string) => {
     // Fill the PDF form
     const base64Pdf = await fillAndFlattenPdf('form-2.pdf', (form) => {
       try {
-        form
-          .getTextField(form2FieldNames.licencing_authority_1)
-          .setText((branchConfig?.defaultRtoOffice as string).toUpperCase());
+        // Split the RTO office name into two lines
+        const rtoOffice = (branchConfig?.defaultRtoOffice as string).toUpperCase();
+        const words = rtoOffice.split(' ');
+        const midPoint = Math.ceil(words.length / 2);
+        const line1 = words.slice(0, midPoint).join(' ');
+        const line2 = words.slice(midPoint).join(' ');
+        form.getTextField(form2FieldNames.licencing_authority_1).setText(line1);
+        if (line2) {
+          form.getTextField(form2FieldNames.licencing_authority_2).setText(line2);
+        }
 
-        form.getCheckBox(form2FieldNames.issue_new_driving_licence).check();
+        if (client.learningLicense?.licenseNumber) {
+          form.getCheckBox(form2FieldNames.issue_new_driving_licence).check();
+        } else {
+          form.getCheckBox(form2FieldNames.issue_new_learners_licence).check();
+        }
 
         const licenseClasses = enrollment.client.learningLicense?.class;
         LicenseClassEnum.enumValues.forEach((vehicleClass) => {
@@ -59,22 +70,25 @@ export const fillForm2 = async (clientId: string) => {
 
         form.getTextField(form2FieldNames.first_name).setText(client.firstName.toUpperCase());
 
-        form.getTextField(form2FieldNames.first_name).setText(client.firstName.toUpperCase());
+        form.getTextField(form2FieldNames.first_name).setText(client.firstName);
 
         const guardianFullName =
           `${client.guardianFirstName}${client.guardianMiddleName ? ' ' + client.guardianMiddleName : ''} ${client.guardianLastName}`.toUpperCase();
 
         form.getTextField(form2FieldNames.guardian_name).setText(guardianFullName);
 
-        form.getTextField(form2FieldNames.date_of_birth_1).setText(client.birthDate);
+        form
+          .getTextField(form2FieldNames.date_of_birth_1)
+          .setText(formatDateToDDMMYYYY(client.birthDate));
 
         // Gender
+        const genderGroup = form.getRadioGroup('gender');
         if (client.gender === 'MALE') {
-          form.getCheckBox(form2FieldNames.gender_male).check();
+          genderGroup.select('male');
         } else if (client.gender === 'FEMALE') {
-          form.getCheckBox(form2FieldNames.gender_female).check();
+          genderGroup.select('female');
         } else if (client.gender === 'OTHER') {
-          form.getCheckBox(form2FieldNames.gender_transgender).check();
+          genderGroup.select('transgender');
         }
 
         // Educational qualification
@@ -82,7 +96,9 @@ export const fillForm2 = async (clientId: string) => {
           .getTextField(form2FieldNames.educational_qualification)
           .setText(client.educationalQualification.toUpperCase());
 
-        form.getTextField(form2FieldNames.date_of_birth_2).setText(client.birthDate);
+        form
+          .getTextField(form2FieldNames.date_of_birth_2)
+          .setText(formatDateToDDMMYYYY(client.birthDate));
 
         // Blood group
         form.getTextField(form2FieldNames.blood_group).setText(client.bloodGroup.toUpperCase());
@@ -90,8 +106,7 @@ export const fillForm2 = async (clientId: string) => {
         // Contact details
         form.getTextField(form2FieldNames.mobile_number).setText(client.phoneNumber);
 
-        if (client.email)
-          form.getTextField(form2FieldNames.email).setText(client.email.toUpperCase());
+        if (client.email) form.getTextField(form2FieldNames.email).setText(client.email);
         if (client.alternativePhoneNumber)
           form.getTextField(form2FieldNames.landline_number).setText(client.alternativePhoneNumber);
 
@@ -140,22 +155,30 @@ export const fillForm2 = async (clientId: string) => {
             .setText(client.permanentAddressLine3.toUpperCase());
         form.getTextField(form2FieldNames.permanent_pincode).setText(client.permanentPincode);
 
-        form
-          .getTextField(form2FieldNames.driving_school_name)
-          .setText(branchConfig.tenant.name.toUpperCase());
-        form
-          .getTextField(form2FieldNames.enrollment_number)
-          .setText(
-            (
-              getTenantNameInitials(branchConfig.tenant.name) +
-              '-' +
-              enrollment.planCode
-            ).toUpperCase()
-          );
-        form.getTextField(form2FieldNames.enrollment_date).setText(enrollment.joiningDate);
-        form.getTextField(form2FieldNames.training_period_from).setText(enrollment.joiningDate);
-        if (enrollment.completedAt)
-          form.getTextField(form2FieldNames.training_period_to).setText(enrollment.completedAt);
+        // Driving school details
+        // form
+        //   .getTextField(form2FieldNames.driving_school_name)
+        //   .setText(branchConfig.tenant.name.toUpperCase());
+        // form
+        //   .getTextField(form2FieldNames.enrollment_number)
+        //   .setText(
+        //     (
+        //       getTenantNameInitials(branchConfig.tenant.name) +
+        //       '-' +
+        //       enrollment.planCode
+        //     ).toUpperCase()
+        //   );
+
+        // form
+        //   .getTextField(form2FieldNames.enrollment_date)
+        //   .setText(formatDateToDDMMYYYY(enrollment.joiningDate));
+        // form
+        //   .getTextField(form2FieldNames.training_period_from)
+        //   .setText(formatDateToDDMMYYYY(enrollment.joiningDate));
+        // if (enrollment.completedAt)
+        //   form
+        //     .getTextField(form2FieldNames.training_period_to)
+        //     .setText(formatDateToDDMMYYYY(enrollment.completedAt));
 
         // Existing licence details (if applicable)
         if (learningLicense && learningLicense.licenseNumber) {
