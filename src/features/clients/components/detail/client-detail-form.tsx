@@ -76,17 +76,7 @@ export const ClientDetailForm = ({ client, branchConfig }: ClientDetailFormProps
   return (
     <FormProvider {...methods}>
       <div className="h-full flex flex-col py-2 gap-4">
-        <ClientDetailProgressBar
-          currentStep={currentStep}
-          onStepChange={goToStep}
-          onStepClick={async (step) => {
-            const canNavigate = await handleStepNavigation(step as ClientDetailStepKey);
-            if (canNavigate) {
-              goToStep(step as ClientDetailStepKey);
-            }
-            return canNavigate;
-          }}
-        />
+        <ClientDetailProgressBar currentStep={currentStep} onStepChange={goToStep} />
 
         <ScrollArea className="h-[calc(100vh-20rem)] pr-10">
           <form className="space-y-8 pb-24">

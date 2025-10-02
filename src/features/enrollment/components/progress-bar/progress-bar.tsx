@@ -3,7 +3,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQueryState, parseAsStringLiteral } from 'nuqs';
 import { ProgressBar as BaseProgressBar, type StepConfig } from '@/components/ui/progress-bar';
-import { AdmissionFormStepKey } from '@/features/enrollment/types';
+import { type AdmissionFormStepKey } from '@/features/enrollment/types';
+
+export type { AdmissionFormStepKey };
 
 // Define admission form steps
 export const ADMISSION_STEPS: StepConfig<AdmissionFormStepKey>[] = [

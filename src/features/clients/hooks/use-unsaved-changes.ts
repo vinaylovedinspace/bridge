@@ -26,8 +26,6 @@ export const useUnsavedChanges = (
           learningLicense: watchedValues.learningLicense,
           drivingLicense: watchedValues.drivingLicense,
         };
-      case 'plans':
-        return watchedValues.plans;
       default:
         return {};
     }
@@ -42,8 +40,6 @@ export const useUnsavedChanges = (
           learningLicense: defaultValues.learningLicense,
           drivingLicense: defaultValues.drivingLicense,
         };
-      case 'plans':
-        return defaultValues.plans;
       default:
         return {};
     }
@@ -77,12 +73,6 @@ export const useUnsavedChanges = (
           ...watchedValues,
           learningLicense: defaultValues.learningLicense,
           drivingLicense: defaultValues.drivingLicense,
-        });
-        break;
-      case 'plans':
-        reset({
-          ...watchedValues,
-          plans: defaultValues.plans,
         });
         break;
     }
