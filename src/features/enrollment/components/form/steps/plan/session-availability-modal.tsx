@@ -178,7 +178,7 @@ export const SessionAvailabilityModal = ({
               Operating Hours: {branchConfig.operatingHours?.start} -{' '}
               {branchConfig.operatingHours?.end}
             </div>
-            {numberOfSessions > 1 && (
+            {numberOfSessions > 1 && selectedDate && (
               <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
                 <strong>Note:</strong> Checking availability for all {numberOfSessions} sessions
                 starting from {format(selectedDate, 'PPP')}. Partially available slots can be

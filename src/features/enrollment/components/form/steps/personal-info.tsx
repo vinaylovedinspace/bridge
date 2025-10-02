@@ -39,12 +39,13 @@ export const PersonalInfoStep = () => {
   const methods = useFormContext<AdmissionFormValues>();
   const { control, setValue, clearErrors } = methods;
 
-  // Use custom hook for phone number validation
+  // Use custom hook for phone and Aadhaar number validation
   const {
     showDuplicateModal,
     setShowDuplicateModal,
     existingClient,
     handlePhoneNumberBlur,
+    handleAadhaarNumberBlur,
     handleUseExisting,
     handleContinueWithNew,
   } = usePhoneNumberValidation(setValue);
@@ -139,6 +140,10 @@ export const PersonalInfoStep = () => {
                       onChange={(e) => {
                         const value = e.target.value.replace(/[^0-9\s]/g, '');
                         field.onChange(value);
+                      }}
+                      onBlur={(e) => {
+                        field.onBlur();
+                        handleAadhaarNumberBlur(e.target.value);
                       }}
                       maxLength={14}
                     />
@@ -742,7 +747,8 @@ export const PersonalInfoStep = () => {
       <DuplicateClientModal
         open={showDuplicateModal}
         onOpenChange={setShowDuplicateModal}
-        clientName={existingClient?.name ?? ''}
+        clientName={existingClient?.name || ''}
+        matchedField={existingClient?.matchedField}
         onUseExisting={handleUseExisting}
         onContinueWithNew={handleContinueWithNew}
       />

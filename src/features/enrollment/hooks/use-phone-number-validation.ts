@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { UseFormSetValue } from 'react-hook-form';
-import { checkPhoneNumberExists } from '@/features/enrollment/server/action';
+import {
+  checkPhoneNumberExists,
+  checkAadhaarNumberExists,
+} from '@/features/enrollment/server/action';
 import {
   mapClientToPersonalInfo,
   mapLearningLicense,
@@ -11,6 +14,7 @@ import { AdmissionFormValues } from '@/features/enrollment/types';
 type ExistingClient = {
   id: string;
   name: string;
+  matchedField: 'phone' | 'aadhaar';
   data: Awaited<ReturnType<typeof checkPhoneNumberExists>>['client'];
 };
 
@@ -31,6 +35,29 @@ export const usePhoneNumberValidation = (setValue: UseFormSetValue<AdmissionForm
       setExistingClient({
         id: result.client.id,
         name: fullName,
+        matchedField: 'phone',
+        data: result.client,
+      });
+      setShowDuplicateModal(true);
+    }
+  };
+
+  const handleAadhaarNumberBlur = async (aadhaarNumber: string) => {
+    // Remove spaces and validate length (12 digits)
+    const cleanedAadhaar = aadhaarNumber.replace(/\s/g, '');
+    if (!cleanedAadhaar || cleanedAadhaar.length !== 12) return;
+
+    const result = await checkAadhaarNumberExists(cleanedAadhaar);
+
+    if (result.exists && result.client) {
+      const fullName = [result.client.firstName, result.client.middleName, result.client.lastName]
+        .filter(Boolean)
+        .join(' ');
+
+      setExistingClient({
+        id: result.client.id,
+        name: fullName,
+        matchedField: 'aadhaar',
         data: result.client,
       });
       setShowDuplicateModal(true);
@@ -68,6 +95,7 @@ export const usePhoneNumberValidation = (setValue: UseFormSetValue<AdmissionForm
     setShowDuplicateModal,
     existingClient,
     handlePhoneNumberBlur,
+    handleAadhaarNumberBlur,
     handleUseExisting,
     handleContinueWithNew,
   };

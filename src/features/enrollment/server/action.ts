@@ -586,3 +586,29 @@ export const checkPhoneNumberExists = async (phoneNumber: string) => {
     return { exists: false };
   }
 };
+
+export const checkAadhaarNumberExists = async (aadhaarNumber: string) => {
+  const { tenantId } = await getBranchConfig();
+
+  try {
+    const client = await db.query.ClientTable.findFirst({
+      where: and(eq(ClientTable.aadhaarNumber, aadhaarNumber), eq(ClientTable.tenantId, tenantId)),
+      with: {
+        learningLicense: true,
+        drivingLicense: true,
+      },
+    });
+
+    if (client) {
+      return {
+        exists: true,
+        client,
+      };
+    }
+
+    return { exists: false };
+  } catch (error) {
+    console.error('Error checking Aadhaar number:', error);
+    return { exists: false };
+  }
+};

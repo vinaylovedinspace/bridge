@@ -15,8 +15,7 @@ type DuplicateClientModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   clientName: string;
-  hasLearningLicense?: boolean;
-  hasDrivingLicense?: boolean;
+  matchedField?: 'phone' | 'aadhaar';
   onUseExisting: () => void;
   onContinueWithNew: () => void;
 };
@@ -25,18 +24,23 @@ export const DuplicateClientModal = ({
   open,
   onOpenChange,
   clientName,
+  matchedField = 'phone',
+
   onUseExisting,
   onContinueWithNew,
 }: DuplicateClientModalProps) => {
+  const fieldLabel = matchedField === 'phone' ? 'Phone Number' : 'Aadhaar Number';
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Phone Number Already Exists</AlertDialogTitle>
+          <AlertDialogTitle>{fieldLabel} Already Exists</AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-2">
               <div>
-                This phone number is already registered for <strong>{clientName}</strong>.
+                This {fieldLabel.toLowerCase()} is already registered for{' '}
+                <strong>{clientName}</strong>.
               </div>
 
               <div className="mt-2">

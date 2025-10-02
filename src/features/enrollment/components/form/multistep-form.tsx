@@ -79,6 +79,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
 
   // Watch all form values to detect changes
   const watchedValues = watch();
+  const clientId = watch('clientId');
 
   // Define step actions
   const handleServiceTypeStep = async (data: { serviceType: string }): ActionReturnType => {
@@ -315,7 +316,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
         }),
       },
       plan: {
-        component: <PlanStep branchConfig={branchConfig} currentClientId={undefined} />,
+        component: <PlanStep branchConfig={branchConfig} currentClientId={clientId} />,
         onSubmit: (data: unknown) => handlePlanStep(data as PlanValues),
         getData: () => getValues('plan'),
       },
@@ -329,6 +330,7 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
     };
   }, [
     branchConfig,
+    clientId,
     getValues,
     handleLicenseStep,
     handlePaymentStep,
