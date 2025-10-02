@@ -17,6 +17,7 @@ import { EditFormSteps } from './form-steps';
 import { FormNavigation } from '@/components/ui/form-navigation';
 import { UnsavedChangesDialog } from '@/components/ui/unsaved-changes-dialog';
 import { Enrollment } from '@/server/db/plan';
+import { useRouter } from 'next/navigation';
 
 type StepKey = 'service' | 'personal' | 'license' | 'plan' | 'payment';
 
@@ -27,6 +28,8 @@ type EditAdmissionFormProps = {
 
 export const EditAdmissionForm = ({ enrollment, branchConfig }: EditAdmissionFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const router = useRouter();
 
   const methods = useEditAdmissionForm(enrollment);
   const { trigger, getValues } = methods;
@@ -46,8 +49,7 @@ export const EditAdmissionForm = ({ enrollment, branchConfig }: EditAdmissionFor
   } = useUnsavedChanges(enrollment, methods, currentStep);
 
   const { payment } = enrollment;
-  const isPaymentProcessed =
-    payment?.paymentStatus === 'FULLY_PAID' || payment?.paymentStatus === 'PARTIALLY_PAID';
+  const isPaymentProcessed = payment?.paymentStatus === 'FULLY_PAID';
   const isPaymentStep = currentStep === 'payment';
   const shouldDisablePaymentEdit = isPaymentStep && isPaymentProcessed;
 
@@ -80,9 +82,8 @@ export const EditAdmissionForm = ({ enrollment, branchConfig }: EditAdmissionFor
 
       const hasChanges = hasCurrentStepChanges();
       if (!hasChanges) {
-        console.log('No changes detected, skipping submission');
         if (isLastStep) {
-          window.location.href = '/clients';
+          router.push('/enrollment');
         } else {
           goToNext();
         }

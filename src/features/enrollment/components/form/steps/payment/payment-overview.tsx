@@ -8,7 +8,11 @@ import { Info } from 'lucide-react';
 import { PaymentOverviewProps } from './types';
 import { calculatePaymentAmounts, formatCurrency } from '@/lib/payment/calculate';
 
-export const PaymentOverview = ({ discountInfo, paymentCheckboxes }: PaymentOverviewProps) => {
+export const PaymentOverview = ({
+  discountInfo,
+  paymentCheckboxes,
+  existingPayment,
+}: PaymentOverviewProps) => {
   const { getValues } = useFormContext<AdmissionFormValues>();
   const { plan } = getValues();
   const { data: vehicle } = useVehicle(plan?.vehicleId || '');
@@ -18,6 +22,17 @@ export const PaymentOverview = ({ discountInfo, paymentCheckboxes }: PaymentOver
 
   // Determine payment type based on checkboxes
   const paymentType = paymentCheckboxes.installments.isChecked ? 'INSTALLMENTS' : 'FULL_PAYMENT';
+
+  // Check if first installment is already paid
+  const isFirstInstallmentPaid =
+    existingPayment?.paymentType === 'INSTALLMENTS' &&
+    existingPayment?.installmentPayments?.some(
+      (installment) => installment.installmentNumber === 1 && installment.isPaid
+    );
+
+  const paidFirstInstallment = existingPayment?.installmentPayments?.find(
+    (installment) => installment.installmentNumber === 1 && installment.isPaid
+  );
 
   // Use the shared utility function for payment calculations
   const {
@@ -33,12 +48,17 @@ export const PaymentOverview = ({ discountInfo, paymentCheckboxes }: PaymentOver
     paymentType,
   });
 
+  // Calculate the amount due based on whether first installment is paid
+  const amountDue = isFirstInstallmentPaid ? secondInstallmentAmount : totalAfterDiscount;
+
   // Format amounts using the shared utility function
   const formattedFees = formatCurrency(totalFees);
   const formattedDiscount = discountValue > 0 ? formatCurrency(discountValue) : null;
-  const formattedTotalAfterDiscount = formatCurrency(totalAfterDiscount);
-  const formattedFirstInstallment = formatCurrency(firstInstallmentAmount);
+  const formattedFirstInstallment = formatCurrency(
+    paidFirstInstallment?.amount || firstInstallmentAmount
+  );
   const formattedSecondInstallment = formatCurrency(secondInstallmentAmount);
+  const formattedAmountDue = formatCurrency(amountDue);
 
   const isCheckboxChecked = Object.values(paymentCheckboxes).some((checkbox) => checkbox.isChecked);
 
@@ -46,11 +66,15 @@ export const PaymentOverview = ({ discountInfo, paymentCheckboxes }: PaymentOver
     <Card className="p-6 flex flex-col pt-10 min-h-[32rem] h-full">
       <div className="space-y-3">
         <TypographyLarge className="text-primary text-4xl text-center">
-          {formattedTotalAfterDiscount}
+          {formattedAmountDue}
         </TypographyLarge>
         <div className="flex items-center justify-center space-x-2">
-          <span className="bg-yellow-500 size-2 rounded-full inline-block" />
-          <TypographyMuted className="text-center">Total Due</TypographyMuted>
+          <span
+            className={`${isFirstInstallmentPaid ? 'bg-orange-500' : 'bg-yellow-500'} size-2 rounded-full inline-block`}
+          />
+          <TypographyMuted className="text-center">
+            {isFirstInstallmentPaid ? 'Remaining Due' : 'Total Due'}
+          </TypographyMuted>
         </div>
       </div>
       <Separator />
@@ -75,8 +99,17 @@ export const PaymentOverview = ({ discountInfo, paymentCheckboxes }: PaymentOver
           {paymentCheckboxes.installments.isChecked && (
             <>
               <div className="flex justify-between mt-4">
-                <TypographyMuted>1st Installment</TypographyMuted>
-                <TypographyMuted className="font-semibold">
+                <TypographyMuted className="flex items-center gap-2">
+                  1st Installment
+                  {isFirstInstallmentPaid && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                      Received
+                    </span>
+                  )}
+                </TypographyMuted>
+                <TypographyMuted
+                  className={`font-semibold ${isFirstInstallmentPaid ? 'text-green-600' : ''}`}
+                >
                   {formattedFirstInstallment}
                 </TypographyMuted>
               </div>
@@ -93,10 +126,10 @@ export const PaymentOverview = ({ discountInfo, paymentCheckboxes }: PaymentOver
             <>
               <Separator className="my-6" />
               <div className="flex justify-between">
-                <TypographyMuted>Total Due</TypographyMuted>
-                <TypographyMuted className="font-semibold">
-                  {formattedTotalAfterDiscount}
+                <TypographyMuted>
+                  {isFirstInstallmentPaid ? 'Remaining Due' : 'Total Due'}
                 </TypographyMuted>
+                <TypographyMuted className="font-semibold">{formattedAmountDue}</TypographyMuted>
               </div>
             </>
           )}

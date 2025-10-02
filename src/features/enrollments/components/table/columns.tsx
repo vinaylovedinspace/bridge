@@ -2,8 +2,10 @@
 
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { Enrollments } from '@/server/db/enrollment';
+import Link from 'next/link';
 
 const getPaymentStatusBadge = (status?: string | null) => {
   if (!status) {
@@ -97,6 +99,26 @@ export const columns: ColumnDef<Enrollments[number]>[] = [
     header: 'Enrollment Date',
     cell: ({ row }) => {
       return format(new Date(row.original.createdAt), 'MMM dd, yyyy');
+    },
+  },
+  {
+    id: 'actions',
+    header: 'Actions',
+    cell: ({ row }) => {
+      if (row.original.payment?.paymentStatus === 'FULLY_PAID') {
+        return null;
+      }
+
+      return (
+        <Link
+          href={`/enrollment/${row.original.id}?step=payment`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button size="xs" variant="outline">
+            Accept Payment
+          </Button>
+        </Link>
+      );
     },
   },
 ];

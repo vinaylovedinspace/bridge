@@ -13,7 +13,11 @@ export const getEnrollmentByPlanId = async (id: string) => {
         },
       },
       vehicle: true,
-      payment: true,
+      payment: {
+        with: {
+          installmentPayments: true,
+        },
+      },
     },
   });
 

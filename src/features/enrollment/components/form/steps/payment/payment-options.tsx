@@ -15,6 +15,12 @@ export const PaymentOptions = ({
   const { control, setValue } = useFormContext<AdmissionFormValues>();
 
   const hasExistingDiscount = Boolean(existingPayment && existingPayment.discount > 0);
+  const hasExistingInstallments = Boolean(
+    existingPayment &&
+      existingPayment.paymentType === 'INSTALLMENTS' &&
+      existingPayment.installmentPayments &&
+      existingPayment.installmentPayments.length > 0
+  );
 
   // Update form value when payment checkboxes change
   useEffect(() => {
@@ -93,9 +99,14 @@ export const PaymentOptions = ({
             <Checkbox
               checked={paymentCheckboxes.installments.isChecked}
               onCheckedChange={(checked) => handleCheckboxChange('installments', checked)}
+              disabled={hasExistingInstallments}
             />
           </FormControl>
-          <FormLabel className="cursor-pointer">{paymentCheckboxes.installments.label}</FormLabel>
+          <FormLabel
+            className={hasExistingInstallments ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
+          >
+            {paymentCheckboxes.installments.label}
+          </FormLabel>
         </FormItem>
       </div>
 

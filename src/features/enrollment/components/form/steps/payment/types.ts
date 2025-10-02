@@ -24,10 +24,23 @@ export type PaymentCheckboxProps = {
     paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS' | null;
     secondInstallmentDate?: Date | string | null;
     paymentDueDate?: Date | string | null;
+    installmentPayments?: Array<{
+      installmentNumber: number;
+      amount: number;
+      isPaid: boolean | null;
+    }>;
   } | null;
 };
 
 export type PaymentOverviewProps = {
   discountInfo: { isChecked: boolean; value: string };
   paymentCheckboxes: PaymentInfoState;
+  existingPayment?: {
+    paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS' | null;
+    installmentPayments?: Array<{
+      installmentNumber: number;
+      amount: number;
+      isPaid: boolean | null;
+    }>;
+  } | null;
 };

@@ -216,9 +216,17 @@ export const createFullPaymentInDB = async (data: typeof FullPaymentTable.$infer
 };
 
 export const createInstallmentPaymentsInDB = async (
-  data: (typeof InstallmentPaymentTable.$inferInsert)[]
+  data: typeof InstallmentPaymentTable.$inferInsert
 ) => {
-  const installmentPayments = await db.insert(InstallmentPaymentTable).values(data).returning();
+  const response = await db.transaction(async (tx) => {
+    const [installmentPayment] = await tx.insert(InstallmentPaymentTable).values(data).returning();
+    await tx
+      .update(PaymentTable)
+      .set({ paymentStatus: 'PARTIALLY_PAID' })
+      .where(eq(PaymentTable.id, data.paymentId));
 
-  return installmentPayments;
+    return installmentPayment;
+  });
+
+  return response;
 };

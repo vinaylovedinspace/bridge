@@ -397,11 +397,9 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
 
   const handleNext = async () => {
     try {
-      // Step 1: Generate validation fields on demand for the current step
       const currentStepKey = currentStep;
 
       const fieldsToValidate = getMultistepAdmissionStepValidationFields(currentStepKey, getValues);
-      console.log(fieldsToValidate, getValues('payment'));
 
       const isStepValid = await trigger(fieldsToValidate);
 

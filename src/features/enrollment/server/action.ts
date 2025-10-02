@@ -26,6 +26,7 @@ import { eq, and, isNull } from 'drizzle-orm';
 import { PlanTable } from '@/db/schema/plan/columns';
 import { VehicleTable } from '@/db/schema/vehicles/columns';
 import { ClientTable } from '@/db/schema/client/columns';
+import { InstallmentPaymentTable } from '@/db/schema/payment/columns';
 import { calculatePaymentAmounts } from '@/lib/payment/calculate';
 import { generateSessionsFromPlan } from '@/lib/sessions';
 import { dateToString } from '@/lib/date-utils';
@@ -416,30 +417,57 @@ export const createPayment = async (
       vehicleRentAmount: vehicle.rent,
     });
 
-    // Create FullPayment or InstallmentPayment entries if paymentMode is CASH
+    // Create FullPayment or InstallmentPayment entries if paymentMode is CASH or QR
     if (data.paymentMode === 'CASH' || data.paymentMode === 'QR') {
       const currentDate = dateToString(new Date());
 
       if (data.paymentType === 'FULL_PAYMENT') {
         await createFullPaymentInDB({
           paymentId,
-          paymentMode: 'CASH',
+          paymentMode: data.paymentMode,
           paymentDate: currentDate,
           isPaid: true,
         });
       } else if (data.paymentType === 'INSTALLMENTS') {
-        const firstInstallmentAmount = Math.ceil(finalAmount / 2);
+        // Check if first installment already exists
+        const existingInstallments = await db.query.InstallmentPaymentTable.findMany({
+          where: eq(InstallmentPaymentTable.paymentId, paymentId),
+        });
 
-        await createInstallmentPaymentsInDB([
-          {
+        const firstInstallmentExists = existingInstallments.some(
+          (installment) => installment.installmentNumber === 1 && installment.isPaid
+        );
+
+        const firstInstallmentAmount = Math.ceil(finalAmount / 2);
+        const secondInstallmentAmount = finalAmount - firstInstallmentAmount;
+
+        if (firstInstallmentExists) {
+          // Create second installment
+          const secondInstallmentExists = existingInstallments.some(
+            (installment) => installment.installmentNumber === 2
+          );
+
+          if (!secondInstallmentExists) {
+            await createInstallmentPaymentsInDB({
+              paymentId,
+              installmentNumber: 2,
+              amount: secondInstallmentAmount,
+              paymentMode: data.paymentMode,
+              paymentDate: currentDate,
+              isPaid: true,
+            });
+          }
+        } else {
+          // Create first installment
+          await createInstallmentPaymentsInDB({
             paymentId,
             installmentNumber: 1,
             amount: firstInstallmentAmount,
-            paymentMode: 'CASH',
+            paymentMode: data.paymentMode,
             paymentDate: currentDate,
             isPaid: true,
-          },
-        ]);
+          });
+        }
       }
     }
 

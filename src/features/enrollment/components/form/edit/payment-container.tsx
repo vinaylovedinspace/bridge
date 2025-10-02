@@ -49,6 +49,7 @@ export const PaymentContainer = ({ payment }: { payment: NonNullable<Enrollment>
           <PaymentOverview
             discountInfo={paymentCheckboxes.discount}
             paymentCheckboxes={paymentCheckboxes}
+            existingPayment={payment}
           />
         </div>
       </div>
@@ -66,6 +67,7 @@ export const PaymentContainer = ({ payment }: { payment: NonNullable<Enrollment>
         <PaymentOverview
           discountInfo={paymentCheckboxes.discount}
           paymentCheckboxes={paymentCheckboxes}
+          existingPayment={payment}
         />
       </div>
 
