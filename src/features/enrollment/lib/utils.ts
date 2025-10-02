@@ -74,71 +74,92 @@ const combineDateAndTime = (dateString: string, timeString: string): Date => {
   return date;
 };
 
+// Helper function to map client data to personal info form values
+export const mapClientToPersonalInfo = (
+  client: NonNullable<Enrollment>['client']
+): AdmissionFormValues['personalInfo'] => {
+  return {
+    firstName: client.firstName,
+    lastName: client.lastName,
+    aadhaarNumber: client.aadhaarNumber,
+    guardianFirstName: client.guardianFirstName || '',
+    guardianLastName: client.guardianLastName || '',
+    guardianMiddleName: client.guardianMiddleName || '',
+    guardianRelationship: client.guardianRelationship || 'FATHER',
+    birthDate: new Date(client.birthDate),
+    bloodGroup: client.bloodGroup,
+    gender: client.gender,
+    educationalQualification: client.educationalQualification || 'CLASS_12TH',
+    phoneNumber: client.phoneNumber,
+    alternativePhoneNumber: client.alternativePhoneNumber || '',
+    addressLine1: client.addressLine1,
+    addressLine2: client.addressLine2,
+    addressLine3: client.addressLine3 || '',
+    city: client.city,
+    state: client.state,
+    pincode: client.pincode,
+    isCurrentAddressSameAsPermanentAddress: client.isCurrentAddressSameAsPermanentAddress ?? false,
+    permanentAddressLine1: client.permanentAddressLine1,
+    permanentAddressLine2: client.permanentAddressLine2,
+    permanentAddressLine3: client.permanentAddressLine3 || '',
+    permanentCity: client.permanentCity,
+    permanentState: client.permanentState,
+    permanentPincode: client.permanentPincode,
+    citizenStatus: client.citizenStatus || 'BIRTH',
+    branchId: client.branchId,
+    tenantId: client.tenantId,
+    middleName: client.middleName || '',
+    email: client.email || '',
+    photoUrl: client.photoUrl || undefined,
+  };
+};
+
+// Helper function to map learning license to form values
+export const mapLearningLicense = (
+  learningLicense: NonNullable<Enrollment>['client']['learningLicense']
+): AdmissionFormValues['learningLicense'] => {
+  if (!learningLicense) return undefined;
+
+  return {
+    class: learningLicense.class || [],
+    testConductedOn: parseDate(learningLicense.testConductedOn),
+    licenseNumber: learningLicense.licenseNumber,
+    issueDate: parseDate(learningLicense.issueDate),
+    expiryDate: parseDate(learningLicense.expiryDate),
+    applicationNumber: learningLicense.applicationNumber,
+  };
+};
+
+// Helper function to map driving license to form values
+export const mapDrivingLicense = (
+  drivingLicense: NonNullable<Enrollment>['client']['drivingLicense']
+): AdmissionFormValues['drivingLicense'] => {
+  if (!drivingLicense) return undefined;
+
+  return {
+    class: drivingLicense.class || [],
+    appointmentDate: parseDate(drivingLicense.appointmentDate),
+    licenseNumber: drivingLicense.licenseNumber,
+    issueDate: parseDate(drivingLicense.issueDate),
+    expiryDate: parseDate(drivingLicense.expiryDate),
+    applicationNumber: drivingLicense.applicationNumber,
+    testConductedBy: drivingLicense.testConductedBy,
+    imv: drivingLicense.imv,
+    rto: drivingLicense.rto,
+    department: drivingLicense.department,
+  };
+};
+
 export const getDefaultValuesForEnrollmentForm = (
   enrollment: NonNullable<Enrollment>
 ): AdmissionFormValues => {
   const { client, payment } = enrollment;
-  const learningLicense = client?.learningLicense;
-  const drivingLicense = client?.drivingLicense;
 
   return {
     serviceType: enrollment.serviceType,
-    personalInfo: {
-      firstName: client.firstName,
-      lastName: client.lastName,
-      aadhaarNumber: client.aadhaarNumber,
-      guardianFirstName: client.guardianFirstName || '',
-      guardianLastName: client.guardianLastName || '',
-      birthDate: new Date(client.birthDate),
-      bloodGroup: client.bloodGroup,
-      gender: client.gender,
-      educationalQualification: client.educationalQualification || 'CLASS_12TH',
-      phoneNumber: client.phoneNumber,
-      addressLine1: client.addressLine1,
-      addressLine2: client.addressLine2,
-      addressLine3: client.addressLine3 || '',
-      city: client.city,
-      state: client.state,
-      pincode: client.pincode,
-      isCurrentAddressSameAsPermanentAddress:
-        client.isCurrentAddressSameAsPermanentAddress ?? false,
-      permanentAddressLine1: client.permanentAddressLine1,
-      permanentAddressLine2: client.permanentAddressLine2,
-      permanentAddressLine3: client.permanentAddressLine3 || '',
-      permanentCity: client.permanentCity,
-      permanentState: client.permanentState,
-      permanentPincode: client.permanentPincode,
-      citizenStatus: client.citizenStatus || 'BIRTH',
-      branchId: client.branchId,
-      tenantId: client.tenantId,
-      middleName: client.middleName || '',
-      email: client.email || '',
-      photoUrl: client.photoUrl || undefined,
-    },
-    learningLicense: learningLicense
-      ? {
-          class: learningLicense.class || [],
-          testConductedOn: parseDate(learningLicense.testConductedOn),
-          licenseNumber: learningLicense.licenseNumber,
-          issueDate: parseDate(learningLicense.issueDate),
-          expiryDate: parseDate(learningLicense.expiryDate),
-          applicationNumber: learningLicense.applicationNumber,
-        }
-      : undefined,
-    drivingLicense: drivingLicense
-      ? {
-          class: drivingLicense.class || [],
-          appointmentDate: parseDate(drivingLicense.appointmentDate),
-          licenseNumber: drivingLicense.licenseNumber,
-          issueDate: parseDate(drivingLicense.issueDate),
-          expiryDate: parseDate(drivingLicense.expiryDate),
-          applicationNumber: drivingLicense.applicationNumber,
-          testConductedBy: drivingLicense.testConductedBy,
-          imv: drivingLicense.imv,
-          rto: drivingLicense.rto,
-          department: drivingLicense.department,
-        }
-      : undefined,
+    personalInfo: mapClientToPersonalInfo(client),
+    learningLicense: mapLearningLicense(client?.learningLicense),
+    drivingLicense: mapDrivingLicense(client?.drivingLicense),
     plan: {
       vehicleId: enrollment.vehicleId,
       numberOfSessions: enrollment.numberOfSessions,

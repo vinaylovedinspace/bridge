@@ -95,5 +95,9 @@ export const ClientTable = pgTable(
       table.phoneNumber,
       table.tenantId
     ),
+    aadhaarNumberTenantUnique: unique('aadhaar_number_tenant_unique').on(
+      table.aadhaarNumber,
+      table.tenantId
+    ),
   })
 );

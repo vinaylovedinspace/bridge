@@ -560,3 +560,29 @@ export const updatePayment = async (
 ): ActionReturnType => {
   return createPayment(data);
 };
+
+export const checkPhoneNumberExists = async (phoneNumber: string) => {
+  const { tenantId } = await getBranchConfig();
+
+  try {
+    const client = await db.query.ClientTable.findFirst({
+      where: and(eq(ClientTable.phoneNumber, phoneNumber), eq(ClientTable.tenantId, tenantId)),
+      with: {
+        learningLicense: true,
+        drivingLicense: true,
+      },
+    });
+
+    if (client) {
+      return {
+        exists: true,
+        client,
+      };
+    }
+
+    return { exists: false };
+  } catch (error) {
+    console.error('Error checking phone number:', error);
+    return { exists: false };
+  }
+};
