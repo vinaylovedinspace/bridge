@@ -6,7 +6,7 @@ import { LicenseStep } from '@/features/enrollment/components/form/steps/license
 import { PlanStep } from '@/features/enrollment/components/form/steps/plan';
 import { BranchConfig } from '@/server/db/branch';
 import { AdmissionFormStepKey } from '../../progress-bar/progress-bar';
-import { PaymentContainer } from './payment-container';
+import { PaymentContainerWithEnrollment } from './payment-container';
 import { Enrollment } from '@/server/db/plan';
 
 type EditFormStepsProps = {
@@ -23,7 +23,7 @@ export const EditFormSteps = ({ currentStep, enrollment, branchConfig }: EditFor
       <LicenseStep isEditMode={true} branchServiceCharge={branchConfig.licenseServiceCharge ?? 0} />
     ),
     plan: <PlanStep branchConfig={branchConfig} currentClientId={enrollment.id} />,
-    payment: <PaymentContainer payment={enrollment.payment} />,
+    payment: <PaymentContainerWithEnrollment enrollment={enrollment} />,
   };
 
   return stepComponents[currentStep];

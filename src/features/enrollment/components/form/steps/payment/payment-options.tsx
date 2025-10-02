@@ -2,11 +2,17 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
-import { PaymentCheckboxProps } from './types';
 import { AdmissionFormValues } from '@/features/enrollment/types';
 import { useFormContext } from 'react-hook-form';
-import { useEffect } from 'react';
+import { Dispatch, SetStateAction, useEffect } from 'react';
+import { Enrollment } from '@/server/db/plan';
+import { PaymentInfoState } from './types';
 
+type PaymentCheckboxProps = {
+  paymentCheckboxes: PaymentInfoState;
+  setPaymentCheckboxes: Dispatch<SetStateAction<PaymentInfoState>>;
+  existingPayment: NonNullable<Enrollment>['payment'];
+};
 export const PaymentOptions = ({
   paymentCheckboxes,
   setPaymentCheckboxes,

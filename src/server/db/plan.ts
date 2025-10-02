@@ -16,6 +16,7 @@ export const getEnrollmentByPlanId = async (id: string) => {
       payment: {
         with: {
           installmentPayments: true,
+          fullPayment: true,
         },
       },
     },

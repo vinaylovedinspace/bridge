@@ -197,3 +197,30 @@ export const getDefaultValuesForEnrollmentForm = (
     paymentId: payment?.id,
   };
 };
+
+export const calculateAmoutDue = (payment: NonNullable<Enrollment>['payment']) => {
+  if (!payment) {
+    return 0;
+  }
+
+  const { paymentType, finalAmount, paymentStatus } = payment;
+
+  if (paymentType === 'FULL_PAYMENT' && paymentStatus === 'PENDING') {
+    return finalAmount;
+  }
+
+  if (paymentType === 'INSTALLMENTS' && paymentStatus === 'PARTIALLY_PAID') {
+    const firstInstallment = payment.installmentPayments?.find(
+      (installment) => installment.installmentNumber === 1
+    );
+    if (firstInstallment?.isPaid) {
+      return finalAmount - firstInstallment.amount;
+    }
+  }
+
+  if (paymentType === 'INSTALLMENTS' && paymentStatus === 'FULLY_PAID') {
+    return 0;
+  }
+
+  return finalAmount;
+};

@@ -1,19 +1,11 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import React from 'react';
-import {
-  admissionFormSchema,
-  AdmissionFormValues,
-  PersonalInfoValues,
-  PlanValues,
-  LearningLicenseValues,
-  DrivingLicenseValues,
-  PaymentValues,
-} from '../../types';
+import { admissionFormSchema, AdmissionFormValues } from '../../types';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ServiceTypeStep } from './steps/service-type';
@@ -22,18 +14,11 @@ import { LicenseStep } from './steps/license';
 import { PlanStep } from './steps/plan';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStepNavigation, ProgressBar } from '../progress-bar/progress-bar';
-import { ActionReturnType } from '@/types/actions';
-import {
-  createClient,
-  createLearningLicense,
-  createDrivingLicense,
-  createPlan,
-  createPayment,
-} from '../../server/action';
 import { PaymentContainer } from './steps/payment';
 import { DEFAULT_STATE } from '@/lib/constants/business';
 import { getMultistepAdmissionStepValidationFields } from '../../lib/utils';
 import { BranchConfig } from '@/server/db/branch';
+import { useEnrollmentFormSubmissions } from '../../hooks/use-enrollment-form-submissions';
 
 type MultistepFormProps = {
   branchConfig: BranchConfig;
@@ -81,235 +66,23 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
   const watchedValues = watch();
   const clientId = watch('clientId');
 
-  // Define step actions
-  const handleServiceTypeStep = async (data: { serviceType: string }): ActionReturnType => {
-    // Service type step doesn't need server action, just validation
-    console.log('Service type selected:', data.serviceType);
-    return Promise.resolve({
-      error: false,
-      message: 'Service type selected successfully',
-    });
-  };
-
-  const handlePersonalStep = useCallback(
-    async (data: PersonalInfoValues): ActionReturnType => {
-      console.log('Processing personal info:', data);
-      const result = await createClient(data);
-
-      // If the client was created successfully, store the clientId for later steps
-      if (!result.error && result.clientId) {
-        setValue('clientId', result.clientId);
-      }
-
-      return result;
-    },
-    [setValue]
-  );
-
-  const handleLicenseStep = useCallback(
-    async (data: {
-      learningLicense?: LearningLicenseValues;
-      drivingLicense?: DrivingLicenseValues;
-    }): ActionReturnType => {
-      console.log('Processing license info:', data);
-
-      const clientId = getValues('clientId');
-      if (!clientId) {
-        return Promise.resolve({
-          error: true,
-          message: 'Client ID not found. Please complete the personal information step first.',
-        });
-      }
-
-      const { learningLicense, drivingLicense } = data;
-
-      const hasClass = learningLicense?.class;
-      const hasLearningLicense = learningLicense && Object.keys(learningLicense).length > 0;
-      const hasDrivingLicense = drivingLicense && Object.keys(drivingLicense).length > 0;
-
-      try {
-        let learningResult: Awaited<ActionReturnType> | null = null;
-        let drivingResult: Awaited<ActionReturnType> | null = null;
-
-        // Handle learning license if present
-        if (hasLearningLicense) {
-          learningResult = await createLearningLicense({
-            ...learningLicense,
-            clientId,
-          });
-
-          // If learning license fails, return the learning result
-          if (learningResult.error) {
-            return learningResult;
-          }
-        }
-
-        // Handle driving license if present
-        if (hasDrivingLicense || hasClass) {
-          drivingResult = await createDrivingLicense({
-            ...drivingLicense,
-            class: learningLicense?.class || [],
-            clientId,
-          });
-
-          // If driving license fails, return its error
-          if (drivingResult.error) {
-            return drivingResult;
-          }
-        }
-
-        // Return success message based on what was processed
-        if (learningResult && drivingResult) {
-          return {
-            error: false,
-            message: 'Learning and driving licence information saved successfully',
-          };
-        } else if (learningResult) {
-          return {
-            error: false,
-            message: 'Learning licence information saved successfully',
-          };
-        } else if (drivingResult) {
-          return {
-            error: false,
-            message: 'Driving licence information saved successfully',
-          };
-        }
-
-        // If no licenses were processed, allow progression (licenses are optional)
-        return {
-          error: false,
-          message: 'Licence step completed',
-        };
-      } catch (error) {
-        console.error('Error processing license data:', error);
-        return Promise.resolve({
-          error: true,
-          message: 'An unexpected error occurred while processing licence data',
-        });
-      }
-    },
-    [getValues]
-  );
-
-  const handlePlanStep = useCallback(
-    async (data: PlanValues): ActionReturnType => {
-      const clientId = getValues('clientId');
-      const serviceType = getValues('serviceType');
-
-      if (!clientId) {
-        return Promise.resolve({
-          error: true,
-          message: 'Client ID not found. Please complete the personal information step first.',
-        });
-      }
-
-      // Check slot availability before creating the plan
-      try {
-        const { getSessions } = await import('@/server/actions/sessions');
-        const sessions = await getSessions(data.vehicleId);
-
-        const selectedDate = data.joiningDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-        const selectedTime = `${data.joiningDate.getHours().toString().padStart(2, '0')}:${data.joiningDate.getMinutes().toString().padStart(2, '0')}`;
-
-        // Check if the selected slot is already taken (excluding current client's sessions)
-        const conflictSession = sessions.find((session) => {
-          const sessionDate = session.sessionDate; // Already in YYYY-MM-DD format
-          const sessionTime = session.startTime.substring(0, 5); // Remove seconds if present
-          const isCurrentClientSession = clientId && session.clientId === clientId;
-          return (
-            sessionDate === selectedDate && sessionTime === selectedTime && !isCurrentClientSession
-          );
-        });
-
-        if (conflictSession) {
-          return Promise.resolve({
-            error: true,
-            message:
-              'The selected time slot is not available. Please choose an available time slot from the suggestions above.',
-          });
-        }
-      } catch (error) {
-        console.error('Error checking slot availability:', error);
-        return Promise.resolve({
-          error: true,
-          message: 'Unable to verify slot availability. Please try again.',
-        });
-      }
-
-      const result = await createPlan({
-        ...data,
-        serviceType: serviceType || data.serviceType,
-        clientId,
-      });
-
-      if (result.planId) {
-        setValue('planId', result.planId);
-      }
-
-      // Sessions are automatically created/updated by the createPlan server action
-      // No need to create them again here
-      return result;
-    },
-    [getValues, setValue]
-  );
-
-  const handlePaymentStep = useCallback(
-    async (data: PaymentValues): ActionReturnType => {
-      const clientId = getValues('clientId');
-      const planId = getValues('planId');
-
-      if (!clientId) {
-        return Promise.resolve({
-          error: true,
-          message: 'Client ID not found. Please complete the personal information step first.',
-        });
-      }
-
-      if (!planId) {
-        return Promise.resolve({
-          error: true,
-          message: 'Plan ID not found. Please complete the plan step first.',
-        });
-      }
-
-      const result = await createPayment({
-        ...data,
-        clientId,
-        planId,
-      });
-
-      if (!result.error && result.paymentId) {
-        setValue('paymentId', result.paymentId);
-      }
-
-      return result;
-    },
-    [getValues, setValue]
-  );
+  // Use the enrollment form submissions hook
+  const { submitStep } = useEnrollmentFormSubmissions(getValues, setValue);
 
   // Map step keys to components and their corresponding actions
   const stepComponents = React.useMemo(() => {
     return {
       service: {
         component: <ServiceTypeStep />,
-        onSubmit: (data: unknown) => handleServiceTypeStep(data as { serviceType: string }),
         getData: () => ({ serviceType: getValues('serviceType') }),
       },
       personal: {
         component: <PersonalInfoStep />,
-        onSubmit: (data: unknown) => handlePersonalStep(data as PersonalInfoValues),
         getData: () => getValues('personalInfo'),
       },
       license: {
         component: <LicenseStep branchServiceCharge={branchConfig.licenseServiceCharge ?? 0} />,
-        onSubmit: (data: unknown) =>
-          handleLicenseStep(
-            data as {
-              learningLicense?: LearningLicenseValues;
-              drivingLicense?: DrivingLicenseValues;
-            }
-          ),
+
         getData: () => ({
           learningLicense: getValues('learningLicense'),
           drivingLicense: getValues('drivingLicense'),
@@ -317,26 +90,14 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
       },
       plan: {
         component: <PlanStep branchConfig={branchConfig} currentClientId={clientId} />,
-        onSubmit: (data: unknown) => handlePlanStep(data as PlanValues),
         getData: () => getValues('plan'),
       },
       payment: {
-        component: (
-          <PaymentContainer clientId={getValues('clientId')} paymentId={getValues('paymentId')} />
-        ),
-        onSubmit: (data: unknown) => handlePaymentStep(data as PaymentValues),
+        component: <PaymentContainer />,
         getData: () => getValues('payment'),
       },
     };
-  }, [
-    branchConfig,
-    clientId,
-    getValues,
-    handleLicenseStep,
-    handlePaymentStep,
-    handlePlanStep,
-    handlePersonalStep,
-  ]);
+  }, [branchConfig, clientId, getValues]);
 
   // Get initial default values for comparison (reuse form's defaultValues)
   const getInitialValues = (): AdmissionFormValues => {
@@ -422,27 +183,12 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
       // Step 2: Execute the step-specific action only if there are changes
       setIsSubmitting(true);
       try {
-        // Get the current step's data and action handler
         const stepData = stepComponents[currentStepKey].getData();
-        const result = await stepComponents[currentStepKey].onSubmit(stepData);
 
-        // Step 3: Handle the result of the step action
-        if (result.error) {
-          toast.error(result.message || 'Failed to save information');
-        } else {
-          // Step 4: On success, show feedback and handle navigation
-          toast.success(result.message || 'Information saved successfully', {
-            position: 'top-right',
-          });
+        const success = await submitStep(currentStepKey, stepData, isLastStep);
 
-          // If it's the last step, we're done with the form
-          if (isLastStep) {
-            router.refresh();
-            router.push('/dashboard'); // Redirect to dashboard or another appropriate page
-          } else {
-            // Otherwise, proceed to the next step
-            goToNext();
-          }
+        if (success && !isLastStep) {
+          goToNext();
         }
       } catch (error) {
         console.error('Error in step submission:', error);

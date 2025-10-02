@@ -5,8 +5,16 @@ import { TypographyLarge, TypographyMuted } from '@/components/ui/typography';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Info } from 'lucide-react';
-import { PaymentOverviewProps } from './types';
 import { calculatePaymentAmounts, formatCurrency } from '@/lib/payment/calculate';
+import { Enrollment } from '@/server/db/plan';
+import { PaymentInfoState } from './types';
+import { calculateAmoutDue } from '@/features/enrollment/lib/utils';
+
+type PaymentOverviewProps = {
+  discountInfo: { isChecked: boolean; value: string };
+  paymentCheckboxes: PaymentInfoState;
+  existingPayment: NonNullable<Enrollment>['payment'];
+};
 
 export const PaymentOverview = ({
   discountInfo,
@@ -23,21 +31,23 @@ export const PaymentOverview = ({
   // Determine payment type based on checkboxes
   const paymentType = paymentCheckboxes.installments.isChecked ? 'INSTALLMENTS' : 'FULL_PAYMENT';
 
-  // Check if first installment is already paid
-  const isFirstInstallmentPaid =
-    existingPayment?.paymentType === 'INSTALLMENTS' &&
-    existingPayment?.installmentPayments?.some(
-      (installment) => installment.installmentNumber === 1 && installment.isPaid
-    );
-
-  const paidFirstInstallment = existingPayment?.installmentPayments?.find(
+  const firstInstallmentPayment = existingPayment?.installmentPayments?.find(
     (installment) => installment.installmentNumber === 1 && installment.isPaid
   );
+
+  const secondInstallmentPayment = existingPayment?.installmentPayments?.find(
+    (installment) => installment.installmentNumber === 2 && installment.isPaid
+  );
+
+  // Check if first installment is already paid
+  const isFirstInstallmentPaid = firstInstallmentPayment?.isPaid;
+  const amountPaidInFirstInstallment = firstInstallmentPayment?.amount;
+
+  const isSecondInstallmentPaid = secondInstallmentPayment?.isPaid;
 
   // Use the shared utility function for payment calculations
   const {
     originalAmount: totalFees,
-    finalAmount: totalAfterDiscount,
     firstInstallmentAmount,
     secondInstallmentAmount,
   } = calculatePaymentAmounts({
@@ -49,13 +59,13 @@ export const PaymentOverview = ({
   });
 
   // Calculate the amount due based on whether first installment is paid
-  const amountDue = isFirstInstallmentPaid ? secondInstallmentAmount : totalAfterDiscount;
+  const amountDue = calculateAmoutDue(existingPayment);
 
   // Format amounts using the shared utility function
   const formattedFees = formatCurrency(totalFees);
   const formattedDiscount = discountValue > 0 ? formatCurrency(discountValue) : null;
   const formattedFirstInstallment = formatCurrency(
-    paidFirstInstallment?.amount || firstInstallmentAmount
+    amountPaidInFirstInstallment || firstInstallmentAmount
   );
   const formattedSecondInstallment = formatCurrency(secondInstallmentAmount);
   const formattedAmountDue = formatCurrency(amountDue);
@@ -103,7 +113,7 @@ export const PaymentOverview = ({
                   1st Installment
                   {isFirstInstallmentPaid && (
                     <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                      Received
+                      Received via {firstInstallmentPayment?.paymentMode}
                     </span>
                   )}
                 </TypographyMuted>
@@ -114,7 +124,14 @@ export const PaymentOverview = ({
                 </TypographyMuted>
               </div>
               <div className="flex justify-between mt-2">
-                <TypographyMuted>2nd Installment</TypographyMuted>
+                <TypographyMuted className="flex items-center gap-2">
+                  2nd Installment
+                  {isSecondInstallmentPaid && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                      Received via {secondInstallmentPayment?.paymentMode}
+                    </span>
+                  )}
+                </TypographyMuted>
                 <TypographyMuted className="font-semibold">
                   {formattedSecondInstallment}
                 </TypographyMuted>

@@ -222,7 +222,7 @@ export const createInstallmentPaymentsInDB = async (
     const [installmentPayment] = await tx.insert(InstallmentPaymentTable).values(data).returning();
     await tx
       .update(PaymentTable)
-      .set({ paymentStatus: 'PARTIALLY_PAID' })
+      .set({ paymentStatus: data.installmentNumber === 1 ? 'PARTIALLY_PAID' : 'FULLY_PAID' })
       .where(eq(PaymentTable.id, data.paymentId));
 
     return installmentPayment;

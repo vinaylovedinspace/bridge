@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState, useMemo } from 'react';
 import { FormItem, FormLabel } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
@@ -10,22 +10,83 @@ import { useFormContext } from 'react-hook-form';
 import { AdmissionFormValues } from '@/features/enrollment/types';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle, MessageSquare, Phone } from 'lucide-react';
-import { createPaymentLinkAction } from '@/features/enrollment/server/action';
+import { createPaymentLinkAction, createPayment } from '@/features/enrollment/server/action';
+import { useRouter } from 'next/navigation';
+import { Enrollment } from '@/server/db/plan';
 
-export const PaymentModeSelector = () => {
+type PaymentModeSelectorProps = {
+  existingPayment: NonNullable<Enrollment>['payment'];
+};
+
+export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProps) => {
   const { getValues, setValue } = useFormContext<AdmissionFormValues>();
-
-  // TODO: Reimplement payment mode logic for new schema
-  const getInitialPaymentMode = useCallback(() => {
-    return 'PAYMENT_LINK';
-  }, []);
+  const router = useRouter();
 
   const [paymentMode, setPaymentMode] =
-    useState<(typeof PaymentModeEnum.enumValues)[number]>(getInitialPaymentMode);
+    useState<(typeof PaymentModeEnum.enumValues)[number]>('PAYMENT_LINK');
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState(getValues().personalInfo?.phoneNumber);
   const [isSendingLink, setIsSendingLink] = useState(false);
   const [smsSent, setSmsSent] = useState(false);
+  const [isAcceptingPayment, setIsAcceptingPayment] = useState(false);
+
+  // Check if this is installment payment and if 1st installment is paid
+  const isFirstInstallmentPaid = useMemo(() => {
+    if (!existingPayment || existingPayment.paymentType !== 'INSTALLMENTS') {
+      return false;
+    }
+    const firstInstallment = existingPayment.installmentPayments?.find(
+      (inst) => inst.installmentNumber === 1
+    );
+    return firstInstallment?.isPaid ?? false;
+  }, [existingPayment]);
+
+  const buttonText = useMemo(() => {
+    if (isFirstInstallmentPaid) {
+      return 'Accept 2nd Installment';
+    }
+    return 'Accept Payment';
+  }, [isFirstInstallmentPaid]);
+
+  const handleAcceptPayment = async () => {
+    setIsAcceptingPayment(true);
+
+    try {
+      const formValues = getValues();
+      const payment = formValues.payment;
+      const clientId = formValues.clientId;
+      const planId = formValues.planId;
+
+      if (!clientId) {
+        toast.error('Client ID not found. Please complete the personal information step first.');
+        return;
+      }
+
+      if (!planId) {
+        toast.error('Plan ID not found. Please complete the plan step first.');
+        return;
+      }
+
+      const result = await createPayment({
+        ...payment,
+        clientId,
+        planId,
+      });
+
+      if (!result.error) {
+        toast.success(result.message || 'Payment processed successfully');
+        router.refresh();
+        router.push('/dashboard');
+      } else {
+        toast.error(result.message || 'Failed to process payment');
+      }
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      toast.error('Unexpected error occurred while processing payment');
+    } finally {
+      setIsAcceptingPayment(false);
+    }
+  };
 
   const handleSendPaymentLink = async () => {
     if (!phoneNumber) {
@@ -185,6 +246,20 @@ export const PaymentModeSelector = () => {
                 </Button>
               </div>
             </div>
+          </div>
+        )}
+
+        {(paymentMode === 'CASH' || paymentMode === 'QR') && (
+          <div className="mt-6">
+            <Button
+              onClick={handleAcceptPayment}
+              type="button"
+              className="w-fit"
+              disabled={isAcceptingPayment}
+              isLoading={isAcceptingPayment}
+            >
+              {buttonText}
+            </Button>
           </div>
         )}
       </div>

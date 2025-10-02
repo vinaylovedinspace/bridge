@@ -29,7 +29,7 @@ export const FormNavigation = ({
     if (nextButtonText) return nextButtonText;
     if (isSubmitting) return 'Saving...';
     if (isLastStep) return 'Done';
-    return 'Next';
+    return 'Save & Next';
   };
 
   return (
@@ -44,14 +44,16 @@ export const FormNavigation = ({
       </Button>
 
       <div className="flex gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onDiscardChanges}
-          disabled={isSubmitting || !hasCurrentStepChanges}
-        >
-          Discard Changes
-        </Button>
+        {!isLastStep && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onDiscardChanges}
+            disabled={isSubmitting || !hasCurrentStepChanges}
+          >
+            Discard Changes
+          </Button>
+        )}
 
         <Button
           type="button"

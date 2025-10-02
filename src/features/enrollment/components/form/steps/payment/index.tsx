@@ -2,23 +2,19 @@ import { TypographyH5 } from '@/components/ui/typography';
 import { Card } from '@/components/ui/card';
 import { PaymentOptions } from './payment-options';
 import { PaymentModeSelector } from './payment-mode-selector';
-import { PaymentCheckboxProps, PAYMENT_INFO, PaymentInfoState } from './types';
-import { useState } from 'react';
+import { PAYMENT_INFO, PaymentInfoState } from './types';
+import { Dispatch, SetStateAction, useState } from 'react';
 import { PaymentOverview as PaymentOverviewComponent } from './payment-overview';
+import { Enrollment } from '@/server/db/plan';
 
 export { PAYMENT_INFO, type PaymentInfoState } from './types';
 export { PaymentOverviewComponent as PaymentOverview };
 
-interface PaymentStepProps extends PaymentCheckboxProps {
-  existingPayment?: {
-    discount: number;
-    paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS' | null;
-    secondInstallmentDate?: Date | string | null;
-    paymentDueDate?: Date | string | null;
-  } | null;
-  clientId?: string;
-  paymentId?: string;
-}
+type PaymentStepProps = {
+  paymentCheckboxes: PaymentInfoState;
+  setPaymentCheckboxes: Dispatch<SetStateAction<PaymentInfoState>>;
+  existingPayment: NonNullable<Enrollment>['payment'];
+};
 
 export const PaymentStep = ({
   paymentCheckboxes,
@@ -33,19 +29,13 @@ export const PaymentStep = ({
         setPaymentCheckboxes={setPaymentCheckboxes}
         existingPayment={existingPayment}
       />
-      <PaymentModeSelector />
+      <PaymentModeSelector existingPayment={existingPayment} />
     </Card>
   );
 };
 
 // Create a component that renders both PaymentOverview and PaymentStep
-export const PaymentContainer = ({
-  clientId,
-  paymentId,
-}: {
-  clientId?: string;
-  paymentId?: string;
-}) => {
+export const PaymentContainer = () => {
   const [paymentCheckboxes, setPaymentCheckboxes] = useState<PaymentInfoState>(PAYMENT_INFO);
 
   return (
@@ -54,13 +44,12 @@ export const PaymentContainer = ({
         paymentCheckboxes={paymentCheckboxes}
         setPaymentCheckboxes={setPaymentCheckboxes}
         existingPayment={null}
-        clientId={clientId}
-        paymentId={paymentId}
       />
       <div className="col-span-4">
         <PaymentOverviewComponent
           discountInfo={paymentCheckboxes.discount}
           paymentCheckboxes={paymentCheckboxes}
+          existingPayment={null}
         />
       </div>
     </div>
