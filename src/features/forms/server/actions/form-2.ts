@@ -118,20 +118,26 @@ export const fillForm2 = async (clientId: string) => {
           .setText(client.guardianLastName.toUpperCase());
 
         // Current address
-        form.getTextField(form2FieldNames.current_house).setText(client.address.toUpperCase());
-        form.getTextField(form2FieldNames.current_village).setText(client.city.toUpperCase());
-        form.getTextField(form2FieldNames.current_state).setText(client.state.toUpperCase());
+        form.getTextField(form2FieldNames.current_house).setText(client.addressLine1.toUpperCase());
+        form
+          .getTextField(form2FieldNames.current_village)
+          .setText(client.addressLine2.toUpperCase());
+        if (client.addressLine3)
+          form
+            .getTextField(form2FieldNames.current_state)
+            .setText(client.addressLine3.toUpperCase());
         form.getTextField(form2FieldNames.current_pincode).setText(client.pincode);
 
         form
           .getTextField(form2FieldNames.permanent_house)
-          .setText(client.permanentAddress.toUpperCase());
+          .setText(client.permanentAddressLine1.toUpperCase());
         form
           .getTextField(form2FieldNames.permanent_village)
-          .setText(client.permanentCity.toUpperCase());
-        form
-          .getTextField(form2FieldNames.permanent_state)
-          .setText(client.permanentState.toUpperCase());
+          .setText(client.permanentAddressLine2.toUpperCase());
+        if (client.permanentAddressLine3)
+          form
+            .getTextField(form2FieldNames.permanent_state)
+            .setText(client.permanentAddressLine3.toUpperCase());
         form.getTextField(form2FieldNames.permanent_pincode).setText(client.permanentPincode);
 
         form
@@ -187,7 +193,8 @@ export const fillForm2 = async (clientId: string) => {
         form
           .getTextField(form2FieldNames.declaration_designation)
           .setText(client.guardianRelationship.toUpperCase());
-      } catch {
+      } catch (error) {
+        console.error('Error filling PDF:', error);
         console.log('something went wrong');
       }
     });
