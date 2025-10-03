@@ -3,8 +3,16 @@ import { ClientDataTable } from './data-table';
 import { columns } from './columns';
 import { getClients } from '@/server/db/client';
 
-export async function Clients({ name }: { name?: string }) {
-  const data = await getClients(name);
+export async function Clients({
+  name,
+  needsLearningTest,
+  needsDrivingTest,
+}: {
+  name?: string;
+  needsLearningTest?: boolean;
+  needsDrivingTest?: boolean;
+}) {
+  const data = await getClients(name, needsLearningTest, needsDrivingTest);
 
   return (
     <Suspense fallback={<div>Loading...</div>}>

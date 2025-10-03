@@ -105,6 +105,11 @@ export const getEligibleStudentsForPermanentLicense = async (filter: FilterType 
       clientCode: true,
     },
     with: {
+      plan: {
+        columns: {
+          serviceType: true,
+        },
+      },
       learningLicense: {
         columns: {
           issueDate: true,
@@ -129,6 +134,10 @@ export const getEligibleStudentsForPermanentLicense = async (filter: FilterType 
 
   return results
     .filter((result) => {
+      // Only include clients with FULL_SERVICE plan
+      const hasFullServicePlan = result.plan.some((p) => p.serviceType === 'FULL_SERVICE');
+      if (!hasFullServicePlan) return false;
+
       // Check if has learning license issued more than 30 days ago
       const learningLicenseDate = result.learningLicense?.issueDate;
       if (!learningLicenseDate) return false;

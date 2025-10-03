@@ -28,10 +28,17 @@ export const ClientFilters = () => {
     throttleMs: 500,
   });
 
-  // const [paymentStatus, setPaymentStatus] = useQueryState('paymentStatus', {
-  //   shallow: false,
-  //   defaultValue: 'ALL',
-  // });
+  const [needsLearningTest, setNeedsLearningTest] = useQueryState('needsLearningTest', {
+    shallow: false,
+    parse: (value) => value === 'true',
+    serialize: (value) => (value ? 'true' : ''),
+  });
+
+  const [needsDrivingTest, setNeedsDrivingTest] = useQueryState('needsDrivingTest', {
+    shallow: false,
+    parse: (value) => value === 'true',
+    serialize: (value) => (value ? 'true' : ''),
+  });
 
   const { visibleColumns, setVisibleColumns } = useColumnPreferences();
   const visibleColumnsArray = visibleColumns?.split(',') || [];
@@ -55,22 +62,34 @@ export const ClientFilters = () => {
           placeholder="Search by name"
           className="w-96"
         />
-        {/* 
-        <Select
-          value={paymentStatus || 'ALL'}
-          onValueChange={(value) => setPaymentStatus(value === 'ALL' ? null : value)}
-        >
-          <SelectTrigger className="w-60">
-            <SelectValue placeholder="Payment Status" />
-          </SelectTrigger>
-          <SelectContent>
-            {paymentStatusOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select> */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="needsLearningTest"
+              checked={needsLearningTest || false}
+              onCheckedChange={(checked) => setNeedsLearningTest(!!checked)}
+            />
+            <label
+              htmlFor="needsLearningTest"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            >
+              Pending LL
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="needsDrivingTest"
+              checked={needsDrivingTest || false}
+              onCheckedChange={(checked) => setNeedsDrivingTest(!!checked)}
+            />
+            <label
+              htmlFor="needsDrivingTest"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            >
+              Pending DL
+            </label>
+          </div>
+        </div>
       </div>
       <div className="flex gap-2">
         <Popover>

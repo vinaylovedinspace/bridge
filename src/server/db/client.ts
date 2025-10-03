@@ -1,21 +1,20 @@
 import { db } from '@/db';
-import { ClientTable, SessionTable, LearningLicenseTable } from '@/db/schema';
+import { ClientTable, LearningLicenseTable, PlanTable, SessionTable } from '@/db/schema';
 import { auth } from '@clerk/nextjs/server';
 import { eq, ilike, and, desc, or, count, gte, sql } from 'drizzle-orm';
 import { getBranchConfig } from './branch';
 
-const _getClients = async (branchId: string, name?: string, needsLearningTest?: boolean) => {
+const _getClients = async (
+  branchId: string,
+  name?: string,
+  needsLearningTest?: boolean,
+  needsDrivingTest?: boolean
+) => {
   const conditions = [eq(ClientTable.branchId, branchId)];
 
   if (name) {
     conditions.push(
       or(ilike(ClientTable.firstName, `%${name}%`), ilike(ClientTable.lastName, `%${name}%`))!
-    );
-  }
-
-  if (needsLearningTest) {
-    conditions.push(
-      sql`(${LearningLicenseTable.licenseNumber} IS NULL OR ${LearningLicenseTable.licenseNumber} = '')`
     );
   }
 
@@ -39,16 +38,60 @@ const _getClients = async (branchId: string, name?: string, needsLearningTest?: 
     },
   });
 
-  return clients.map((client) => ({
+  let filteredClients = clients;
+
+  // Apply filters (OR logic if both are selected)
+  if (needsLearningTest || needsDrivingTest) {
+    filteredClients = clients.filter((client) => {
+      const hasFullServicePlan = client.plan.some((plan) => plan.serviceType === 'FULL_SERVICE');
+      if (!hasFullServicePlan) return false;
+
+      let matchesLearningFilter = false;
+      let matchesDrivingFilter = false;
+
+      // Check learning license filter
+      if (needsLearningTest) {
+        const hasNoLicenseNumber =
+          !client.learningLicense ||
+          !client.learningLicense.licenseNumber ||
+          client.learningLicense.licenseNumber.trim() === '';
+        matchesLearningFilter = hasNoLicenseNumber;
+      }
+
+      // Check driving license filter
+      if (needsDrivingTest) {
+        const learningLicenseDate = client.learningLicense?.issueDate;
+        if (learningLicenseDate) {
+          const daysSinceLearning = Math.floor(
+            (Date.now() - new Date(learningLicenseDate).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          const hasNoDrivingLicense =
+            !client.drivingLicense?.licenseNumber && !client.drivingLicense?.issueDate;
+          matchesDrivingFilter = daysSinceLearning >= 30 && hasNoDrivingLicense;
+        }
+      }
+
+      // Return true if matches any selected filter (OR logic)
+      return (
+        (needsLearningTest && matchesLearningFilter) || (needsDrivingTest && matchesDrivingFilter)
+      );
+    });
+  }
+
+  return filteredClients.map((client) => ({
     ...client,
     hasPlan: client.plan.length > 0,
   }));
 };
 
-export const getClients = async (name?: string, needsLearningTest?: boolean) => {
+export const getClients = async (
+  name?: string,
+  needsLearningTest?: boolean,
+  needsDrivingTest?: boolean
+) => {
   const { id: branchId } = await getBranchConfig();
 
-  return await _getClients(branchId, name, needsLearningTest);
+  return await _getClients(branchId, name, needsLearningTest, needsDrivingTest);
 };
 
 export const getClient = async (clientId: string) => {
