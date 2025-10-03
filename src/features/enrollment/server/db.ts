@@ -5,10 +5,11 @@ import {
   PlanTable,
   FullPaymentTable,
   InstallmentPaymentTable,
+  VehicleTable,
 } from '@/db/schema';
 import { LearningLicenseTable } from '@/db/schema/learning-licenses/columns';
 import { DrivingLicenseTable } from '@/db/schema/driving-licenses/columns';
-import { eq } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { getNextClientCode } from '@/db/utils/client-code';
 import { getNextPlanCode } from '@/db/utils/plan-code';
 
@@ -112,6 +113,45 @@ export const createPlanInDB = async (
   data: Omit<typeof PlanTable.$inferInsert, 'planCode'> & { planCode?: string },
   tenantId: string
 ) => {
+  // Validate plan data
+  if (data.numberOfSessions <= 0) {
+    throw new Error('Number of sessions must be greater than 0');
+  }
+
+  if (data.numberOfSessions > 100) {
+    throw new Error('Number of sessions cannot exceed 100');
+  }
+
+  if (data.sessionDurationInMinutes <= 0) {
+    throw new Error('Session duration must be greater than 0');
+  }
+
+  if (data.sessionDurationInMinutes > 240) {
+    throw new Error('Session duration cannot exceed 240 minutes');
+  }
+
+  if (!data.vehicleId) {
+    throw new Error('Vehicle ID is required');
+  }
+
+  if (!data.clientId) {
+    throw new Error('Client ID is required');
+  }
+
+  if (!data.branchId) {
+    throw new Error('Branch ID is required');
+  }
+
+  // Validate date is not too far in the past (allow same day)
+  const joiningDate = new Date(data.joiningDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  joiningDate.setHours(0, 0, 0, 0);
+
+  if (joiningDate < today) {
+    throw new Error('Joining date cannot be in the past');
+  }
+
   // Generate plan code if not provided
   const planCode = data.planCode || (await getNextPlanCode(tenantId));
 
@@ -130,6 +170,32 @@ export const updatePlanInDB = async (
   planId: string,
   data: Partial<Omit<typeof PlanTable.$inferInsert, 'planCode' | 'clientId'>>
 ) => {
+  // Validate if present
+  if (data.numberOfSessions !== undefined && data.numberOfSessions <= 0) {
+    throw new Error('Number of sessions must be greater than 0');
+  }
+
+  if (data.numberOfSessions !== undefined && data.numberOfSessions > 100) {
+    throw new Error('Number of sessions cannot exceed 100');
+  }
+
+  if (data.sessionDurationInMinutes !== undefined && data.sessionDurationInMinutes <= 0) {
+    throw new Error('Session duration must be greater than 0');
+  }
+
+  if (data.sessionDurationInMinutes !== undefined && data.sessionDurationInMinutes > 240) {
+    throw new Error('Session duration cannot exceed 240 minutes');
+  }
+
+  // Check if plan exists before updating
+  const existingPlan = await db.query.PlanTable.findFirst({
+    where: eq(PlanTable.id, planId),
+  });
+
+  if (!existingPlan) {
+    throw new Error('Plan not found');
+  }
+
   const [plan] = await db
     .update(PlanTable)
     .set({
@@ -146,36 +212,50 @@ export const updatePlanInDB = async (
 };
 
 export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert) => {
-  // Create a variable to track if this was an update operation
-  let isExistingPayment = false;
+  // Validate payment amounts
+  if (data.finalAmount < 0) {
+    throw new Error('Final amount cannot be negative');
+  }
+
+  if (data.discount && data.discount > data.originalAmount) {
+    throw new Error('Discount cannot exceed original amount');
+  }
 
   const response = await db.transaction(async (tx) => {
-    const [payment] = await tx
-      .insert(PaymentTable)
-      .values(data)
-      .onConflictDoUpdate({
-        target: PaymentTable.planId,
-        set: {
+    // Check if payment already exists for this plan
+    const existingPayment = await tx.query.PaymentTable.findFirst({
+      where: eq(PaymentTable.planId, data.planId),
+    });
+
+    let isExistingPayment = false;
+    let payment;
+
+    if (existingPayment) {
+      // Update existing payment
+      isExistingPayment = true;
+      const [updated] = await tx
+        .update(PaymentTable)
+        .set({
           ...data,
           updatedAt: new Date(),
-        },
-      })
-      .returning();
+        })
+        .where(eq(PaymentTable.id, existingPayment.id))
+        .returning();
 
-    await tx
-      .update(PlanTable)
-      .set({
-        paymentId: payment.id,
-        updatedAt: new Date(),
-      })
-      .where(eq(PlanTable.id, data.planId))
-      .returning();
+      payment = updated;
+    } else {
+      // Create new payment
+      const [created] = await tx.insert(PaymentTable).values(data).returning();
+      payment = created;
 
-    // Check if this was an update by comparing createdAt and updatedAt
-    // If they're different by more than a few seconds, it was an update
-    if (payment.createdAt && payment.updatedAt) {
-      const timeDiff = Math.abs(payment.updatedAt.getTime() - payment.createdAt.getTime());
-      isExistingPayment = timeDiff > 1000; // More than 1 second difference
+      // Link payment to plan
+      await tx
+        .update(PlanTable)
+        .set({
+          paymentId: payment.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(PlanTable.id, data.planId));
     }
 
     return {
@@ -203,10 +283,36 @@ export const getClientById = async (clientId: string) => {
 
 export const createFullPaymentInDB = async (data: typeof FullPaymentTable.$inferInsert) => {
   const response = await db.transaction(async (tx) => {
+    // Check if full payment already exists to prevent duplicates
+    const existingFullPayment = await tx.query.FullPaymentTable.findFirst({
+      where: eq(FullPaymentTable.paymentId, data.paymentId),
+    });
+
+    if (existingFullPayment) {
+      // Update existing record instead of creating duplicate
+      const [updatedPayment] = await tx
+        .update(FullPaymentTable)
+        .set({
+          paymentMode: data.paymentMode,
+          paymentDate: data.paymentDate,
+          isPaid: data.isPaid,
+        })
+        .where(eq(FullPaymentTable.paymentId, data.paymentId))
+        .returning();
+
+      return updatedPayment;
+    }
+
+    // Create new full payment record
     const [fullPayment] = await tx.insert(FullPaymentTable).values(data).returning();
+
+    // Update payment status
     await tx
       .update(PaymentTable)
-      .set({ paymentStatus: 'FULLY_PAID' })
+      .set({
+        paymentStatus: 'FULLY_PAID',
+        updatedAt: new Date(),
+      })
       .where(eq(PaymentTable.id, data.paymentId));
 
     return fullPayment;
@@ -219,14 +325,143 @@ export const createInstallmentPaymentsInDB = async (
   data: typeof InstallmentPaymentTable.$inferInsert
 ) => {
   const response = await db.transaction(async (tx) => {
-    const [installmentPayment] = await tx.insert(InstallmentPaymentTable).values(data).returning();
+    // Check if this specific installment already exists
+    const existingInstallment = await tx.query.InstallmentPaymentTable.findFirst({
+      where: and(
+        eq(InstallmentPaymentTable.paymentId, data.paymentId),
+        eq(InstallmentPaymentTable.installmentNumber, data.installmentNumber)
+      ),
+    });
+
+    let installmentPayment;
+
+    if (existingInstallment) {
+      // Update existing installment instead of creating duplicate
+      const [updated] = await tx
+        .update(InstallmentPaymentTable)
+        .set({
+          amount: data.amount,
+          paymentMode: data.paymentMode,
+          paymentDate: data.paymentDate,
+          isPaid: data.isPaid,
+        })
+        .where(eq(InstallmentPaymentTable.id, existingInstallment.id))
+        .returning();
+
+      installmentPayment = updated;
+    } else {
+      // Create new installment
+      const [created] = await tx.insert(InstallmentPaymentTable).values(data).returning();
+      installmentPayment = created;
+    }
+
+    // Get all installments to determine payment status
+    const allInstallments = await tx.query.InstallmentPaymentTable.findMany({
+      where: eq(InstallmentPaymentTable.paymentId, data.paymentId),
+    });
+
+    const paidInstallments = allInstallments.filter((inst) => inst.isPaid);
+    const paymentStatus =
+      paidInstallments.length === 0
+        ? 'PENDING'
+        : paidInstallments.length === 1
+          ? 'PARTIALLY_PAID'
+          : 'FULLY_PAID';
+
+    // Update payment status based on actual installments
     await tx
       .update(PaymentTable)
-      .set({ paymentStatus: data.installmentNumber === 1 ? 'PARTIALLY_PAID' : 'FULLY_PAID' })
+      .set({
+        paymentStatus,
+        updatedAt: new Date(),
+      })
       .where(eq(PaymentTable.id, data.paymentId));
 
     return installmentPayment;
   });
 
   return response;
+};
+
+// ============================================================================
+// Plan-related database queries
+// ============================================================================
+
+/**
+ * Find existing plan by ID or client ID
+ */
+export const findExistingPlanInDB = async (
+  planId?: string,
+  clientId?: string
+): Promise<typeof PlanTable.$inferSelect | null> => {
+  if (planId) {
+    const plan = await db.query.PlanTable.findFirst({
+      where: eq(PlanTable.id, planId),
+    });
+    return plan ?? null;
+  }
+
+  if (clientId) {
+    const plan = await db.query.PlanTable.findFirst({
+      where: eq(PlanTable.clientId, clientId),
+    });
+    return plan ?? null;
+  }
+
+  return null;
+};
+
+/**
+ * Get client for session generation
+ */
+export const getClientForSessionsInDB = async (clientId: string) => {
+  return await db.query.ClientTable.findFirst({
+    where: eq(ClientTable.id, clientId),
+    columns: { id: true, firstName: true, lastName: true },
+  });
+};
+
+// ============================================================================
+// Payment-related database queries
+// ============================================================================
+
+/**
+ * Get plan and vehicle for payment calculation
+ */
+export const getPlanAndVehicleInDB = async (planId: string) => {
+  const plan = await db.query.PlanTable.findFirst({
+    where: eq(PlanTable.id, planId),
+  });
+
+  if (!plan) {
+    return null;
+  }
+
+  const vehicle = await db.query.VehicleTable.findFirst({
+    where: and(eq(VehicleTable.id, plan.vehicleId), isNull(VehicleTable.deletedAt)),
+  });
+
+  if (!vehicle) {
+    return null;
+  }
+
+  return { plan, vehicle };
+};
+
+/**
+ * Get existing installments for a payment
+ */
+export const getExistingInstallmentsInDB = async (paymentId: string) => {
+  return await db.query.InstallmentPaymentTable.findMany({
+    where: eq(InstallmentPaymentTable.paymentId, paymentId),
+  });
+};
+
+/**
+ * Get plan for fallback session creation
+ */
+export const getPlanForSessionsInDB = async (planId: string) => {
+  return await db.query.PlanTable.findFirst({
+    where: eq(PlanTable.id, planId),
+  });
 };

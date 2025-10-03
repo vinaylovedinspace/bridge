@@ -15,26 +15,14 @@ import {
   upsertLearningLicenseInDB,
   upsertDrivingLicenseInDB,
   getClientById as getClientByIdFromDB,
-  createPlanInDB,
-  updatePlanInDB,
+  findExistingPlanInDB,
+  getPlanAndVehicleInDB,
   upsertPaymentInDB,
-  createFullPaymentInDB,
-  createInstallmentPaymentsInDB,
 } from './db';
 import { db } from '@/db';
-import { eq, and, isNull } from 'drizzle-orm';
-import { PlanTable } from '@/db/schema/plan/columns';
-import { VehicleTable } from '@/db/schema/vehicles/columns';
+import { eq, and } from 'drizzle-orm';
 import { ClientTable } from '@/db/schema/client/columns';
-import { InstallmentPaymentTable } from '@/db/schema/payment/columns';
-import { calculatePaymentBreakdown } from '@/lib/payment/calculate';
-import { generateSessionsFromPlan } from '@/lib/sessions';
 import { dateToString } from '@/lib/date-utils';
-import {
-  createSessions,
-  getSessionsByClientId,
-  updateScheduledSessionsForClient,
-} from '@/server/actions/sessions';
 import {
   createPaymentLink,
   CreatePaymentLinkRequest,
@@ -42,6 +30,18 @@ import {
 } from '@/lib/cashfree/payment-links';
 import { personalInfoSchema } from '@/types/zod/client';
 import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
+import {
+  extractTimeString,
+  hasPlanChanged,
+  upsertPlan,
+  handleSessionGeneration,
+} from '../lib/plan-helpers';
+import {
+  calculatePaymentAmounts,
+  createFallbackSessions,
+  handleFullPayment,
+  handleInstallmentPayment,
+} from '../lib/payment-helpers';
 
 export const createClient = async (
   unsafeData: z.infer<typeof personalInfoSchema>
@@ -200,165 +200,51 @@ export const createPlan = async (
   const { tenantId, id: branchId } = await getBranchConfig();
 
   try {
-    // Extract time from the joiningDate and format it as a string
-    const joiningDateTime = data.joiningDate;
-    const hours = joiningDateTime.getHours().toString().padStart(2, '0');
-    const minutes = joiningDateTime.getMinutes().toString().padStart(2, '0');
-    const timeString = `${hours}:${minutes}`;
-
-    // Validate the plan data
+    // 1. Extract and validate time
+    const timeString = extractTimeString(data.joiningDate);
     const parseResult = planSchema.safeParse({ ...data, joiningTime: timeString });
 
     if (!parseResult.success) {
       return { error: true, message: 'Invalid plan data' };
     }
 
-    // Check if there's an existing plan for this client
-    let existingPlan = null;
-    if (data.id) {
-      // If we have a plan ID, fetch the existing plan details
-      existingPlan = await db.query.PlanTable.findFirst({
-        where: eq(PlanTable.id, data.id),
-      });
-    } else {
-      // Otherwise, try to find a plan by client ID
-      existingPlan = await db.query.PlanTable.findFirst({
-        where: eq(PlanTable.clientId, data.clientId),
-      });
-    }
+    // 2. Find existing plan (if any)
+    const existingPlan = await findExistingPlanInDB(data.id, data.clientId);
 
-    // Check if the plan timing has changed
-    let planTimingChanged = false;
-    if (existingPlan) {
-      const existingDate = existingPlan.joiningDate ? new Date(existingPlan.joiningDate) : null;
-      const existingTime = existingPlan.joiningTime;
+    // 3. Check if plan has changed
+    const planTimingChanged = existingPlan
+      ? hasPlanChanged(existingPlan, data.joiningDate, timeString, data)
+      : false;
 
-      // Check if date or time has changed
-      if (existingDate && existingTime) {
-        const formattedExistingDate = existingDate.toISOString().split('T')[0];
-        const formattedNewDate = joiningDateTime.toISOString().split('T')[0];
-
-        planTimingChanged =
-          formattedExistingDate !== formattedNewDate ||
-          existingTime !== timeString ||
-          existingPlan.vehicleId !== data.vehicleId ||
-          existingPlan.numberOfSessions !== data.numberOfSessions;
-      }
-    }
-
-    // Convert date to YYYY-MM-DD string (no timezone conversion)
-    const dateString = dateToString(data.joiningDate);
-
-    // Make sure we're explicitly passing the joiningDate and joiningTime
+    // 4. Prepare plan data for database
     const planData = {
       ...parseResult.data,
-      joiningDate: dateString, // Pass as YYYY-MM-DD string, no timezone conversion
-      joiningTime: timeString, // Explicitly pass the formatted time
-      branchId, // Add branchId to the plan data
+      joiningDate: dateToString(data.joiningDate),
+      joiningTime: timeString,
+      branchId,
     };
 
-    // Create or update the plan
-    let planId: string;
-    let isExistingPlan = false;
+    // 5. Upsert the plan
+    const { planId, isExisting: isExistingPlan } = await upsertPlan(
+      existingPlan,
+      data.id,
+      planData,
+      tenantId
+    );
 
-    if (data.id) {
-      // Update existing plan by ID
-      const result = await updatePlanInDB(data.id, planData);
-      planId = result.planId;
-      isExistingPlan = true;
-    } else if (existingPlan) {
-      // Update existing plan found by client ID
-      const result = await updatePlanInDB(existingPlan.id, planData);
-      planId = result.planId;
-      isExistingPlan = true;
-    } else {
-      // Create new plan
-      const result = await createPlanInDB(planData, tenantId);
-      planId = result.planId;
-      isExistingPlan = false;
-    }
-
-    // Check if sessions already exist for this client
-    const existingSessions = await getSessionsByClientId(data.clientId);
-
-    // Determine if we need to regenerate sessions
-    const shouldGenerateSessions =
-      !isExistingPlan || // New plan
-      existingSessions.length === 0 || // No existing sessions
-      (isExistingPlan && planTimingChanged); // Plan timing changed
-
-    let sessionMessage = '';
-
-    if (shouldGenerateSessions) {
-      // Get client details for session generation
-      const clientDetails = await db.query.ClientTable.findFirst({
-        where: eq(ClientTable.id, data.clientId),
-        columns: {
-          id: true,
-          firstName: true,
-          lastName: true,
-        },
-      });
-
-      if (!clientDetails) {
-        return { error: true, message: 'Client not found' };
-      }
-
-      // Get branch configuration
-      const branchConfig = await getBranchConfig();
-
-      // Generate sessions from plan data
-      const sessionsToGenerate = generateSessionsFromPlan(
-        {
-          joiningDate: data.joiningDate,
-          joiningTime: timeString,
-          numberOfSessions: data.numberOfSessions,
-          vehicleId: data.vehicleId,
-          planId,
-        },
-        {
-          id: clientDetails.id,
-          firstName: clientDetails.firstName,
-          lastName: clientDetails.lastName,
-        },
-        branchConfig
-      );
-
-      if (sessionsToGenerate.length > 0) {
-        const shouldUpdate = isExistingPlan && planTimingChanged && existingSessions.length > 0;
-
-        if (shouldUpdate) {
-          // Update existing sessions instead of creating duplicates
-          console.log('Updating scheduled sessions for client:', data.clientId);
-          const updateResult = await updateScheduledSessionsForClient(
-            data.clientId,
-            sessionsToGenerate.map((session) => ({
-              sessionDate: session.sessionDate, // Already a string from generateSessionsFromPlan
-              startTime: session.startTime,
-              endTime: session.endTime,
-              vehicleId: session.vehicleId,
-              planId: session.planId,
-              sessionNumber: session.sessionNumber,
-            }))
-          );
-          if (updateResult.error) {
-            console.error('Failed to update sessions:', updateResult.message);
-            sessionMessage = ' but session update failed';
-          } else {
-            sessionMessage = ' and sessions updated';
-          }
-        } else {
-          // Create new sessions for new plans
-          const createResult = await createSessions(sessionsToGenerate);
-          if (createResult.error) {
-            console.error('Failed to create sessions:', createResult.message);
-            sessionMessage = ' but session creation failed';
-          } else {
-            sessionMessage = ' and sessions generated';
-          }
-        }
-      }
-    }
+    // 6. Handle session generation/update
+    const sessionMessage = await handleSessionGeneration(
+      data.clientId,
+      planId,
+      {
+        joiningDate: data.joiningDate,
+        joiningTime: timeString,
+        numberOfSessions: data.numberOfSessions,
+        vehicleId: data.vehicleId,
+      },
+      isExistingPlan,
+      planTimingChanged
+    );
 
     const action = isExistingPlan ? 'updated' : 'created';
 
@@ -380,34 +266,21 @@ export const createPayment = async (
     return { error: true, message: 'Plan ID is required' };
   }
 
-  // Get the plan and vehicle data to calculate the original amount
-  const plan = await db.query.PlanTable.findFirst({
-    where: eq(PlanTable.id, unsafeData.planId),
-  });
-
-  if (!plan) {
-    return { error: true, message: 'Plan not found' };
-  }
-
-  const vehicle = await db.query.VehicleTable.findFirst({
-    where: and(eq(VehicleTable.id, plan.vehicleId), isNull(VehicleTable.deletedAt)),
-  });
-
-  if (!vehicle) {
-    return { error: true, message: 'Vehicle not found' };
-  }
-
-  // Use the utility function to calculate payment amounts
-  const { originalAmount, finalAmount, firstInstallmentAmount, secondInstallmentAmount } =
-    calculatePaymentBreakdown({
-      sessions: plan.numberOfSessions,
-      duration: plan.sessionDurationInMinutes,
-      rate: vehicle.rent,
-      discount: unsafeData.discount,
-      paymentType: unsafeData.paymentType,
-    });
-
   try {
+    // 1. Get plan and vehicle for payment calculation
+    const result = await getPlanAndVehicleInDB(unsafeData.planId);
+
+    if (!result) {
+      return { error: true, message: 'Plan or vehicle not found' };
+    }
+
+    const { plan, vehicle } = result;
+
+    // 2. Calculate payment amounts
+    const { originalAmount, finalAmount, firstInstallmentAmount, secondInstallmentAmount } =
+      calculatePaymentAmounts(plan, vehicle, unsafeData.discount, unsafeData.paymentType);
+
+    // 3. Validate payment data
     const { success, data, error } = paymentSchema.safeParse({
       ...unsafeData,
       originalAmount,
@@ -419,118 +292,32 @@ export const createPayment = async (
       return { error: true, message: 'Invalid payment data' };
     }
 
-    // Create or update the payment
-    const { isExistingPayment, paymentId } = await upsertPaymentInDB({
+    // 4. Upsert payment
+    const { paymentId, isExistingPayment } = await upsertPaymentInDB({
       ...data,
       vehicleRentAmount: vehicle.rent,
     });
 
-    // Create FullPayment or InstallmentPayment entries if paymentMode is CASH or QR
+    // 5. Handle payment transactions (CASH or QR)
     if (data.paymentMode === 'CASH' || data.paymentMode === 'QR') {
-      const currentDate = dateToString(new Date());
-
       if (data.paymentType === 'FULL_PAYMENT') {
-        await createFullPaymentInDB({
-          paymentId,
-          paymentMode: data.paymentMode,
-          paymentDate: currentDate,
-          isPaid: true,
-        });
+        await handleFullPayment(paymentId, data.paymentMode);
       } else if (data.paymentType === 'INSTALLMENTS') {
-        // Check if first installment already exists
-        const existingInstallments = await db.query.InstallmentPaymentTable.findMany({
-          where: eq(InstallmentPaymentTable.paymentId, paymentId),
-        });
-
-        const firstInstallmentExists = existingInstallments.some(
-          (installment) => installment.installmentNumber === 1 && installment.isPaid
+        await handleInstallmentPayment(
+          paymentId,
+          data.paymentMode,
+          firstInstallmentAmount,
+          secondInstallmentAmount
         );
-
-        if (firstInstallmentExists) {
-          // Create second installment
-          const secondInstallmentExists = existingInstallments.some(
-            (installment) => installment.installmentNumber === 2
-          );
-
-          if (!secondInstallmentExists) {
-            await createInstallmentPaymentsInDB({
-              paymentId,
-              installmentNumber: 2,
-              amount: secondInstallmentAmount,
-              paymentMode: data.paymentMode,
-              paymentDate: currentDate,
-              isPaid: true,
-            });
-          }
-        } else {
-          // Create first installment
-          await createInstallmentPaymentsInDB({
-            paymentId,
-            installmentNumber: 1,
-            amount: firstInstallmentAmount,
-            paymentMode: data.paymentMode,
-            paymentDate: currentDate,
-            isPaid: true,
-          });
-        }
       }
     }
 
-    // Check if sessions need to be created when payment is completed (onboarding finished)
-    if (paymentId && !isExistingPayment) {
+    // 6. Create fallback sessions if needed (for new payments only)
+    if (!isExistingPayment) {
       try {
-        // Get the plan details
-        const plan = await db.query.PlanTable.findFirst({
-          where: eq(PlanTable.id, unsafeData.planId),
-        });
-
-        if (plan) {
-          // Check if sessions already exist for this client (created by createPlan)
-          const existingSessions = await getSessionsByClientId(plan.clientId);
-
-          if (existingSessions.length === 0) {
-            // Only create sessions if none exist (fallback in case createPlan didn't create them)
-            const client = await db.query.ClientTable.findFirst({
-              where: eq(ClientTable.id, plan.clientId),
-            });
-
-            if (client) {
-              // Get branch config for session generation
-              const branchConfig = await getBranchConfig();
-
-              // Generate sessions from plan
-              const sessions = generateSessionsFromPlan(
-                {
-                  joiningDate: plan.joiningDate,
-                  joiningTime: plan.joiningTime,
-                  numberOfSessions: plan.numberOfSessions,
-                  vehicleId: plan.vehicleId,
-                  planId: plan.id,
-                },
-                {
-                  firstName: client.firstName,
-                  lastName: client.lastName,
-                  id: client.id,
-                },
-                branchConfig
-              );
-
-              // Create the sessions
-              const sessionsResult = await createSessions(sessions);
-              if (sessionsResult.error) {
-                console.error('Failed to create sessions:', sessionsResult.message);
-              } else {
-                console.log('Successfully created sessions as fallback:', sessionsResult.message);
-              }
-            }
-          } else {
-            console.log(
-              `Sessions already exist for client (${existingSessions.length} sessions), skipping creation in payment step`
-            );
-          }
-        }
+        await createFallbackSessions(unsafeData.planId);
       } catch (sessionError) {
-        console.error('Error creating sessions:', sessionError);
+        console.error('Error creating fallback sessions:', sessionError);
         // Don't fail the payment if session creation fails
       }
     }
@@ -542,7 +329,8 @@ export const createPayment = async (
     };
   } catch (error) {
     console.error('Error processing payment data:', error);
-    return { error: true, message: 'Failed to save payment information' };
+    const message = error instanceof Error ? error.message : 'Failed to save payment information';
+    return { error: true, message };
   }
 };
 
