@@ -22,9 +22,10 @@ export type PaymentCalculationResult = {
 };
 
 /**
- * Calculate payment amounts based on plan and vehicle data
+ * Calculate payment breakdown based on plan and vehicle data
+ * Returns the complete payment structure including installment splits
  */
-export function calculatePaymentAmounts({
+export function calculatePaymentBreakdown({
   sessions,
   duration,
   rate,
@@ -73,4 +74,64 @@ export function formatCurrency(amount: number): string {
     currency: 'INR',
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+/**
+ * Calculate the outstanding amount (remaining unpaid balance) based on payment data
+ * Handles all payment statuses and types consistently
+ */
+export type PaymentData = {
+  paymentType: 'FULL_PAYMENT' | 'INSTALLMENTS' | null;
+  paymentStatus: 'PENDING' | 'PARTIALLY_PAID' | 'FULLY_PAID' | null;
+  finalAmount: number;
+  installmentPayments?: Array<{
+    installmentNumber: number;
+    amount: number;
+    isPaid: boolean | null;
+  }>;
+  fullPayment?: {
+    isPaid: boolean | null;
+  };
+};
+
+export function calculateOutstandingAmount(payment: PaymentData | null | undefined): number {
+  if (!payment) {
+    return 0;
+  }
+
+  const { paymentType, finalAmount, paymentStatus } = payment;
+
+  // Handle null values - default to PENDING and FULL_PAYMENT
+  const safePaymentType = paymentType || 'FULL_PAYMENT';
+  const safePaymentStatus = paymentStatus || 'PENDING';
+
+  // If fully paid, no amount is due
+  if (safePaymentStatus === 'FULLY_PAID') {
+    return 0;
+  }
+
+  // If pending (not paid at all), full amount is due
+  if (safePaymentStatus === 'PENDING') {
+    return finalAmount;
+  }
+
+  // For partially paid status
+  if (safePaymentStatus === 'PARTIALLY_PAID') {
+    if (safePaymentType === 'INSTALLMENTS' && payment.installmentPayments) {
+      // Sum all paid installments
+      const totalPaid = payment.installmentPayments
+        .filter((installment) => installment.isPaid)
+        .reduce((sum, installment) => sum + installment.amount, 0);
+
+      return Math.max(0, finalAmount - totalPaid);
+    }
+
+    // For full payment that's partially paid (shouldn't happen, but handle it)
+    if (safePaymentType === 'FULL_PAYMENT' && payment.fullPayment) {
+      return payment.fullPayment.isPaid ? 0 : finalAmount;
+    }
+  }
+
+  // Fallback: return full amount
+  return finalAmount;
 }

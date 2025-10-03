@@ -27,7 +27,7 @@ import { PlanTable } from '@/db/schema/plan/columns';
 import { VehicleTable } from '@/db/schema/vehicles/columns';
 import { ClientTable } from '@/db/schema/client/columns';
 import { InstallmentPaymentTable } from '@/db/schema/payment/columns';
-import { calculatePaymentAmounts } from '@/lib/payment/calculate';
+import { calculatePaymentBreakdown } from '@/lib/payment/calculate';
 import { generateSessionsFromPlan } from '@/lib/sessions';
 import { dateToString } from '@/lib/date-utils';
 import {
@@ -391,13 +391,14 @@ export const createPayment = async (
   }
 
   // Use the utility function to calculate payment amounts
-  const { originalAmount, finalAmount } = calculatePaymentAmounts({
-    sessions: plan.numberOfSessions,
-    duration: plan.sessionDurationInMinutes,
-    rate: vehicle.rent,
-    discount: unsafeData.discount,
-    paymentType: unsafeData.paymentType,
-  });
+  const { originalAmount, finalAmount, firstInstallmentAmount, secondInstallmentAmount } =
+    calculatePaymentBreakdown({
+      sessions: plan.numberOfSessions,
+      duration: plan.sessionDurationInMinutes,
+      rate: vehicle.rent,
+      discount: unsafeData.discount,
+      paymentType: unsafeData.paymentType,
+    });
 
   try {
     const { success, data, error } = paymentSchema.safeParse({
@@ -437,9 +438,6 @@ export const createPayment = async (
         const firstInstallmentExists = existingInstallments.some(
           (installment) => installment.installmentNumber === 1 && installment.isPaid
         );
-
-        const firstInstallmentAmount = Math.ceil(finalAmount / 2);
-        const secondInstallmentAmount = finalAmount - firstInstallmentAmount;
 
         if (firstInstallmentExists) {
           // Create second installment

@@ -5,10 +5,13 @@ import { TypographyLarge, TypographyMuted } from '@/components/ui/typography';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Info } from 'lucide-react';
-import { calculatePaymentAmounts, formatCurrency } from '@/lib/payment/calculate';
+import {
+  calculatePaymentBreakdown,
+  formatCurrency,
+  calculateOutstandingAmount,
+} from '@/lib/payment/calculate';
 import { Enrollment } from '@/server/db/plan';
 import { PaymentInfoState } from './types';
-import { calculateAmoutDue } from '@/features/enrollment/lib/utils';
 
 type PaymentOverviewProps = {
   discountInfo: { isChecked: boolean; value: string };
@@ -50,7 +53,7 @@ export const PaymentOverview = ({
     originalAmount: totalFees,
     firstInstallmentAmount,
     secondInstallmentAmount,
-  } = calculatePaymentAmounts({
+  } = calculatePaymentBreakdown({
     sessions: plan?.numberOfSessions || 0,
     duration: plan?.sessionDurationInMinutes || 0,
     rate: vehicle?.rent || 0,
@@ -58,8 +61,23 @@ export const PaymentOverview = ({
     paymentType,
   });
 
-  // Calculate the amount due based on whether first installment is paid
-  const amountDue = calculateAmoutDue(existingPayment);
+  // Calculate the amount due
+  // If existingPayment exists, use it to calculate based on payment history
+  // Otherwise, calculate based on current form values (new enrollment)
+  let amountDue: number;
+  if (existingPayment) {
+    amountDue = calculateOutstandingAmount(existingPayment);
+  } else {
+    // For new enrollments, calculate from form values
+    const finalAmount = totalFees - discountValue;
+    if (paymentType === 'INSTALLMENTS') {
+      // For installments, show first installment as amount due
+      amountDue = firstInstallmentAmount;
+    } else {
+      // For full payment, show total final amount
+      amountDue = finalAmount;
+    }
+  }
 
   // Format amounts using the shared utility function
   const formattedFees = formatCurrency(totalFees);
