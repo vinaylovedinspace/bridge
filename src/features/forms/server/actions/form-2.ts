@@ -23,7 +23,7 @@ export async function fillForm2Fields(
   const learningLicense = client.learningLicense;
 
   // Split the RTO office name into two lines
-  const rtoOffice = (branchConfig?.defaultRtoOffice as string).toUpperCase();
+  const rtoOffice = (branchConfig?.defaultRtoOffice ?? '').toUpperCase();
   const words = rtoOffice.split(' ');
   const midPoint = Math.ceil(words.length / 2);
   const line1 = words.slice(0, midPoint).join(' ');
