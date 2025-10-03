@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   getEligibleStudentsForPermanentLicense,
   getEligibleStudentsForLearnersLicense,
+  markFormsAsPrinted,
 } from '@/server/actions/forms';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
@@ -23,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useRouter } from 'next/navigation';
 
 type EligibleStudent =
   | Awaited<ReturnType<typeof getEligibleStudentsForPermanentLicense>>[0]
@@ -39,6 +41,8 @@ export function EligibleStudents({ list, type: inputType }: EligibleStudentsClie
   );
   const [skipPrinted, setSkipPrinted] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
+
+  const router = useRouter();
 
   const handleSkipPrintedChange = (newSkipPrinted: boolean) => {
     setSkipPrinted(newSkipPrinted);
@@ -72,7 +76,7 @@ export function EligibleStudents({ list, type: inputType }: EligibleStudentsClie
 
   const [filter, setFilter] = useQueryState('filter', {
     shallow: false,
-    defaultValue: 'new-only',
+    defaultValue: 'all-eligible',
   });
 
   const [type, setType] = useQueryState('type', {
@@ -93,7 +97,12 @@ export function EligibleStudents({ list, type: inputType }: EligibleStudentsClie
 
       if (result.success && result.pdfData) {
         printPdfFromBase64(result.pdfData);
+
+        // Mark forms as printed in the database
+        await markFormsAsPrinted(clientIds, 'form-2');
+
         toast.success(`Successfully printed Form 2 for ${result.count} student(s)`);
+        router.refresh();
       } else {
         toast.error(result.error || 'Failed to generate PDFs');
       }
