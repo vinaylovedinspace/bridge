@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { ClientTable, LearningLicenseTable, PlanTable, SessionTable } from '@/db/schema';
+import { ClientTable, SessionTable } from '@/db/schema';
 import { auth } from '@clerk/nextjs/server';
 import { eq, ilike, and, desc, or, count, gte, sql } from 'drizzle-orm';
 import { getBranchConfig } from './branch';

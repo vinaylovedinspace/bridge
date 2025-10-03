@@ -16,7 +16,7 @@ import {
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
 import { UseFormGetValues, UseFormSetValue } from 'react-hook-form';
-import { getSessions } from '@/server/db/sessions';
+import { getSessions } from '@/server/actions/sessions';
 
 export const useEnrollmentFormSubmissions = (
   getValues: UseFormGetValues<AdmissionFormValues>,
