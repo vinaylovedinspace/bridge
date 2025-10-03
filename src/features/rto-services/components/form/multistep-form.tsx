@@ -326,7 +326,7 @@ export function RTOServiceMultistepForm({
   return (
     <FormProvider {...form}>
       <div className="h-full flex flex-col py-10 gap-4">
-        <ScrollArea className="h-[calc(100vh-320px)]">
+        <ScrollArea className="h-[calc(100vh-220px)]">
           <form className="space-y-8 pb-24">{stepComponents[externalStep]}</form>
         </ScrollArea>
 

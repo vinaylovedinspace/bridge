@@ -3,7 +3,7 @@ import { ClientTable } from '@/db/schema/client/columns';
 import { LearningLicenseTable } from '@/db/schema/learning-licenses/columns';
 import { RTOServicesTable } from '@/db/schema/rto-services/columns';
 import { PlanTable } from '@/db/schema/plan/columns';
-import { and, count, eq, inArray, sql } from 'drizzle-orm';
+import { and, countDistinct, eq, inArray, sql } from 'drizzle-orm';
 import { getBranchConfig } from './branch';
 
 export async function getAppointmentStatistics() {
@@ -24,7 +24,7 @@ export async function getAppointmentStatistics() {
   // 1. Don't have a learning license record at all, OR
   // 2. Have a learning license record but licenseNumber is null/empty
   const learningTestCountResult = await db
-    .select({ count: count() })
+    .select({ count: countDistinct(ClientTable.id) })
     .from(ClientTable)
     .innerJoin(PlanTable, eq(ClientTable.id, PlanTable.clientId))
     .leftJoin(LearningLicenseTable, eq(ClientTable.id, LearningLicenseTable.clientId))
@@ -36,9 +36,11 @@ export async function getAppointmentStatistics() {
       )
     );
 
+  console.log(learningTestCountResult);
+
   // Final Test Count: Clients with FULL_SERVICE plans who got their learning license 30+ days ago
   const finalTestCountResult = await db
-    .select({ count: count() })
+    .select({ count: countDistinct(ClientTable.id) })
     .from(ClientTable)
     .innerJoin(PlanTable, eq(ClientTable.id, PlanTable.clientId))
     .innerJoin(LearningLicenseTable, eq(ClientTable.id, LearningLicenseTable.clientId))
@@ -53,7 +55,7 @@ export async function getAppointmentStatistics() {
 
   // RTO Work Count: Count of uncompleted RTO services (not completed, rejected, or cancelled)
   const rtoWorkCountResult = await db
-    .select({ count: count() })
+    .select({ count: countDistinct(RTOServicesTable.id) })
     .from(RTOServicesTable)
     .where(
       and(
