@@ -266,6 +266,11 @@ export const createPlan = async (
       const result = await updatePlanInDB(data.id, planData);
       planId = result.planId;
       isExistingPlan = true;
+    } else if (existingPlan) {
+      // Update existing plan found by client ID
+      const result = await updatePlanInDB(existingPlan.id, planData);
+      planId = result.planId;
+      isExistingPlan = true;
     } else {
       // Create new plan
       const result = await createPlanInDB(planData, tenantId);
@@ -320,8 +325,11 @@ export const createPlan = async (
       );
 
       if (sessionsToGenerate.length > 0) {
-        if (isExistingPlan && planTimingChanged && existingSessions.length > 0) {
+        const shouldUpdate = isExistingPlan && planTimingChanged && existingSessions.length > 0;
+
+        if (shouldUpdate) {
           // Update existing sessions instead of creating duplicates
+          console.log('Updating scheduled sessions for client:', data.clientId);
           const updateResult = await updateScheduledSessionsForClient(
             data.clientId,
             sessionsToGenerate.map((session) => ({
@@ -333,7 +341,6 @@ export const createPlan = async (
               sessionNumber: session.sessionNumber,
             }))
           );
-
           if (updateResult.error) {
             console.error('Failed to update sessions:', updateResult.message);
             sessionMessage = ' but session update failed';

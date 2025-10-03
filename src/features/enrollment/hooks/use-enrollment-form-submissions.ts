@@ -173,14 +173,19 @@ export const useEnrollmentFormSubmissions = (
         });
       }
 
+      // Get the existing plan ID if it exists
+      const existingPlanId = getValues('plan.id') || getValues('planId');
+
       const result = await createPlan({
         ...data,
+        id: existingPlanId,
         serviceType: serviceType || data.serviceType,
         clientId,
       });
 
       if (result.planId) {
         setValue('planId', result.planId);
+        setValue('plan.id', result.planId); // Also store in plan.id for future updates
       }
 
       // Sessions are automatically created/updated by the createPlan server action
