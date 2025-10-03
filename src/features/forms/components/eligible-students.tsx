@@ -7,11 +7,14 @@ import {
 } from '@/server/actions/forms';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
-import { Users, Calendar, CheckCircle2 } from 'lucide-react';
+import { Users, Calendar, CheckCircle2, Printer } from 'lucide-react';
 import { useQueryState } from 'nuqs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { bulkFillForm2 } from '@/features/forms/server/actions/bulk-form-2';
+import { toast } from 'sonner';
+import { printPdfFromBase64 } from '@/features/forms/lib/utils';
 import {
   Select,
   SelectContent,
@@ -35,6 +38,7 @@ export function EligibleStudents({ list, type: inputType }: EligibleStudentsClie
     () => new Set(list.map((s) => s.id))
   );
   const [skipPrinted, setSkipPrinted] = useState(true);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const handleSkipPrintedChange = (newSkipPrinted: boolean) => {
     setSkipPrinted(newSkipPrinted);
@@ -75,6 +79,31 @@ export function EligibleStudents({ list, type: inputType }: EligibleStudentsClie
     shallow: false,
     defaultValue: inputType,
   });
+
+  const handleBulkPrint = async () => {
+    if (selectedStudents.size === 0) {
+      toast.error('No students selected');
+      return;
+    }
+
+    setIsPrinting(true);
+    try {
+      const clientIds = Array.from(selectedStudents);
+      const result = await bulkFillForm2(clientIds);
+
+      if (result.success && result.pdfData) {
+        printPdfFromBase64(result.pdfData);
+        toast.success(`Successfully printed Form 2 for ${result.count} student(s)`);
+      } else {
+        toast.error(result.error || 'Failed to generate PDFs');
+      }
+    } catch (error) {
+      console.error('Bulk print error:', error);
+      toast.error('An error occurred while printing');
+    } finally {
+      setIsPrinting(false);
+    }
+  };
 
   return (
     <div className="space-y-10">
@@ -209,12 +238,20 @@ export function EligibleStudents({ list, type: inputType }: EligibleStudentsClie
             )}
           </div>
 
-          {/* Student count display */}
+          {/* Student count display and bulk actions */}
           {selectedStudents.size > 0 && (
-            <div className="flex items-center justify-center pt-4 border-t">
+            <div className="flex items-center justify-between pt-4 border-t">
               <div className="text-sm text-muted-foreground">
                 {selectedStudents.size} student{selectedStudents.size !== 1 ? 's' : ''} selected
               </div>
+              <Button
+                onClick={handleBulkPrint}
+                disabled={isPrinting}
+                className="flex items-center gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                {isPrinting ? 'Printing...' : 'Bulk Print Form 2'}
+              </Button>
             </div>
           )}
         </CardContent>

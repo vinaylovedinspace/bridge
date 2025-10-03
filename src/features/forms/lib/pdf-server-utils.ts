@@ -68,3 +68,19 @@ export async function fillAndFlattenPdf(
   // Convert to base64
   return pdfToBase64(pdfDoc);
 }
+
+/**
+ * Merge multiple PDF documents into a single PDF
+ * @param pdfDocuments - Array of PDF documents to merge
+ * @returns Merged PDF document as base64
+ */
+export async function mergePdfs(pdfDocuments: PDFDocument[]): Promise<string> {
+  const mergedPdf = await PDFDocument.create();
+
+  for (const pdfDoc of pdfDocuments) {
+    const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+    pages.forEach((page) => mergedPdf.addPage(page));
+  }
+
+  return pdfToBase64(mergedPdf);
+}

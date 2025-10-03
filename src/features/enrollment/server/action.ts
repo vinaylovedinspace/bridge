@@ -530,7 +530,7 @@ export const createPayment = async (
 
     return {
       error: false,
-      message: 'Payment created successfully',
+      message: 'Payment acknowledged successfully',
       paymentId,
     };
   } catch (error) {

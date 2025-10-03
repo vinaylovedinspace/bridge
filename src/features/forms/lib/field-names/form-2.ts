@@ -71,7 +71,6 @@ export const form2FieldNames = {
   declaration_donate_organ_yes: 'declaration_donate_organ_yes',
   declaration_donate_organ_no: 'declaration_donate_organ_no',
 
-  declaration_designation: 'declaration_designation',
   declaration_epilepsy_yes: 'declaration_epilepsy_yes',
   declaration_epilepsy_no: 'declaration_epilepsy_no',
   declaration_eye_yes: 'declaration_eye_yes',
@@ -87,4 +86,6 @@ export const form2FieldNames = {
   declaration_name: 'declaration_name',
   declaration_guardian_name: 'declaration_guardian_name',
   declaration_guardian_relationship: 'declaration_guardian_relationship',
+  declaration_guardian_name_2: 'declaration_guardian_name_2',
+  declaration_guardian_relationship_2: 'declaration_guardian_relationship_2',
 };
