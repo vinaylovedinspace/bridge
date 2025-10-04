@@ -83,7 +83,7 @@ export const EditAdmissionForm = ({ enrollment, branchConfig }: EditAdmissionFor
       const hasChanges = hasCurrentStepChanges();
       if (!hasChanges) {
         if (isLastStep) {
-          router.push('/enrollment');
+          router.push('/enrollments');
         } else {
           goToNext();
         }

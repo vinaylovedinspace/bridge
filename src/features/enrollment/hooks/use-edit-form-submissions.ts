@@ -6,6 +6,7 @@ import {
   PlanValues,
   LearningLicenseValues,
   DrivingLicenseValues,
+  PaymentValues,
 } from '@/features/enrollment/types';
 import {
   updateClient,
@@ -14,6 +15,7 @@ import {
   updateLearningLicense,
   updateDrivingLicense,
   updatePlan,
+  createPayment,
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
 import { Enrollment } from '@/server/db/plan';
@@ -114,7 +116,44 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
     [enrollment.id, enrollment.client.id]
   );
 
-  const handlePaymentStep = useCallback(async () => {}, []);
+  const handlePaymentStep = useCallback(
+    async (data: PaymentValues): ActionReturnType => {
+      // If payment already exists, no need to create a new one
+      if (enrollment.payment) {
+        return {
+          error: false,
+          message: 'Success',
+        };
+      }
+
+      // Create payment if it doesn't exist
+      try {
+        const result = await createPayment({
+          ...data,
+          planId: enrollment.id,
+          clientId: enrollment.clientId,
+        });
+
+        if (result.error) {
+          return {
+            error: true,
+            message: result.message || 'Failed to create payment',
+          };
+        }
+
+        return {
+          error: false,
+          message: 'Payment created successfully',
+        };
+      } catch (error) {
+        return {
+          error: true,
+          message: 'Unable to create payment. Please try again.',
+        };
+      }
+    },
+    [enrollment.id, enrollment.clientId, enrollment.payment]
+  );
 
   const submitStep = useCallback(
     async (
@@ -134,7 +173,7 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
             }
           ),
         plan: () => handlePlanStep(stepData as PlanValues),
-        payment: () => handlePaymentStep(),
+        payment: () => handlePaymentStep(stepData as PaymentValues),
       };
 
       const handler = stepHandlers[stepKey as keyof typeof stepHandlers];

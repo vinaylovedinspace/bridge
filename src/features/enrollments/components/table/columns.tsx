@@ -24,7 +24,7 @@ const getPaymentStatusBadge = (status?: string | null) => {
     case 'FULLY_PAID':
       return (
         <Badge variant="default" className="bg-green-600 font-bold">
-          PAID
+          Paid
         </Badge>
       );
     default:

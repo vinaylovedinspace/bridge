@@ -62,6 +62,12 @@ export const useUnsavedChanges = (
 
   const hasCurrentStepChanges = (): boolean => {
     const currentStepKey = currentStep as AdmissionFormStepKey;
+
+    // Special case: if on payment step and no payment exists in DB, we should create one
+    if (currentStepKey === 'payment' && !enrollment.payment) {
+      return true;
+    }
+
     const currentValues = getCurrentStepValues(currentStepKey);
     const originalStepValues = getOriginalStepValues(currentStepKey);
 
