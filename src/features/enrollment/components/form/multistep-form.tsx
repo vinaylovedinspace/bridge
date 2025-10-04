@@ -16,31 +16,28 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStepNavigation, ProgressBar } from '../progress-bar/progress-bar';
 import { PaymentContainer } from './steps/payment';
 import { DEFAULT_STATE } from '@/lib/constants/business';
-import { getMultistepAdmissionStepValidationFields } from '../../lib/utils';
+import {
+  getMultistepAdmissionStepValidationFields,
+  mapClientToPersonalInfo,
+  mapLearningLicense,
+  mapDrivingLicense,
+} from '../../lib/utils';
 import { BranchConfig } from '@/server/db/branch';
 import { useEnrollmentFormSubmissions } from '../../hooks/use-enrollment-form-submissions';
+import { getClientById } from '../../server/action';
 
 type MultistepFormProps = {
   branchConfig: BranchConfig;
+  existingClient?: Awaited<ReturnType<typeof getClientById>>['data'];
 };
 
-export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
+export const MultistepForm = ({ branchConfig, existingClient }: MultistepFormProps) => {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const methods = useForm<AdmissionFormValues>({
-    resolver: zodResolver(admissionFormSchema),
-    defaultValues: {
+  const getDefaultValues = (): AdmissionFormValues => {
+    const baseDefaults = {
       serviceType: 'FULL_SERVICE' as const,
-      personalInfo: {
-        educationalQualification: 'GRADUATE',
-        citizenStatus: 'BIRTH',
-        isCurrentAddressSameAsPermanentAddress: false,
-        state: DEFAULT_STATE,
-        permanentState: DEFAULT_STATE,
-      },
-      learningLicense: {},
-      drivingLicense: {},
       plan: {
         vehicleId: '',
         numberOfSessions: 21,
@@ -53,7 +50,35 @@ export const MultistepForm = ({ branchConfig }: MultistepFormProps) => {
         discount: 0,
         paymentMode: 'PAYMENT_LINK' as const,
       },
-    },
+    };
+
+    if (existingClient) {
+      return {
+        ...baseDefaults,
+        personalInfo: mapClientToPersonalInfo(existingClient),
+        learningLicense: mapLearningLicense(existingClient.learningLicense),
+        drivingLicense: mapDrivingLicense(existingClient.drivingLicense),
+        clientId: existingClient.id,
+      } as AdmissionFormValues;
+    }
+
+    return {
+      ...baseDefaults,
+      personalInfo: {
+        educationalQualification: 'GRADUATE',
+        citizenStatus: 'BIRTH',
+        isCurrentAddressSameAsPermanentAddress: false,
+        state: DEFAULT_STATE,
+        permanentState: DEFAULT_STATE,
+      },
+      learningLicense: {},
+      drivingLicense: {},
+    } as AdmissionFormValues;
+  };
+
+  const methods = useForm<AdmissionFormValues>({
+    resolver: zodResolver(admissionFormSchema),
+    defaultValues: getDefaultValues(),
     mode: 'onChange',
   });
 

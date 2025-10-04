@@ -116,13 +116,12 @@ export const columns: ColumnDef<Client>[] = [
       if (!plan || plan.length === 0) {
         return (
           <Link href={`/enrollment?clientId=${id}`} onClick={(e) => e.stopPropagation()}>
-            <Button size="sm" variant="outline">
+            <Button size="xs" variant="outline">
               Complete Enrollment
             </Button>
           </Link>
         );
       }
-
       return null;
     },
   },

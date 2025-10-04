@@ -145,7 +145,7 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
           error: false,
           message: 'Payment created successfully',
         };
-      } catch (error) {
+      } catch {
         return {
           error: true,
           message: 'Unable to create payment. Please try again.',
