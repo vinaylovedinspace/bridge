@@ -1,13 +1,8 @@
 import { db } from '@/db';
-import {
-  ClientTable,
-  PaymentTable,
-  TransactionTable,
-  InstallmentPaymentTable,
-  PlanTable,
-} from '@/db/schema';
-import { eq, and, desc, max, or, ilike, sum } from 'drizzle-orm';
+import { ClientTable, PaymentTable, TransactionTable, PlanTable } from '@/db/schema';
+import { eq, and, desc, max, or, ilike } from 'drizzle-orm';
 import { getBranchConfig } from './branch';
+import { isPaymentOverdue } from '@/lib/payment/is-payment-overdue';
 
 const _getPayments = async (branchId: string, name?: string, paymentStatus?: string) => {
   const conditions = [eq(ClientTable.branchId, branchId)];
@@ -111,77 +106,27 @@ export const getPayments = async (name?: string, paymentStatus?: string) => {
 };
 
 const _getOverduePaymentsCount = async (branchId: string) => {
-  const conditions = [eq(ClientTable.branchId, branchId)];
+  const conditions = [eq(PlanTable.branchId, branchId)];
 
-  const payments = await db
-    .select({
-      id: PaymentTable.id,
-      paymentStatus: PaymentTable.paymentStatus,
-      paymentType: PaymentTable.paymentType,
-      finalAmount: PaymentTable.finalAmount,
-      joiningDate: PlanTable.joiningDate,
-    })
-    .from(PaymentTable)
-    .innerJoin(ClientTable, eq(PaymentTable.clientId, ClientTable.id))
-    .innerJoin(PlanTable, eq(PaymentTable.planId, PlanTable.id))
-    .where(and(...conditions));
+  const plans = await db.query.PlanTable.findMany({
+    where: and(...conditions),
+    with: {
+      payment: {
+        with: {
+          client: true,
+          installmentPayments: true,
+          fullPayment: true,
+        },
+      },
+    },
+  });
 
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  let overdueCount = 0;
+  const overdueCount = plans.filter((plan) => {
+    // If no payment entry, consider it overdue
+    if (!plan.payment) return true;
 
-  for (const payment of payments) {
-    if (payment.paymentStatus === 'FULLY_PAID') {
-      continue;
-    }
-
-    // Calculate total paid amount from successful transactions
-    const totalPaidResult = await db
-      .select({
-        totalPaid: sum(TransactionTable.amount),
-      })
-      .from(TransactionTable)
-      .where(
-        and(
-          eq(TransactionTable.paymentId, payment.id),
-          eq(TransactionTable.transactionStatus, 'SUCCESS')
-        )
-      );
-
-    const totalPaid = Number(totalPaidResult[0]?.totalPaid) || 0;
-    const amountDue = payment.finalAmount - totalPaid;
-
-    if (amountDue <= 0) {
-      continue; // Fully paid
-    }
-
-    if (payment.paymentType === 'FULL_PAYMENT') {
-      overdueCount++;
-    } else if (payment.paymentType === 'INSTALLMENTS') {
-      // For installments, check unpaid installments that are overdue
-      const installments = await db
-        .select({
-          installmentNumber: InstallmentPaymentTable.installmentNumber,
-          amount: InstallmentPaymentTable.amount,
-          isPaid: InstallmentPaymentTable.isPaid,
-          paymentDate: InstallmentPaymentTable.paymentDate,
-        })
-        .from(InstallmentPaymentTable)
-        .where(eq(InstallmentPaymentTable.paymentId, payment.id));
-
-      let hasOverdueInstallment = false;
-      for (const installment of installments) {
-        if (!installment.isPaid && installment.paymentDate && installment.paymentDate < todayStr) {
-          hasOverdueInstallment = true;
-          break;
-        }
-      }
-
-      if (hasOverdueInstallment) {
-        overdueCount++;
-      }
-    }
-  }
+    return isPaymentOverdue(plan.payment, plan);
+  }).length;
 
   return overdueCount;
 };
