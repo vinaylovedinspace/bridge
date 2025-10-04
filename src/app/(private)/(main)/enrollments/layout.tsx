@@ -2,6 +2,8 @@ import { TypographyH4 } from '@/components/ui/typography';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { ClientSearch } from '@/features/clients/components/client-search';
+
 export default function EnrollmentsLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="space-y-10" data-testid="enrollments-page">
@@ -14,6 +16,7 @@ export default function EnrollmentsLayout({ children }: { children: React.ReactN
           </Button>
         </Link>
       </div>
+      <ClientSearch />
       {children}
     </div>
   );

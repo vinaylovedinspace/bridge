@@ -1,12 +1,12 @@
 'use client';
 
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useQueryState } from 'nuqs';
 import { useColumnPreferences } from '@/hooks/use-column-preferences';
 import { Settings } from 'lucide-react';
+import { ClientSearch } from './client-search';
 
 const columnOptions = [
   { key: 'clientCode', label: 'Client Code' },
@@ -23,11 +23,6 @@ const columnOptions = [
 ];
 
 export const ClientFilters = () => {
-  const [name, setName] = useQueryState('name', {
-    shallow: false,
-    throttleMs: 500,
-  });
-
   const [needsLearningTest, setNeedsLearningTest] = useQueryState('needsLearningTest', {
     shallow: false,
     parse: (value) => value === 'true',
@@ -55,13 +50,7 @@ export const ClientFilters = () => {
   return (
     <div className="flex justify-between gap-4">
       <div className="flex gap-4">
-        <Input
-          data-testid="clients-search-input"
-          value={name || ''}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Search by name"
-          className="w-96"
-        />
+        <ClientSearch />
         <div className="flex items-center gap-6">
           <div className="flex items-center space-x-2">
             <Checkbox

@@ -7,7 +7,7 @@ export default async function ClientsPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    name?: string;
+    search?: string;
     columns?: string;
     needsLearningTest?: string;
     needsDrivingTest?: string;
@@ -24,7 +24,7 @@ export default async function ClientsPage({
         <ClientFilters />
       </Suspense>
       <Clients
-        name={params.name}
+        search={params.search}
         needsLearningTest={needsLearningTest}
         needsDrivingTest={needsDrivingTest}
       />

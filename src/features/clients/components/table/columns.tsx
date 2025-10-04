@@ -115,8 +115,8 @@ export const columns: ColumnDef<Client>[] = [
 
       if (!plan || plan.length === 0) {
         return (
-          <Link href={`/enrollment?clientId=${id}`}>
-            <Button size="sm" variant="outline" onClick={(e) => e.preventDefault()}>
+          <Link href={`/enrollment?clientId=${id}`} onClick={(e) => e.stopPropagation()}>
+            <Button size="sm" variant="outline">
               Complete Enrollment
             </Button>
           </Link>

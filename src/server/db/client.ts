@@ -6,15 +6,19 @@ import { getBranchConfig } from './branch';
 
 const _getClients = async (
   branchId: string,
-  name?: string,
+  search?: string,
   needsLearningTest?: boolean,
   needsDrivingTest?: boolean
 ) => {
   const conditions = [eq(ClientTable.branchId, branchId)];
 
-  if (name) {
+  if (search) {
     conditions.push(
-      or(ilike(ClientTable.firstName, `%${name}%`), ilike(ClientTable.lastName, `%${name}%`))!
+      or(
+        ilike(ClientTable.firstName, `%${search}%`),
+        ilike(ClientTable.lastName, `%${search}%`),
+        ilike(ClientTable.phoneNumber, `%${search}%`)
+      )!
     );
   }
 
@@ -85,13 +89,13 @@ const _getClients = async (
 };
 
 export const getClients = async (
-  name?: string,
+  search?: string,
   needsLearningTest?: boolean,
   needsDrivingTest?: boolean
 ) => {
   const { id: branchId } = await getBranchConfig();
 
-  return await _getClients(branchId, name, needsLearningTest, needsDrivingTest);
+  return await _getClients(branchId, search, needsLearningTest, needsDrivingTest);
 };
 
 export const getClient = async (clientId: string) => {

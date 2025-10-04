@@ -3,8 +3,14 @@ import { EnrollmentDataTable } from './data-table';
 import { columns } from './columns';
 import { getEnrollments } from '@/server/db/enrollment';
 
-export async function Enrollments({ paymentStatus }: { paymentStatus?: string }) {
-  const data = await getEnrollments(paymentStatus);
+export async function Enrollments({
+  search,
+  paymentStatus,
+}: {
+  search?: string;
+  paymentStatus?: string;
+}) {
+  const data = await getEnrollments(search, paymentStatus);
 
   return (
     <Suspense fallback={<div>Loading...</div>}>

@@ -4,15 +4,15 @@ import { columns } from './columns';
 import { getClients } from '@/server/db/client';
 
 export async function Clients({
-  name,
+  search,
   needsLearningTest,
   needsDrivingTest,
 }: {
-  name?: string;
+  search?: string;
   needsLearningTest?: boolean;
   needsDrivingTest?: boolean;
 }) {
-  const data = await getClients(name, needsLearningTest, needsDrivingTest);
+  const data = await getClients(search, needsLearningTest, needsDrivingTest);
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
