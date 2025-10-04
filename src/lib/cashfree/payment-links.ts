@@ -5,6 +5,22 @@ import {
 } from './client';
 import { nanoid } from 'nanoid';
 import { getCurrentTenantName } from '@/server/db/tenant';
+import { z } from 'zod';
+import { env } from '@/env';
+
+const createPaymentLinkSchema = z.object({
+  amount: z.number().positive('Amount must be greater than 0'),
+  customerPhone: z
+    .string()
+    .min(1, 'Phone number is required')
+    .transform((val) => val.replace(/\D/g, ''))
+    .refine((val) => val.length === 10, {
+      message: 'Phone number must be exactly 10 digits',
+    }),
+  customerName: z.string().min(1, 'Customer name is required').max(100),
+  planId: z.string().min(1, 'Plan ID is required'),
+  sendSms: z.boolean().optional().default(true),
+});
 
 export type CreatePaymentLinkRequest = {
   amount: number;
@@ -29,12 +45,12 @@ export async function createPaymentLink(
   request: CreatePaymentLinkRequest
 ): Promise<PaymentLinkResult> {
   try {
+    // Validate input
+    const validatedData = createPaymentLinkSchema.parse(request);
+
     const client = getCashfreeClient();
 
     const linkId = `bridge_plan_${nanoid(8)}`;
-
-    // Ensure phone number is properly formatted (10 digits for India)
-    const formattedPhone = request.customerPhone.replace(/\D/g, '').slice(-10);
 
     // Get tenant name for payment purpose
     const tenantName = await getCurrentTenantName();
@@ -42,47 +58,56 @@ export async function createPaymentLink(
 
     const params: CreatePaymentLinkParams = {
       link_id: linkId,
-      link_amount: request.amount,
+      link_amount: validatedData.amount,
       link_currency: 'INR',
       customer_details: {
-        customer_phone: formattedPhone,
-        customer_name: request.customerName,
+        customer_phone: validatedData.customerPhone,
+        customer_name: validatedData.customerName,
       },
       link_purpose: `Payment to ${organizationName}`,
       link_notify: {
-        send_sms: true,
+        send_sms: validatedData.sendSms,
       },
       link_notes: {
-        planId: request.planId,
+        planId: validatedData.planId,
       },
       link_meta: {
-        notify_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/webhooks/cashfree`,
+        notify_url: `${env.NEXT_PUBLIC_APP_URL}/api/webhooks/cashfree`,
       },
     };
 
-    console.log('Creating payment link with params:', {
-      ...params,
-      customer_details: {
-        ...params.customer_details,
-        customer_phone: `${formattedPhone.slice(0, 6)}****`, // Partially hide phone for security
-      },
-    });
-
     const response: PaymentLinkResponse = await client.createPaymentLink(params);
+
+    // Validate response
+    if (!response?.link_id || !response?.link_url) {
+      throw new Error('Invalid response from Cashfree API');
+    }
 
     return {
       success: true,
       data: {
         linkId: response.link_id,
         paymentUrl: response.link_url,
-        qrCode: response.link_qrcode,
+        qrCode: response.link_qrcode || '',
         expiryTime: response.link_expiry_time,
       },
     };
   } catch (error) {
-    console.error('Failed to create Cashfree payment link:', error);
+    console.error('Failed to create Cashfree payment link:', {
+      error,
+      request: {
+        ...request,
+        customerPhone: request.customerPhone?.slice(-4).padStart(10, '*'), // Mask phone for security
+      },
+    });
 
-    const errorMessage = error instanceof Error ? error.message : 'Failed to create payment link';
+    let errorMessage = 'Failed to create payment link';
+
+    if (error instanceof z.ZodError) {
+      errorMessage = error.errors[0]?.message || 'Validation failed';
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
 
     return {
       success: false,
