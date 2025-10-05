@@ -42,6 +42,7 @@ import {
   handleFullPayment,
   handleInstallmentPayment,
 } from '../lib/payment-helpers';
+import { sendOnboardingMessageAfterPayment } from '@/server/actions/whatsapp';
 
 export const createClient = async (
   unsafeData: z.infer<typeof personalInfoSchema>
@@ -310,9 +311,70 @@ export const createPayment = async (
           secondInstallmentAmount
         );
       }
+
+      // Send WhatsApp onboarding message immediately for CASH/QR payments
+      try {
+        console.log('📱 [Enrollment] Sending WhatsApp for CASH/QR payment');
+        const whatsappResult = await sendOnboardingMessageAfterPayment({
+          clientId: plan.clientId,
+          planId: unsafeData.planId,
+          paymentMode: data.paymentMode,
+          amount: finalAmount,
+          transactionReference: `TXN-${Date.now()}`,
+        });
+        console.log('📱 [Enrollment] WhatsApp result:', whatsappResult);
+      } catch (error) {
+        console.error('❌ [Enrollment] WhatsApp error:', error);
+      }
     }
 
-    // 6. Create fallback sessions if needed (for new payments only)
+    // 6. Handle payment link generation if payment mode is PAYMENT_LINK
+    if (data.paymentMode === 'PAYMENT_LINK') {
+      try {
+        console.log('💳 [Enrollment] Creating payment link for amount:', finalAmount);
+
+        // Get client details for payment link
+        const client = await db.query.ClientTable.findFirst({
+          where: eq(ClientTable.id, plan.clientId),
+        });
+
+        if (client) {
+          const paymentLinkResult = await createPaymentLink({
+            amount: finalAmount,
+            customerPhone: client.phoneNumber,
+            customerName: `${client.firstName} ${client.lastName}`,
+            planId: unsafeData.planId,
+            sendSms: true,
+          });
+
+          if (paymentLinkResult.success && paymentLinkResult.data) {
+            console.log('✅ [Enrollment] Payment link created:', paymentLinkResult.data.paymentUrl);
+
+            // Send WhatsApp onboarding message for PAYMENT_LINK
+            console.log('📱 [Enrollment] Sending WhatsApp for PAYMENT_LINK');
+            const whatsappResult = await sendOnboardingMessageAfterPayment({
+              clientId: plan.clientId,
+              planId: unsafeData.planId,
+              paymentMode: data.paymentMode,
+              amount: finalAmount,
+              transactionReference: paymentLinkResult.data.paymentUrl,
+            });
+            console.log('📱 [Enrollment] WhatsApp result:', whatsappResult);
+          } else {
+            console.error(
+              '❌ [Enrollment] Failed to create payment link:',
+              paymentLinkResult.error
+            );
+          }
+        } else {
+          console.error('❌ [Enrollment] Client not found for payment link');
+        }
+      } catch (error) {
+        console.error('❌ [Enrollment] Payment link error:', error);
+      }
+    }
+
+    // 7. Create fallback sessions if needed (for new payments only)
     if (!isExistingPayment) {
       try {
         await createFallbackSessions(unsafeData.planId);

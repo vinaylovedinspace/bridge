@@ -16,7 +16,14 @@ export const personalInfoSchema = createInsertSchema(ClientTable, {
     .regex(/^\d{12}$/, 'Aadhaar number must contain only digits'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
-  phoneNumber: z.string().min(10, 'Phone number is required').max(10, 'Phone number is not valid'),
+  phoneNumber: z
+    .string()
+    .min(10, 'Phone number is required')
+    .max(15, 'Phone number is not valid')
+    .regex(
+      /^(\+91|91)?[6-9]\d{9}$/,
+      'Invalid phone number format. Use 10-digit Indian number or include country code'
+    ),
   email: z.string().email('Invalid email address').or(z.literal('')).optional().nullable(),
 
   birthDate: z.date().min(new Date('1900-01-01'), 'Invalid birth date'),

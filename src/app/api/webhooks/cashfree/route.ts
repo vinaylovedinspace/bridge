@@ -6,6 +6,11 @@ import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import { PaymentTable } from '@/db/schema/payment/columns';
 import { TransactionTable } from '@/db/schema/transactions/columns';
+import { PlanTable } from '@/db/schema/plan/columns';
+import { ClientTable } from '@/db/schema/client/columns';
+import { VehicleTable } from '@/db/schema/vehicles/columns';
+import { SessionTable } from '@/db/schema/sessions/columns';
+import { sendOnboardingWithReceiptWhatsApp } from '@/lib/whatsapp';
 
 // Cashfree webhook event types
 type CashfreeWebhookEvent = {
@@ -237,7 +242,15 @@ async function handleSuccessfulPayment(data: CashfreeWebhookEvent['data'], planI
       })
       .where(eq(PaymentTable.id, payment.id));
 
-    // TODO: Send confirmation SMS/email to customer
+    // Send WhatsApp onboarding message after successful payment
+    try {
+      console.log('📱 [Cashfree Webhook] Sending onboarding message for planId:', planId);
+      const whatsappResult = await sendWhatsAppOnboardingMessage(planId, data);
+      console.log('📱 [Cashfree Webhook] WhatsApp result:', whatsappResult);
+    } catch (error) {
+      console.error('❌ [Cashfree Webhook] Failed to send WhatsApp onboarding:', error);
+    }
+
     console.log('Payment processing completed for planId:', planId);
   } catch (error) {
     console.error('Error updating payment status:', error);
@@ -277,5 +290,79 @@ async function handleFailedPayment(data: CashfreeWebhookEvent['data'], planId?: 
     console.log('Payment status remains as:', payment.paymentStatus);
   } catch (error) {
     console.error('Error handling failed payment:', error);
+  }
+}
+
+async function sendWhatsAppOnboardingMessage(
+  planId: string,
+  paymentData: CashfreeWebhookEvent['data']
+) {
+  try {
+    console.log('📱 [WhatsApp Webhook] Starting onboarding message for planId:', planId);
+
+    // Get plan details
+    const plan = await db.query.PlanTable.findFirst({
+      where: eq(PlanTable.id, planId),
+    });
+
+    if (!plan) {
+      console.error('❌ [WhatsApp Webhook] Plan not found for planId:', planId);
+      return { success: false, error: 'Plan not found' };
+    }
+
+    // Get client details
+    const client = await db.query.ClientTable.findFirst({
+      where: eq(ClientTable.id, plan.clientId),
+    });
+
+    if (!client) {
+      console.error('❌ [WhatsApp Webhook] Client not found for clientId:', plan.clientId);
+      return { success: false, error: 'Client not found' };
+    }
+
+    // Get vehicle details
+    const vehicle = await db.query.VehicleTable.findFirst({
+      where: eq(VehicleTable.id, plan.vehicleId),
+    });
+
+    // Get sessions for the client
+    const sessions = await db.query.SessionTable.findMany({
+      where: eq(SessionTable.clientId, plan.clientId),
+      orderBy: (sessions, { asc }) => [asc(sessions.sessionDate)],
+    });
+
+    console.log('📱 [WhatsApp Webhook] Sending onboarding message to:', client.phoneNumber);
+
+    const whatsappResult = await sendOnboardingWithReceiptWhatsApp({
+      id: client.id,
+      firstName: client.firstName,
+      lastName: client.lastName,
+      phoneNumber: client.phoneNumber,
+      plan: {
+        numberOfSessions: plan.numberOfSessions,
+        joiningDate: plan.joiningDate,
+        joiningTime: plan.joiningTime,
+      },
+      sessions: sessions.map((session) => ({
+        sessionDate: session.sessionDate,
+        startTime: session.startTime,
+      })),
+      payment: {
+        amount: Math.round(parseFloat(paymentData.link_amount_paid) * 100), // Convert to paise
+        paymentMode: 'PAYMENT_LINK',
+        transactionReference: paymentData.order.order_id,
+      },
+      vehicleDetails: {
+        name: vehicle?.name || 'Vehicle',
+        number: vehicle?.number || 'N/A',
+        type: 'Driving School Vehicle',
+      },
+    });
+
+    console.log('📱 [WhatsApp Webhook] Result:', whatsappResult);
+    return whatsappResult;
+  } catch (error) {
+    console.error('❌ [WhatsApp Webhook] Error sending onboarding message:', error);
+    return { success: false, error: (error as Error).message };
   }
 }

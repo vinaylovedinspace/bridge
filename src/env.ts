@@ -12,6 +12,10 @@ export const env = createEnv({
     CRON_SECRET: z.string().min(1),
     UPSTASH_REDIS_REST_URL: z.string().min(1),
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1),
+    // WhatsApp Cloud API
+    WHATSAPP_CLOUD_TOKEN: z.string().min(1),
+    WHATSAPP_CLOUD_PHONE_NUMBER_ID: z.string().min(1),
+    WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),

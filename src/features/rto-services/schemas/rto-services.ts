@@ -74,7 +74,14 @@ export const rtoServiceFormSchema = baseRtoServiceSchema
       middleName: z.string().optional(),
       lastName: z.string().min(1, 'Last name is required'),
       aadhaarNumber: z.string().regex(/^\d{12}$/, 'Aadhaar number must be 12 digits'),
-      phoneNumber: z.string().min(10, 'Phone number is required'),
+      phoneNumber: z
+        .string()
+        .min(10, 'Phone number is required')
+        .max(15, 'Phone number is not valid')
+        .regex(
+          /^(\+91|91)?[6-9]\d{9}$/,
+          'Invalid phone number format. Use 10-digit Indian number or include country code'
+        ),
       email: z.string().email('Invalid email').optional().or(z.literal('')),
       addressLine1: z.string().min(1, 'House/Door/Flat No is required'),
       addressLine2: z.string().min(1, 'Street/Locality/Police Station is required'),

@@ -8,7 +8,14 @@ const branchSchema = z.object({
 // Form schema for validation
 export const onboardingFormSchema = z.object({
   schoolName: z.string().min(2, 'School name must be at least 2 characters'),
-  schoolWhatsappNumber: z.string().min(10, 'WhatsApp number must be at least 10 characters'),
+  schoolWhatsappNumber: z
+    .string()
+    .min(10, 'WhatsApp number must be at least 10 characters')
+    .max(15, 'WhatsApp number is not valid')
+    .regex(
+      /^(\+91|91)?[6-9]\d{9}$/,
+      'Invalid WhatsApp number format. Use 10-digit Indian number or include country code'
+    ),
   branches: z
     .array(branchSchema)
     .min(1, 'At least one branch is required')
