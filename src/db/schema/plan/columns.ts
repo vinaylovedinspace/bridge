@@ -18,6 +18,7 @@ export const PlanTable = pgTable('plans', {
   sessionDurationInMinutes: integer('session_duration_in_minutes').notNull(),
   joiningDate: text('joining_date').notNull(),
   joiningTime: time('joining_time').notNull(),
+  vehicleRentAmount: integer('vehicle_rent_amount').notNull(),
 
   serviceType: ServiceTypeEnum().notNull(),
 

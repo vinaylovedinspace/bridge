@@ -47,11 +47,14 @@ export const createPlanSchema = (operatingHours?: { start: string; end: string }
   });
 };
 
-export const planSchema = basePlanSchema.omit({ planCode: true, branchId: true });
+export const planSchema = basePlanSchema.omit({
+  planCode: true,
+  branchId: true,
+  vehicleRentAmount: true,
+});
 
 export const paymentSchema = createInsertSchema(PaymentTable, {
   discount: z.number().default(0),
-  vehicleRentAmount: z.number().default(0),
   paymentType: z
     .enum(PaymentTypeEnum.enumValues, { required_error: 'Payment type is required' })
     .default('FULL_PAYMENT'),
@@ -60,7 +63,7 @@ export const paymentSchema = createInsertSchema(PaymentTable, {
     .default('PENDING'),
   licenseServiceFee: z.number().default(0),
 })
-  .omit({ createdAt: true, updatedAt: true, vehicleRentAmount: true })
+  .omit({ createdAt: true, updatedAt: true })
   .extend({
     paymentMode: z
       .enum(PaymentModeEnum.enumValues, { required_error: 'Payment mode is required' })

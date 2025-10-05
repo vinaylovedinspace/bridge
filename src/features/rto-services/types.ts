@@ -1,35 +1,23 @@
-import type { RTOServicesTable } from '@/db/schema';
+import { RTOServiceTypeEnum, type RTOServicesTable } from '@/db/schema';
+import { RTO_OFFICES as _RTO_OFFICES } from '@/lib/constants/rto-offices';
+import { personalInfoSchema } from '@/types/zod/client';
+import { drivingLicenseSchema } from '@/types/zod/license';
+import { z } from 'zod';
 
 export type RTOService = typeof RTOServicesTable.$inferSelect;
 export type RTOServiceInsert = typeof RTOServicesTable.$inferInsert;
 
-export type RTOServiceWithClient = RTOService & {
-  rtoClient: {
-    id: string;
-    clientCode: string;
-    firstName: string;
-    middleName: string | null;
-    lastName: string;
-    phoneNumber: string;
-    aadhaarNumber: string;
-  } | null;
-};
-
 export type RTOServiceStatus = RTOService['status'];
 export type RTOServiceType = RTOService['serviceType'];
-export type RTOServicePriority = RTOService['priority'];
 
 export const RTO_SERVICE_TYPE_LABELS: Record<RTOServiceType, string> = {
+  NEW_DRIVING_LICENCE: 'New Driving Licence',
   LICENSE_RENEWAL: 'License Renewal',
   ADDRESS_CHANGE: 'Address Change',
-  DUPLICATE_LICENSE: 'Duplicate License',
+  DUPLICATE_LICENSE: 'Duplicate Licence',
   INTERNATIONAL_PERMIT: 'International Permit',
-  NEW_LICENSE: 'New License',
-  LEARNER_LICENSE: 'Learner License',
-  CATEGORY_ADDITION: 'Category Addition',
-  LICENSE_TRANSFER: 'License Transfer',
   NAME_CHANGE: 'Name Change',
-  ENDORSEMENT_REMOVAL: 'Endorsement Removal',
+  ADDITION_OF_CLASS: 'Addition of Class',
 };
 
 export const RTO_SERVICE_STATUS_LABELS: Record<RTOServiceStatus, string> = {
@@ -43,13 +31,21 @@ export const RTO_SERVICE_STATUS_LABELS: Record<RTOServiceStatus, string> = {
   CANCELLED: 'Cancelled',
 };
 
-export const RTO_SERVICE_PRIORITY_LABELS: Record<RTOServicePriority, string> = {
-  NORMAL: 'Normal',
-  TATKAL: 'Tatkal',
-};
-
-// Import from the comprehensive RTO offices database
-import { RTO_OFFICES as _RTO_OFFICES } from '@/lib/constants/rto-offices';
-
 export const RTO_OFFICES = _RTO_OFFICES;
 export type RTOOffice = (typeof RTO_OFFICES)[number];
+
+export const rtoServicesFormSchema = z.object({
+  personalInfo: personalInfoSchema,
+  service: z.object({
+    type: z.enum(RTOServiceTypeEnum.enumValues, {
+      required_error: 'Service type is required',
+    }),
+    license: drivingLicenseSchema.pick({
+      licenseNumber: true,
+      issueDate: true,
+      expiryDate: true,
+    }),
+  }),
+});
+
+export type RTOServiceFormValues = z.infer<typeof rtoServicesFormSchema>;

@@ -211,7 +211,7 @@ export const updatePlanInDB = async (
   };
 };
 
-export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert) => {
+export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert, planId: string) => {
   // Validate payment amounts
   if (data.finalAmount < 0) {
     throw new Error('Final amount cannot be negative');
@@ -223,14 +223,17 @@ export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert) 
 
   const response = await db.transaction(async (tx) => {
     // Check if payment already exists for this plan
-    const existingPayment = await tx.query.PaymentTable.findFirst({
-      where: eq(PaymentTable.planId, data.planId),
+    const existingPayment = await tx.query.PlanTable.findFirst({
+      where: eq(PlanTable.id, planId),
+      with: {
+        payment: true,
+      },
     });
 
     let isExistingPayment = false;
     let payment;
 
-    if (existingPayment) {
+    if (existingPayment?.payment) {
       // Update existing payment
       isExistingPayment = true;
       const [updated] = await tx
@@ -255,7 +258,7 @@ export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert) 
           paymentId: payment.id,
           updatedAt: new Date(),
         })
-        .where(eq(PlanTable.id, data.planId));
+        .where(eq(PlanTable.id, planId));
     }
 
     return {
@@ -463,5 +466,12 @@ export const getExistingInstallmentsInDB = async (paymentId: string) => {
 export const getPlanForSessionsInDB = async (planId: string) => {
   return await db.query.PlanTable.findFirst({
     where: eq(PlanTable.id, planId),
+  });
+};
+
+export const getVehicleRentAmount = async (vehicleId: string) => {
+  return await db.query.VehicleTable.findFirst({
+    where: eq(VehicleTable.id, vehicleId),
+    columns: { rent: true },
   });
 };

@@ -12,9 +12,7 @@ export const PaymentTypeEnum = pgEnum('payment_type', ['FULL_PAYMENT', 'INSTALLM
 export const PaymentTable = pgTable('payments', {
   id: uuid('id').primaryKey().defaultRandom(),
   clientId: uuid('client_id').notNull(),
-  planId: uuid('plan_id').notNull().unique(),
 
-  vehicleRentAmount: integer('vehicle_rent_amount').notNull(),
   originalAmount: integer('original_amount').notNull(),
   discount: integer('discount').notNull().default(0),
   finalAmount: integer('final_amount').notNull(),

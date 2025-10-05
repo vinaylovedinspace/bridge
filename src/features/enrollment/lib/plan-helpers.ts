@@ -6,7 +6,12 @@ import {
   getSessionsByClientId,
   updateScheduledSessionsForClient,
 } from '@/server/actions/sessions';
-import { createPlanInDB, updatePlanInDB, getClientForSessionsInDB } from '../server/db';
+import {
+  createPlanInDB,
+  updatePlanInDB,
+  getClientForSessionsInDB,
+  getVehicleRentAmount,
+} from '../server/db';
 
 /**
  * Extract time string (HH:MM) from Date object
@@ -47,7 +52,10 @@ export const hasPlanChanged = (
 export const upsertPlan = async (
   existingPlan: typeof PlanTable.$inferSelect | null,
   providedPlanId: string | undefined,
-  planData: Omit<typeof PlanTable.$inferInsert, 'id' | 'planCode' | 'createdAt' | 'updatedAt'>,
+  planData: Omit<
+    typeof PlanTable.$inferInsert,
+    'id' | 'planCode' | 'createdAt' | 'updatedAt' | 'vehicleRentAmount'
+  >,
   tenantId: string
 ): Promise<{ planId: string; isExisting: boolean }> => {
   // Validate plan data before upsert
@@ -67,15 +75,26 @@ export const upsertPlan = async (
     throw new Error('Joining time is required for plan');
   }
 
+  const vehicle = await getVehicleRentAmount(planData.vehicleId);
+
+  if (!vehicle) {
+    throw new Error('Vehicle not found');
+  }
+
+  const planDataWithVehicleRent = {
+    ...planData,
+    vehicleRentAmount: vehicle.rent,
+  };
+
   // Update existing plan
   if (providedPlanId || existingPlan) {
     const planIdToUpdate = providedPlanId || existingPlan!.id;
-    const result = await updatePlanInDB(planIdToUpdate, planData);
+    const result = await updatePlanInDB(planIdToUpdate, planDataWithVehicleRent);
     return { planId: result.planId, isExisting: true };
   }
 
   // Create new plan
-  const result = await createPlanInDB(planData, tenantId);
+  const result = await createPlanInDB(planDataWithVehicleRent, tenantId);
   return { planId: result.planId, isExisting: false };
 };
 

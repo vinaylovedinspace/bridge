@@ -11,31 +11,29 @@ import { toast } from 'sonner';
 import {
   RTO_SERVICE_TYPE_LABELS,
   RTO_SERVICE_STATUS_LABELS,
-  RTO_SERVICE_PRIORITY_LABELS,
-  type RTOServiceWithClient,
+  type RTOServiceStatus,
 } from '../../types';
 import Link from 'next/link';
+import { getRTOServices } from '../../server/db';
+
+type RTOServiceWithClient = Awaited<ReturnType<typeof getRTOServices>>[number];
 
 export const columns: ColumnDef<RTOServiceWithClient>[] = [
   {
-    accessorKey: 'rtoClient.clientCode',
+    accessorKey: 'client.clientCode',
     header: 'Client Code',
     cell: ({ row }) => {
-      const rtoClient = row.original.rtoClient;
-      return rtoClient?.clientCode ? (
-        <Badge variant="outline">RS-{rtoClient.clientCode}</Badge>
-      ) : (
-        '-'
-      );
+      const client = row.original.client;
+      return client?.clientCode ? <Badge variant="outline">RS-{client.clientCode}</Badge> : '-';
     },
   },
   {
-    accessorKey: 'rtoClient.firstName',
+    accessorKey: 'client.firstName',
     header: 'Client Name',
     cell: ({ row }) => {
-      const rtoClient = row.original.rtoClient;
-      if (!rtoClient) return '-';
-      return `${rtoClient.firstName} ${rtoClient.middleName ? rtoClient.middleName + ' ' : ''}${rtoClient.lastName}`;
+      const client = row.original.client;
+      if (!client) return '-';
+      return `${client.firstName} ${client.middleName ? client.middleName + ' ' : ''}${client.lastName}`;
     },
   },
   {
@@ -51,7 +49,7 @@ export const columns: ColumnDef<RTOServiceWithClient>[] = [
     header: 'Status',
     cell: ({ row }) => {
       const status = row.original.status;
-      const statusColors = {
+      const statusColors: Record<RTOServiceStatus, string> = {
         PENDING: 'bg-gray-100 text-gray-800',
         DOCUMENT_COLLECTION: 'bg-blue-100 text-blue-800',
         APPLICATION_SUBMITTED: 'bg-yellow-100 text-yellow-800',
@@ -66,31 +64,12 @@ export const columns: ColumnDef<RTOServiceWithClient>[] = [
     },
   },
   {
-    accessorKey: 'priority',
-    header: 'Priority',
-    cell: ({ row }) => {
-      const priority = row.original.priority;
-      const priorityColors = {
-        NORMAL: 'bg-gray-100 text-gray-800',
-        TATKAL: 'bg-red-100 text-red-800',
-      };
-
-      return (
-        <Badge className={priorityColors[priority]}>{RTO_SERVICE_PRIORITY_LABELS[priority]}</Badge>
-      );
-    },
-  },
-  {
     accessorKey: 'totalAmount',
     header: 'Total Amount',
     cell: ({ row }) => {
       const amount = row.original.totalAmount;
       return `₹${amount.toLocaleString()}`;
     },
-  },
-  {
-    accessorKey: 'rtoOffice',
-    header: 'RTO Office',
   },
   {
     accessorKey: 'applicationDate',

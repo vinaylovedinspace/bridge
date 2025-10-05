@@ -4,8 +4,8 @@ import { env } from '@/env';
 import crypto from 'crypto';
 import { db } from '@/db';
 import { eq } from 'drizzle-orm';
-import { PaymentTable } from '@/db/schema/payment/columns';
 import { TransactionTable } from '@/db/schema/transactions/columns';
+import { PaymentTable, PlanTable } from '@/db/schema';
 
 // Cashfree webhook event types
 type CashfreeWebhookEvent = {
@@ -199,18 +199,24 @@ async function handleSuccessfulPayment(data: CashfreeWebhookEvent['data'], planI
 
   try {
     // Get the payment record associated with this plan
-    const payment = await db.query.PaymentTable.findFirst({
-      where: eq(PaymentTable.planId, planId),
+
+    const plan = await db.query.PlanTable.findFirst({
+      where: eq(PlanTable.id, planId),
+      with: {
+        payment: true,
+      },
     });
 
-    if (!payment) {
+    if (!plan?.payment?.id) {
       console.error('No payment found for planId:', planId);
       return;
     }
 
+    const paymentId = plan.payment.id;
+
     // Create transaction record
     await db.insert(TransactionTable).values({
-      paymentId: payment.id,
+      paymentId,
       amount: Math.round(parseFloat(data.link_amount_paid) * 100), // Convert to paise
       paymentMode: 'PAYMENT_LINK',
       transactionStatus: 'SUCCESS',
@@ -228,14 +234,14 @@ async function handleSuccessfulPayment(data: CashfreeWebhookEvent['data'], planI
       .set({
         paymentStatus: newPaymentStatus,
         // Update payment flags based on payment type
-        ...(payment.paymentType === 'FULL_PAYMENT' && {
+        ...(plan.payment.paymentType === 'FULL_PAYMENT' && {
           fullPaymentPaid: isFullyPaid,
         }),
-        ...(payment.paymentType === 'INSTALLMENTS' && {
+        ...(plan.payment.paymentType === 'INSTALLMENTS' && {
           firstInstallmentPaid: true, // Payment link payments count as first installment
         }),
       })
-      .where(eq(PaymentTable.id, payment.id));
+      .where(eq(PaymentTable.id, paymentId));
 
     // TODO: Send confirmation SMS/email to customer
     console.log('Payment processing completed for planId:', planId);
@@ -253,7 +259,7 @@ async function handleFailedPayment(data: CashfreeWebhookEvent['data'], planId?: 
   try {
     // Get the payment record associated with this plan
     const payment = await db.query.PaymentTable.findFirst({
-      where: eq(PaymentTable.planId, planId),
+      where: eq(PaymentTable.id, planId),
     });
 
     if (!payment) {

@@ -7,10 +7,10 @@ import { and, countDistinct, eq, inArray, sql } from 'drizzle-orm';
 import { getBranchConfig } from './branch';
 
 export async function getAppointmentStatistics() {
-  const { tenantId } = await getBranchConfig();
+  const { id: branchId } = await getBranchConfig();
 
-  if (!tenantId) {
-    console.error('getAppointmentStatistics: No tenant found - returning empty statistics');
+  if (!branchId) {
+    console.error('getAppointmentStatistics: No branch found - returning empty statistics');
     // Return empty statistics instead of throwing
     return {
       learningTestCount: 0,
@@ -30,13 +30,11 @@ export async function getAppointmentStatistics() {
     .leftJoin(LearningLicenseTable, eq(ClientTable.id, LearningLicenseTable.clientId))
     .where(
       and(
-        eq(ClientTable.tenantId, tenantId),
+        eq(ClientTable.branchId, branchId),
         eq(PlanTable.serviceType, 'FULL_SERVICE'),
         sql`(${LearningLicenseTable.licenseNumber} IS NULL OR ${LearningLicenseTable.licenseNumber} = '')`
       )
     );
-
-  console.log(learningTestCountResult);
 
   // Final Test Count: Clients with FULL_SERVICE plans who got their learning license 30+ days ago
   const finalTestCountResult = await db
@@ -46,7 +44,7 @@ export async function getAppointmentStatistics() {
     .innerJoin(LearningLicenseTable, eq(ClientTable.id, LearningLicenseTable.clientId))
     .where(
       and(
-        eq(ClientTable.tenantId, tenantId),
+        eq(ClientTable.branchId, branchId),
         eq(PlanTable.serviceType, 'FULL_SERVICE'),
         sql`${LearningLicenseTable.issueDate} IS NOT NULL`,
         sql`CURRENT_DATE - CAST(${LearningLicenseTable.issueDate} AS DATE) >= 30`
@@ -59,7 +57,7 @@ export async function getAppointmentStatistics() {
     .from(RTOServicesTable)
     .where(
       and(
-        eq(RTOServicesTable.tenantId, tenantId),
+        eq(RTOServicesTable.branchId, branchId),
         inArray(RTOServicesTable.status, [
           'PENDING',
           'DOCUMENT_COLLECTION',

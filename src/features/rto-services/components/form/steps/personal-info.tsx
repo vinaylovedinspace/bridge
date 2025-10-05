@@ -1,8 +1,14 @@
 'use client';
 
 import { useFormContext, useWatch } from 'react-hook-form';
-import { RTOServiceFormData } from '@/features/rto-services/schemas/rto-services';
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -13,67 +19,79 @@ import {
 } from '@/components/ui/select';
 import { StateSelect } from '@/components/ui/state-select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { DatePicker } from '@/components/ui/date-picker';
 import { TypographyH5, TypographyP } from '@/components/ui/typography';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  BloodGroupEnum,
+  GenderEnum,
+  CitizenStatusEnum,
+  EducationalQualificationEnum,
+  GuardianRelationshipEnum,
+} from '@/db/schema/client/columns';
 import { useEffect } from 'react';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Info } from 'lucide-react';
+import { RTOServiceFormValues } from '@/features/rto-services/types';
 
 export const PersonalInfoStep = () => {
-  const methods = useFormContext<RTOServiceFormData>();
+  const methods = useFormContext<RTOServiceFormValues>();
   const { control, setValue, clearErrors } = methods;
 
   // Watch for changes in the checkbox and address fields
   const isSameAddress = useWatch({
     control,
-    name: 'clientInfo.isCurrentAddressSameAsPermanentAddress',
+    name: 'personalInfo.isCurrentAddressSameAsPermanentAddress',
   });
 
   const currentAddressLine1 = useWatch({
     control,
-    name: 'clientInfo.addressLine1',
+    name: 'personalInfo.addressLine1',
   });
 
   const currentAddressLine2 = useWatch({
     control,
-    name: 'clientInfo.addressLine2',
+    name: 'personalInfo.addressLine2',
   });
 
   const currentAddressLine3 = useWatch({
     control,
-    name: 'clientInfo.addressLine3',
+    name: 'personalInfo.addressLine3',
   });
 
   const currentCity = useWatch({
     control,
-    name: 'clientInfo.city',
+    name: 'personalInfo.city',
   });
 
   const currentState = useWatch({
     control,
-    name: 'clientInfo.state',
+    name: 'personalInfo.state',
   });
 
   const currentPincode = useWatch({
     control,
-    name: 'clientInfo.pincode',
+    name: 'personalInfo.pincode',
   });
 
-  // Auto-fill permanent address when checkbox is checked
+  // Update permanent address fields when checkbox is checked or current address fields change
   useEffect(() => {
     if (isSameAddress) {
-      setValue('clientInfo.permanentAddressLine1', currentAddressLine1 || '');
-      setValue('clientInfo.permanentAddressLine2', currentAddressLine2 || '');
-      setValue('clientInfo.permanentAddressLine3', currentAddressLine3 || '');
-      setValue('clientInfo.permanentCity', currentCity || '');
-      setValue('clientInfo.permanentState', currentState || '');
-      setValue('clientInfo.permanentPincode', currentPincode || '');
+      setValue('personalInfo.permanentAddressLine1', currentAddressLine1);
+      setValue('personalInfo.permanentAddressLine2', currentAddressLine2);
+      setValue('personalInfo.permanentAddressLine3', currentAddressLine3);
+      setValue('personalInfo.permanentCity', currentCity);
+      setValue('personalInfo.permanentState', currentState);
+      setValue('personalInfo.permanentPincode', currentPincode);
 
-      // Clear any validation errors for permanent address fields
-      clearErrors('clientInfo.permanentAddressLine1');
-      clearErrors('clientInfo.permanentAddressLine2');
-      clearErrors('clientInfo.permanentAddressLine3');
-      clearErrors('clientInfo.permanentCity');
-      clearErrors('clientInfo.permanentState');
-      clearErrors('clientInfo.permanentPincode');
+      // Clear any validation errors from permanent address fields
+      clearErrors([
+        'personalInfo.permanentAddressLine1',
+        'personalInfo.permanentAddressLine2',
+        'personalInfo.permanentAddressLine3',
+        'personalInfo.permanentCity',
+        'personalInfo.permanentState',
+        'personalInfo.permanentPincode',
+      ]);
     }
   }, [
     isSameAddress,
@@ -89,57 +107,41 @@ export const PersonalInfoStep = () => {
 
   return (
     <div className="space-y-10">
-      {/* Basic Information */}
       <div className="grid grid-cols-12">
-        <TypographyH5 className="col-span-3">Personal Details</TypographyH5>
-
+        <TypographyH5 className="col-span-3" data-testid="admission-personal-info-heading">
+          Personal Details
+        </TypographyH5>
         <div className="grid grid-cols-3 col-span-9 gap-6 items-end">
+          <div className="grid grid-cols-3 gap-6 col-span-3 items-top justify-between">
+            <FormField
+              control={control}
+              name="personalInfo.aadhaarNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>Aadhaar Number</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="123456789012"
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      maxLength={12}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
           <FormField
             control={control}
-            name="clientInfo.aadhaarNumber"
+            name="personalInfo.firstName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>Aadhaar Number</FormLabel>
+                <FormLabel required>Full Name</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="123456789012"
-                    value={field.value || ''}
-                    onChange={field.onChange}
-                    maxLength={12}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={control}
-            name="clientInfo.firstName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel required>First Name</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Enter first name"
-                    value={field.value || ''}
-                    onChange={field.onChange}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={control}
-            name="clientInfo.middleName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Middle Name</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Enter middle name"
+                    data-testid="admission-firstName-input"
+                    placeholder="First"
                     value={field.value || ''}
                     onChange={field.onChange}
                   />
@@ -148,16 +150,27 @@ export const PersonalInfoStep = () => {
               </FormItem>
             )}
           />
-
           <FormField
             control={control}
-            name="clientInfo.lastName"
+            name="personalInfo.middleName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>Last Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Middle" value={field.value || ''} onChange={field.onChange} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="personalInfo.lastName"
+            render={({ field }) => (
+              <FormItem>
                 <FormControl>
                   <Input
-                    placeholder="Enter last name"
+                    data-testid="admission-lastName-input"
+                    placeholder="Last"
                     value={field.value || ''}
                     onChange={field.onChange}
                   />
@@ -166,48 +179,9 @@ export const PersonalInfoStep = () => {
               </FormItem>
             )}
           />
-
           <FormField
             control={control}
-            name="clientInfo.fatherName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Father&apos;s Name</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Enter father's name"
-                    value={field.value || ''}
-                    onChange={field.onChange}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={control}
-            name="clientInfo.birthDate"
-            render={() => (
-              <FormItem>
-                <FormLabel required>Date of Birth</FormLabel>
-                <FormControl>
-                  <DatePicker
-                    name="clientInfo.birthDate"
-                    control={control}
-                    placeholderText="Select date of birth"
-                    maxDate={new Date()}
-                    minDate={new Date('1900-01-01')}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={control}
-            name="clientInfo.gender"
+            name="personalInfo.gender"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Gender</FormLabel>
@@ -218,9 +192,11 @@ export const PersonalInfoStep = () => {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="MALE">Male</SelectItem>
-                    <SelectItem value="FEMALE">Female</SelectItem>
-                    <SelectItem value="OTHER">Other</SelectItem>
+                    {GenderEnum.enumValues.map((gender) => (
+                      <SelectItem key={gender} value={gender}>
+                        {gender.charAt(0) + gender.slice(1).toLowerCase()}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -230,25 +206,130 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="clientInfo.bloodGroup"
+            name="personalInfo.birthDate"
+            render={() => (
+              <FormItem>
+                <FormLabel required>Date of Birth</FormLabel>
+                <FormControl>
+                  <DatePicker
+                    name="personalInfo.birthDate"
+                    control={control}
+                    placeholderText="Select date of birth"
+                    maxDate={new Date()}
+                    minDate={new Date('1900-01-01')}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="personalInfo.bloodGroup"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Blood Group</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ''}>
+                <FormLabel required>Blood Group</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select blood group" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="A+">A+</SelectItem>
-                    <SelectItem value="A-">A-</SelectItem>
-                    <SelectItem value="B+">B+</SelectItem>
-                    <SelectItem value="B-">B-</SelectItem>
-                    <SelectItem value="AB+">AB+</SelectItem>
-                    <SelectItem value="AB-">AB-</SelectItem>
-                    <SelectItem value="O+">O+</SelectItem>
-                    <SelectItem value="O-">O-</SelectItem>
+                    {BloodGroupEnum.enumValues.map((bloodGroup) => (
+                      <SelectItem key={bloodGroup} value={bloodGroup}>
+                        {bloodGroup}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="personalInfo.educationalQualification"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>Educational Qualification</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select qualification" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {EducationalQualificationEnum.enumValues.map((qualification) => (
+                      <SelectItem key={qualification} value={qualification}>
+                        {qualification.replaceAll('_', ' ')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div />
+          <div />
+
+          <FormField
+            control={control}
+            name="personalInfo.guardianFirstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>Guardian Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="First" value={field.value || ''} onChange={field.onChange} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="personalInfo.guardianMiddleName"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Input placeholder="Middle" value={field.value || ''} onChange={field.onChange} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="personalInfo.guardianLastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Input placeholder="Last" value={field.value || ''} onChange={field.onChange} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="personalInfo.guardianRelationship"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>Guardian Relationship</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select relationship" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {GuardianRelationshipEnum.enumValues.map((relationship) => (
+                      <SelectItem key={relationship} value={relationship}>
+                        {relationship.charAt(0) + relationship.slice(1).toLowerCase()}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -258,23 +339,43 @@ export const PersonalInfoStep = () => {
         </div>
       </div>
 
-      {/* Contact Details */}
-      <div className="grid grid-cols-12">
+      <div className="grid grid-cols-12 pb-10">
         <TypographyH5 className="col-span-3">Contact Details</TypographyH5>
-
         <div className="grid grid-cols-3 col-span-9 gap-6 items-end">
           <FormField
             control={control}
-            name="clientInfo.phoneNumber"
+            name="personalInfo.phoneNumber"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Phone Number</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="10-digit mobile number"
+                    data-testid="admission-phoneNumber-input"
+                    placeholder="Phone number"
                     value={field.value || ''}
                     onChange={field.onChange}
-                    maxLength={10}
+                  />
+                </FormControl>
+                <FormDescription className="flex gap-1">
+                  <Info className="size-5 text-primary" /> This number will be used for updates,
+                  receipts, and reminders
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name="personalInfo.alternativePhoneNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Alternative Phone</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Alternative phone"
+                    value={field.value || ''}
+                    onChange={field.onChange}
                   />
                 </FormControl>
                 <FormMessage />
@@ -284,69 +385,15 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="clientInfo.email"
+            name="personalInfo.email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email Address</FormLabel>
+                <FormLabel>Email</FormLabel>
                 <FormControl>
                   <Input
+                    data-testid="admission-email-input"
                     type="email"
-                    placeholder="email@example.com"
-                    value={field.value || ''}
-                    onChange={field.onChange}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={control}
-            name="clientInfo.emergencyContactName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Emergency Contact Name</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Emergency contact person name"
-                    value={field.value || ''}
-                    onChange={field.onChange}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={control}
-            name="clientInfo.emergencyContact"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Emergency Contact Number</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Emergency contact phone number"
-                    value={field.value || ''}
-                    onChange={field.onChange}
-                    maxLength={10}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={control}
-            name="clientInfo.passportNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Passport Number</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="For international permits"
+                    placeholder="Email address"
                     value={field.value || ''}
                     onChange={field.onChange}
                   />
@@ -358,19 +405,18 @@ export const PersonalInfoStep = () => {
         </div>
       </div>
 
-      {/* Address */}
       <div className="grid grid-cols-12">
         <TypographyH5 className="col-span-3">Address</TypographyH5>
-
         <div className="grid grid-cols-3 col-span-9 gap-6 items-end">
           <FormField
             control={control}
-            name="clientInfo.addressLine1"
+            name="personalInfo.addressLine1"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>House/Door/Flat No</FormLabel>
                 <FormControl>
                   <Input
+                    data-testid="admission-addressLine1-input"
                     placeholder="House/Door/Flat No"
                     value={field.value || ''}
                     onChange={field.onChange}
@@ -383,12 +429,13 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="clientInfo.addressLine2"
+            name="personalInfo.addressLine2"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Street/Locality/Police Station</FormLabel>
                 <FormControl>
                   <Input
+                    data-testid="admission-addressLine2-input"
                     placeholder="Street/Locality/Police Station"
                     value={field.value || ''}
                     onChange={field.onChange}
@@ -401,12 +448,13 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="clientInfo.addressLine3"
+            name="personalInfo.addressLine3"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Location/Landmark</FormLabel>
                 <FormControl>
                   <Input
+                    data-testid="admission-addressLine3-input"
                     placeholder="Location/Landmark"
                     value={field.value || ''}
                     onChange={field.onChange}
@@ -419,29 +467,16 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="clientInfo.city"
+            name="personalInfo.city"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>City</FormLabel>
                 <FormControl>
-                  <Input placeholder="City" value={field.value || ''} onChange={field.onChange} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={control}
-            name="clientInfo.state"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel required>State</FormLabel>
-                <FormControl>
-                  <StateSelect
+                  <Input
+                    data-testid="admission-city-input"
+                    placeholder="City"
                     value={field.value || ''}
-                    onValueChange={field.onChange}
-                    placeholder="Select state"
+                    onChange={field.onChange}
                   />
                 </FormControl>
                 <FormMessage />
@@ -451,12 +486,32 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="clientInfo.pincode"
+            name="personalInfo.state"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>State</FormLabel>
+                <FormControl>
+                  <StateSelect
+                    value={field.value || ''}
+                    onValueChange={field.onChange}
+                    placeholder="Select state"
+                    error={methods.formState.errors.personalInfo?.state?.message}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name="personalInfo.pincode"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Pincode</FormLabel>
                 <FormControl>
                   <Input
+                    data-testid="admission-postalCode-input"
                     placeholder="Pincode"
                     value={field.value || ''}
                     onChange={field.onChange}
@@ -471,7 +526,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="clientInfo.isCurrentAddressSameAsPermanentAddress"
+            name="personalInfo.isCurrentAddressSameAsPermanentAddress"
             render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 col-span-3">
                 <FormControl>
@@ -484,117 +539,153 @@ export const PersonalInfoStep = () => {
             )}
           />
 
-          {!isSameAddress && (
-            <>
-              <FormField
-                control={control}
-                name="clientInfo.permanentAddressLine1"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>House/Door/Flat No</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="House/Door/Flat No"
-                        value={field.value || ''}
-                        onChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <FormField
+            control={control}
+            name="personalInfo.permanentAddressLine1"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>House/Door/Flat No</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="House/Door/Flat No"
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    disabled={isSameAddress === true}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-              <FormField
-                control={control}
-                name="clientInfo.permanentAddressLine2"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>Street/Locality/Police Station</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Street/Locality/Police Station"
-                        value={field.value || ''}
-                        onChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <FormField
+            control={control}
+            name="personalInfo.permanentAddressLine2"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>Street/Locality/Police Station</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Street/Locality/Police Station"
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    disabled={isSameAddress === true}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-              <FormField
-                control={control}
-                name="clientInfo.permanentAddressLine3"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location/Landmark</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Location/Landmark"
-                        value={field.value || ''}
-                        onChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <FormField
+            control={control}
+            name="personalInfo.permanentAddressLine3"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Location/Landmark</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Location/Landmark"
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    disabled={isSameAddress === true}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-              <FormField
-                control={control}
-                name="clientInfo.permanentCity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>City</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="City"
-                        value={field.value || ''}
-                        onChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <FormField
+            control={control}
+            name="personalInfo.permanentCity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>City</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="City"
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    disabled={isSameAddress === true}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-              <FormField
-                control={control}
-                name="clientInfo.permanentState"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>State</FormLabel>
-                    <FormControl>
-                      <StateSelect
-                        value={field.value || ''}
-                        onValueChange={field.onChange}
-                        placeholder="Select state"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <FormField
+            control={control}
+            name="personalInfo.permanentState"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>State</FormLabel>
+                <FormControl>
+                  <StateSelect
+                    value={field.value || ''}
+                    onValueChange={field.onChange}
+                    placeholder="Select state"
+                    disabled={isSameAddress === true}
+                    error={methods.formState.errors.personalInfo?.permanentState?.message}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-              <FormField
-                control={control}
-                name="clientInfo.permanentPincode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel required>Pincode</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Pincode"
-                        value={field.value || ''}
-                        onChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </>
-          )}
+          <FormField
+            control={control}
+            name="personalInfo.permanentPincode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>Pincode</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Pincode"
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    disabled={isSameAddress === true}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-12 align-center">
+        <TypographyH5 className="col-span-3">Citizenship</TypographyH5>
+        <div className="grid grid-cols-3 col-span-9 gap-6 items-end">
+          <FormField
+            control={control}
+            name="personalInfo.citizenStatus"
+            render={({ field }) => (
+              <FormItem className="col-span-3">
+                <FormControl>
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    defaultValue={field.value || 'BIRTH'}
+                    className="flex space-y-1"
+                  >
+                    {CitizenStatusEnum.enumValues.map((status) => (
+                      <FormItem key={status} className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value={status} />
+                        </FormControl>
+                        <FormLabel className="font-normal">
+                          {status.charAt(0) + status.slice(1).toLowerCase()}
+                        </FormLabel>
+                      </FormItem>
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
       </div>
     </div>

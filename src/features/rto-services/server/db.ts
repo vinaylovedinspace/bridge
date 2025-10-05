@@ -1,7 +1,7 @@
 import { db } from '@/db';
-import { RTOServicesTable, RTOClientTable } from '@/db/schema';
-import { eq, and, desc, ilike, or, isNull } from 'drizzle-orm';
-import type { RTOServiceWithClient, RTOServiceStatus, RTOServiceType } from '../types';
+import { ClientTable, RTOServicesTable } from '@/db/schema';
+import { eq, and, ilike, or, isNull } from 'drizzle-orm';
+import type { RTOServiceStatus, RTOServiceType } from '../types';
 
 export const addRTOService = async (data: typeof RTOServicesTable.$inferInsert) => {
   const [rtoService] = await db.insert(RTOServicesTable).values(data).returning();
@@ -26,56 +26,22 @@ export const updateRTOService = async (
   }
 };
 
-export const getRTOService = async (id: string): Promise<RTOServiceWithClient | null> => {
+export const getRTOService = async (id: string) => {
   try {
-    const [result] = await db
-      .select({
-        id: RTOServicesTable.id,
-        rtoClientId: RTOServicesTable.rtoClientId,
-        branchId: RTOServicesTable.branchId,
-        tenantId: RTOServicesTable.tenantId,
-        serviceType: RTOServicesTable.serviceType,
-        status: RTOServicesTable.status,
-        priority: RTOServicesTable.priority,
-        applicationNumber: RTOServicesTable.applicationNumber,
-        rtoOffice: RTOServicesTable.rtoOffice,
-        existingLicenseNumber: RTOServicesTable.existingLicenseNumber,
-        governmentFees: RTOServicesTable.governmentFees,
-        serviceCharge: RTOServicesTable.serviceCharge,
-        urgentFees: RTOServicesTable.urgentFees,
-        totalAmount: RTOServicesTable.totalAmount,
-        applicationDate: RTOServicesTable.applicationDate,
-        expectedCompletionDate: RTOServicesTable.expectedCompletionDate,
-        actualCompletionDate: RTOServicesTable.actualCompletionDate,
-        remarks: RTOServicesTable.remarks,
-        requiredDocuments: RTOServicesTable.requiredDocuments,
-        submittedDocuments: RTOServicesTable.submittedDocuments,
-        trackingNumber: RTOServicesTable.trackingNumber,
-        agentAssigned: RTOServicesTable.agentAssigned,
-        isDocumentCollectionComplete: RTOServicesTable.isDocumentCollectionComplete,
-        isPaymentComplete: RTOServicesTable.isPaymentComplete,
-        requiresClientPresence: RTOServicesTable.requiresClientPresence,
-        createdAt: RTOServicesTable.createdAt,
-        updatedAt: RTOServicesTable.updatedAt,
-        deletedAt: RTOServicesTable.deletedAt,
-        rtoClient: {
-          id: RTOClientTable.id,
-          clientCode: RTOClientTable.clientCode,
-          firstName: RTOClientTable.firstName,
-          middleName: RTOClientTable.middleName,
-          lastName: RTOClientTable.lastName,
-          phoneNumber: RTOClientTable.phoneNumber,
-          aadhaarNumber: RTOClientTable.aadhaarNumber,
-        },
-      })
-      .from(RTOServicesTable)
-      .leftJoin(RTOClientTable, eq(RTOServicesTable.rtoClientId, RTOClientTable.id))
-      .where(and(eq(RTOServicesTable.id, id), isNull(RTOServicesTable.deletedAt)));
+    const conditions = [eq(RTOServicesTable.id, id), isNull(RTOServicesTable.deletedAt)];
 
-    return result || null;
+    const rtoService = await db.query.RTOServicesTable.findFirst({
+      where: and(...conditions),
+      with: {
+        client: true,
+      },
+      orderBy: (RTOServicesTable, { desc }) => [desc(RTOServicesTable.createdAt)],
+    });
+
+    return rtoService;
   } catch (error) {
     console.log(error);
-    return null;
+    return undefined;
   }
 };
 
@@ -86,51 +52,8 @@ export const getRTOServices = async (
     serviceType?: RTOServiceType;
     client?: string;
   }
-): Promise<RTOServiceWithClient[]> => {
+) => {
   try {
-    const query = db
-      .select({
-        id: RTOServicesTable.id,
-        rtoClientId: RTOServicesTable.rtoClientId,
-        branchId: RTOServicesTable.branchId,
-        tenantId: RTOServicesTable.tenantId,
-        serviceType: RTOServicesTable.serviceType,
-        status: RTOServicesTable.status,
-        priority: RTOServicesTable.priority,
-        applicationNumber: RTOServicesTable.applicationNumber,
-        rtoOffice: RTOServicesTable.rtoOffice,
-        existingLicenseNumber: RTOServicesTable.existingLicenseNumber,
-        governmentFees: RTOServicesTable.governmentFees,
-        serviceCharge: RTOServicesTable.serviceCharge,
-        urgentFees: RTOServicesTable.urgentFees,
-        totalAmount: RTOServicesTable.totalAmount,
-        applicationDate: RTOServicesTable.applicationDate,
-        expectedCompletionDate: RTOServicesTable.expectedCompletionDate,
-        actualCompletionDate: RTOServicesTable.actualCompletionDate,
-        remarks: RTOServicesTable.remarks,
-        requiredDocuments: RTOServicesTable.requiredDocuments,
-        submittedDocuments: RTOServicesTable.submittedDocuments,
-        trackingNumber: RTOServicesTable.trackingNumber,
-        agentAssigned: RTOServicesTable.agentAssigned,
-        isDocumentCollectionComplete: RTOServicesTable.isDocumentCollectionComplete,
-        isPaymentComplete: RTOServicesTable.isPaymentComplete,
-        requiresClientPresence: RTOServicesTable.requiresClientPresence,
-        createdAt: RTOServicesTable.createdAt,
-        updatedAt: RTOServicesTable.updatedAt,
-        deletedAt: RTOServicesTable.deletedAt,
-        rtoClient: {
-          id: RTOClientTable.id,
-          clientCode: RTOClientTable.clientCode,
-          firstName: RTOClientTable.firstName,
-          middleName: RTOClientTable.middleName,
-          lastName: RTOClientTable.lastName,
-          phoneNumber: RTOClientTable.phoneNumber,
-          aadhaarNumber: RTOClientTable.aadhaarNumber,
-        },
-      })
-      .from(RTOServicesTable)
-      .leftJoin(RTOClientTable, eq(RTOServicesTable.rtoClientId, RTOClientTable.id));
-
     const conditions = [
       eq(RTOServicesTable.branchId, branchId),
       isNull(RTOServicesTable.deletedAt),
@@ -147,17 +70,23 @@ export const getRTOServices = async (
     if (filters?.client) {
       conditions.push(
         or(
-          ilike(RTOClientTable.firstName, `%${filters.client}%`),
-          ilike(RTOClientTable.lastName, `%${filters.client}%`),
-          ilike(RTOClientTable.aadhaarNumber, `%${filters.client}%`),
-          ilike(RTOClientTable.phoneNumber, `%${filters.client}%`)
+          ilike(ClientTable.firstName, `%${filters.client}%`),
+          ilike(ClientTable.lastName, `%${filters.client}%`),
+          ilike(ClientTable.aadhaarNumber, `%${filters.client}%`),
+          ilike(ClientTable.phoneNumber, `%${filters.client}%`)
         )!
       );
     }
 
-    const result = await query.where(and(...conditions)).orderBy(desc(RTOServicesTable.createdAt));
+    const rtoServices = await db.query.RTOServicesTable.findMany({
+      where: and(...conditions),
+      with: {
+        client: true,
+      },
+      orderBy: (RTOServicesTable, { desc }) => [desc(RTOServicesTable.createdAt)],
+    });
 
-    return result;
+    return rtoServices;
   } catch (error) {
     console.log(error);
     return [];
@@ -182,5 +111,27 @@ export const deleteRTOService = async (id: string, branchId: string) => {
   } catch (error) {
     console.log(error);
     throw error;
+  }
+};
+
+export const getRTOServiceByClient = async (clientId: string) => {
+  try {
+    const conditions = [
+      eq(RTOServicesTable.clientId, clientId),
+      isNull(RTOServicesTable.deletedAt),
+    ];
+
+    const rtoService = await db.query.RTOServicesTable.findFirst({
+      where: and(...conditions),
+      with: {
+        client: true,
+      },
+      orderBy: (RTOServicesTable, { desc }) => [desc(RTOServicesTable.createdAt)],
+    });
+
+    return rtoService;
+  } catch (error) {
+    console.log(error);
+    return undefined;
   }
 };
