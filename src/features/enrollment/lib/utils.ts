@@ -2,6 +2,9 @@ import { Path } from 'react-hook-form';
 import { AdmissionFormValues } from '../types';
 import { Enrollment } from '@/server/db/plan';
 import { generateFieldPaths } from '@/lib/utils';
+import { getClientById } from '../server/action';
+import { DEFAULT_STATE } from '@/lib/constants/business';
+import { parseDateStringToDateObject } from '@/lib/date-utils';
 
 // Function to get validation fields for a specific step
 export const getMultistepAdmissionStepValidationFields = (
@@ -40,12 +43,6 @@ export const getMultistepAdmissionStepValidationFields = (
     default:
       return [];
   }
-};
-
-// Helper function to convert date string to Date object
-const parseDate = (dateString: string | null): Date | null => {
-  if (!dateString) return null;
-  return new Date(dateString);
 };
 
 // Helper function to combine date and time strings into a single Date object
@@ -105,10 +102,10 @@ export const mapLearningLicense = (
 
   return {
     class: learningLicense.class || [],
-    testConductedOn: parseDate(learningLicense.testConductedOn),
+    testConductedOn: parseDateStringToDateObject(learningLicense.testConductedOn),
     licenseNumber: learningLicense.licenseNumber,
-    issueDate: parseDate(learningLicense.issueDate),
-    expiryDate: parseDate(learningLicense.expiryDate),
+    issueDate: parseDateStringToDateObject(learningLicense.issueDate),
+    expiryDate: parseDateStringToDateObject(learningLicense.expiryDate),
     applicationNumber: learningLicense.applicationNumber,
   };
 };
@@ -121,10 +118,10 @@ export const mapDrivingLicense = (
 
   return {
     class: drivingLicense.class || [],
-    appointmentDate: parseDate(drivingLicense.appointmentDate),
+    appointmentDate: parseDateStringToDateObject(drivingLicense.appointmentDate),
     licenseNumber: drivingLicense.licenseNumber,
-    issueDate: parseDate(drivingLicense.issueDate),
-    expiryDate: parseDate(drivingLicense.expiryDate),
+    issueDate: parseDateStringToDateObject(drivingLicense.issueDate),
+    expiryDate: parseDateStringToDateObject(drivingLicense.expiryDate),
     applicationNumber: drivingLicense.applicationNumber,
     testConductedBy: drivingLicense.testConductedBy,
     imv: drivingLicense.imv,
@@ -133,7 +130,52 @@ export const mapDrivingLicense = (
   };
 };
 
-export const getDefaultValuesForEnrollmentForm = (
+const DEFAULT_PLAN_VALUES = {
+  vehicleId: '',
+  numberOfSessions: 21,
+  sessionDurationInMinutes: 30,
+  joiningDate: new Date(),
+  joiningTime: '12:00',
+  serviceType: 'FULL_SERVICE' as const,
+};
+
+const DEFAULT_PAYMENT_VALUES = {
+  discount: 0,
+  paymentMode: 'PAYMENT_LINK' as const,
+};
+
+export const getDefaultValuesForAddEnrollmentForm = (
+  existingClient?: Awaited<ReturnType<typeof getClientById>>['data']
+): AdmissionFormValues => {
+  if (existingClient) {
+    return {
+      serviceType: 'FULL_SERVICE' as const,
+      personalInfo: mapClientToPersonalInfo(existingClient),
+      learningLicense: mapLearningLicense(existingClient.learningLicense),
+      drivingLicense: mapDrivingLicense(existingClient.drivingLicense),
+      plan: DEFAULT_PLAN_VALUES,
+      payment: DEFAULT_PAYMENT_VALUES,
+      clientId: existingClient.id,
+    } as AdmissionFormValues;
+  }
+
+  return {
+    serviceType: 'FULL_SERVICE' as const,
+    personalInfo: {
+      educationalQualification: 'GRADUATE',
+      citizenStatus: 'BIRTH',
+      isCurrentAddressSameAsPermanentAddress: false,
+      state: DEFAULT_STATE,
+      permanentState: DEFAULT_STATE,
+    },
+    learningLicense: {},
+    drivingLicense: {},
+    plan: DEFAULT_PLAN_VALUES,
+    payment: DEFAULT_PAYMENT_VALUES,
+  } as AdmissionFormValues;
+};
+
+export const getDefaultValuesForEditEnrollmentForm = (
   enrollment: NonNullable<Enrollment>
 ): AdmissionFormValues => {
   const { client, payment } = enrollment;

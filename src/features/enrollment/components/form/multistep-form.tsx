@@ -2,10 +2,8 @@
 
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { FormProvider } from 'react-hook-form';
 import React from 'react';
-import { admissionFormSchema, AdmissionFormValues } from '../../types';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ServiceTypeStep } from './steps/service-type';
@@ -15,16 +13,12 @@ import { PlanStep } from './steps/plan';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStepNavigation, ProgressBar } from '../progress-bar/progress-bar';
 import { PaymentContainer } from './steps/payment';
-import { DEFAULT_STATE } from '@/lib/constants/business';
-import {
-  getMultistepAdmissionStepValidationFields,
-  mapClientToPersonalInfo,
-  mapLearningLicense,
-  mapDrivingLicense,
-} from '../../lib/utils';
+import { getMultistepAdmissionStepValidationFields } from '../../lib/utils';
 import { BranchConfig } from '@/server/db/branch';
 import { useEnrollmentFormSubmissions } from '../../hooks/use-enrollment-form-submissions';
 import { getClientById } from '../../server/action';
+import { useAddAdmissionForm } from '../../hooks/use-admission-form';
+import { AdmissionFormValues } from '../../types';
 
 type MultistepFormProps = {
   branchConfig: BranchConfig;
@@ -35,52 +29,7 @@ export const MultistepForm = ({ branchConfig, existingClient }: MultistepFormPro
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const getDefaultValues = (): AdmissionFormValues => {
-    const baseDefaults = {
-      serviceType: 'FULL_SERVICE' as const,
-      plan: {
-        vehicleId: '',
-        numberOfSessions: 21,
-        sessionDurationInMinutes: 30,
-        joiningDate: new Date(),
-        joiningTime: '12:00',
-        serviceType: 'FULL_SERVICE' as const,
-      },
-      payment: {
-        discount: 0,
-        paymentMode: 'PAYMENT_LINK' as const,
-      },
-    };
-
-    if (existingClient) {
-      return {
-        ...baseDefaults,
-        personalInfo: mapClientToPersonalInfo(existingClient),
-        learningLicense: mapLearningLicense(existingClient.learningLicense),
-        drivingLicense: mapDrivingLicense(existingClient.drivingLicense),
-        clientId: existingClient.id,
-      } as AdmissionFormValues;
-    }
-
-    return {
-      ...baseDefaults,
-      personalInfo: {
-        educationalQualification: 'GRADUATE',
-        citizenStatus: 'BIRTH',
-        isCurrentAddressSameAsPermanentAddress: false,
-        state: DEFAULT_STATE,
-        permanentState: DEFAULT_STATE,
-      },
-      learningLicense: {},
-      drivingLicense: {},
-    } as AdmissionFormValues;
-  };
-
-  const methods = useForm<AdmissionFormValues>({
-    resolver: zodResolver(admissionFormSchema),
-    defaultValues: getDefaultValues(),
-    mode: 'onChange',
-  });
+  const methods = useAddAdmissionForm(existingClient);
 
   const { trigger, getValues, watch, setValue } = methods;
 
@@ -124,14 +73,9 @@ export const MultistepForm = ({ branchConfig, existingClient }: MultistepFormPro
     };
   }, [branchConfig, clientId, getValues]);
 
-  // Get initial default values for comparison (reuse form's defaultValues)
-  const getInitialValues = (): AdmissionFormValues => {
-    return methods.formState.defaultValues as AdmissionFormValues;
-  };
-
   // Check if current step has any changes compared to initial values
   const hasCurrentStepChanges = (): boolean => {
-    const initialValues = getInitialValues();
+    const initialValues = methods.formState.defaultValues as AdmissionFormValues;
     const currentStepKey = currentStep;
 
     const getCurrentStepValues = () => {
@@ -182,49 +126,38 @@ export const MultistepForm = ({ branchConfig, existingClient }: MultistepFormPro
   };
 
   const handleNext = async () => {
+    const fieldsToValidate = getMultistepAdmissionStepValidationFields(currentStep, getValues);
+    const isStepValid = await trigger(fieldsToValidate);
+
+    if (!isStepValid) {
+      return;
+    }
+
+    // If no changes, just navigate
+    if (!hasCurrentStepChanges()) {
+      if (isLastStep) {
+        router.refresh();
+        router.push('/dashboard');
+      } else {
+        goToNext();
+      }
+      return;
+    }
+
+    // Submit changes
+    setIsSubmitting(true);
     try {
-      const currentStepKey = currentStep;
+      const stepData = stepComponents[currentStep].getData();
+      const success = await submitStep(currentStep, stepData, isLastStep);
 
-      const fieldsToValidate = getMultistepAdmissionStepValidationFields(currentStepKey, getValues);
-
-      const isStepValid = await trigger(fieldsToValidate);
-
-      if (!isStepValid) {
-        return;
-      }
-
-      const hasChanges = hasCurrentStepChanges();
-
-      if (!hasChanges) {
-        if (isLastStep) {
-          router.refresh();
-          router.push('/dashboard'); // Redirect to dashboard or another appropriate page
-        } else {
-          goToNext();
-        }
-        return;
-      }
-
-      // Step 2: Execute the step-specific action only if there are changes
-      setIsSubmitting(true);
-      try {
-        const stepData = stepComponents[currentStepKey].getData();
-
-        const success = await submitStep(currentStepKey, stepData, isLastStep);
-
-        if (success && !isLastStep) {
-          goToNext();
-        }
-      } catch (error) {
-        console.error('Error in step submission:', error);
-        toast.error('An unexpected error occurred');
-      } finally {
-        setIsSubmitting(false);
+      if (success && !isLastStep) {
+        goToNext();
       }
     } catch (error) {
-      // Handle any unexpected errors
-      console.error(`Error in step ${currentStep}:`, error);
-      toast.error('An error occurred while processing your information');
+      console.error(`Error submitting step ${currentStep}:`, error);
+      toast.error('Failed to save your information. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
