@@ -67,12 +67,13 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
         return;
       }
 
-      const paymentWithClientId = {
-        ...payment,
-        clientId,
-      };
-
-      const result = await createPayment(paymentWithClientId, planId);
+      const result = await createPayment(
+        {
+          ...payment,
+          clientId,
+        },
+        planId
+      );
 
       if (!result.error) {
         toast.success(result.message || 'Payment processed successfully');

@@ -128,11 +128,11 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
 
       // Create payment if it doesn't exist
       try {
-        const result = await createPayment({
+        const paymentData = {
           ...data,
-          planId: enrollment.id,
           clientId: enrollment.clientId,
-        });
+        };
+        const result = await createPayment(paymentData, enrollment.id);
 
         if (result.error) {
           return {

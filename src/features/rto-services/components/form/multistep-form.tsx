@@ -1,367 +1,194 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FormProvider, Path, useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useQueryState, parseAsStringLiteral } from 'nuqs';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useState } from 'react';
+import { useForm, FormProvider } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import React from 'react';
+import { rtoServicesFormSchema, RTOServiceFormValues } from '../../types';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-
-import { type StepConfig } from '@/components/ui/progress-bar';
 import { PersonalInfoStep } from './steps/personal-info';
-import { ServiceDetailsStep } from './steps/service-details';
-import { rtoServiceFormSchema, type RTOServiceFormData } from '../../schemas/rto-services';
-import { addRTOService, updateRTOService } from '../../server/action';
-import { type RTOServiceWithClient } from '../../types';
+import { LicenseStep } from './steps/service';
+import { PaymentContainer } from './steps/payment';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useRTOServiceStepNavigation, RTOServiceProgressBar } from './progress-bar';
 import { DEFAULT_STATE } from '@/lib/constants/business';
 
-// RTO Services step configuration
-export const RTO_STEPS: StepConfig<'service' | 'personal'>[] = [
-  { key: 'service', label: 'Service Details' },
-  { key: 'personal', label: 'Personal Info' },
-];
-
-const sortOrder = ['service', 'personal'] as const;
-type StepKey = (typeof sortOrder)[number];
-
-type RTOServiceMultistepFormProps = {
-  rtoService?: RTOServiceWithClient;
-  defaultRtoOffice?: string | null;
-};
-
-export function RTOServiceMultistepForm({
-  rtoService,
-  defaultRtoOffice,
-}: RTOServiceMultistepFormProps) {
+export function RTOServiceMultistepForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const initialFormDataRef = useRef<RTOServiceFormData | null>(null);
 
-  // URL state management
-  const [externalStep, setExternalStep] = useQueryState(
-    'step',
-    parseAsStringLiteral(sortOrder).withDefault('service')
-  );
-
-  // Form setup
-  const form = useForm<RTOServiceFormData>({
-    resolver: zodResolver(rtoServiceFormSchema),
-    mode: 'onChange',
+  const methods = useForm<RTOServiceFormValues>({
+    resolver: zodResolver(rtoServicesFormSchema),
     defaultValues: {
-      serviceType: rtoService?.serviceType || 'LICENSE_RENEWAL',
-      status: rtoService?.status || 'PENDING',
-      priority: rtoService?.priority || 'NORMAL',
-      rtoOffice: rtoService?.rtoOffice || defaultRtoOffice || '',
-      existingLicenseNumber: rtoService?.existingLicenseNumber || '',
-      governmentFees: rtoService?.governmentFees || 0,
-      serviceCharge: rtoService?.serviceCharge || 0,
-      urgentFees: rtoService?.urgentFees || 0,
-      totalAmount: rtoService?.totalAmount || 0,
-      remarks: rtoService?.remarks || '',
-      requiresClientPresence: rtoService?.requiresClientPresence || false,
-      isDocumentCollectionComplete: rtoService?.isDocumentCollectionComplete || false,
-      isPaymentComplete: rtoService?.isPaymentComplete || false,
-      clientInfo: {
-        firstName: rtoService?.rtoClient?.firstName || '',
-        middleName: rtoService?.rtoClient?.middleName || '',
-        lastName: rtoService?.rtoClient?.lastName || '',
-        aadhaarNumber: rtoService?.rtoClient?.aadhaarNumber || '',
-        phoneNumber: rtoService?.rtoClient?.phoneNumber || '',
-        email: '',
-        addressLine1: '',
-        addressLine2: '',
-        addressLine3: '',
-        city: '',
+      personalInfo: {
+        educationalQualification: 'GRADUATE',
+        citizenStatus: 'BIRTH',
+        isCurrentAddressSameAsPermanentAddress: false,
         state: DEFAULT_STATE,
-        pincode: '',
-        birthDate: new Date(),
-        gender: 'MALE',
-        // Additional personal information
-        fatherName: '',
-        bloodGroup: undefined,
-        // Document information
-        passportNumber: '',
-        // Emergency contact
-        emergencyContact: '',
-        emergencyContactName: '',
-        // Address fields
-        isCurrentAddressSameAsPermanentAddress: true,
-        permanentAddressLine1: '',
-        permanentAddressLine2: '',
-        permanentAddressLine3: '',
-        permanentCity: '',
         permanentState: DEFAULT_STATE,
-        permanentPincode: '',
+      },
+      service: {
+        type: 'NEW_DRIVING_LICENCE',
+        license: {},
       },
     },
+    mode: 'onChange',
   });
 
-  // Store initial form data for change detection
-  useEffect(() => {
-    if (!initialFormDataRef.current) {
-      initialFormDataRef.current = form.getValues();
-    }
-  }, [form]);
+  const { trigger, getValues, watch } = methods;
 
-  // Get default values based on existing service or defaults
-  const getDefaultValues = (): RTOServiceFormData => {
-    return {
-      serviceType: rtoService?.serviceType || 'LICENSE_RENEWAL',
-      status: rtoService?.status || 'PENDING',
-      priority: rtoService?.priority || 'NORMAL',
-      rtoOffice: rtoService?.rtoOffice || defaultRtoOffice || '',
-      existingLicenseNumber: rtoService?.existingLicenseNumber || '',
-      governmentFees: rtoService?.governmentFees || 0,
-      serviceCharge: rtoService?.serviceCharge || 0,
-      urgentFees: rtoService?.urgentFees || 0,
-      totalAmount: rtoService?.totalAmount || 0,
-      remarks: rtoService?.remarks || '',
-      requiresClientPresence: rtoService?.requiresClientPresence || false,
-      isDocumentCollectionComplete: rtoService?.isDocumentCollectionComplete || false,
-      isPaymentComplete: rtoService?.isPaymentComplete || false,
-      clientInfo: {
-        firstName: rtoService?.rtoClient?.firstName || '',
-        middleName: rtoService?.rtoClient?.middleName || '',
-        lastName: rtoService?.rtoClient?.lastName || '',
-        aadhaarNumber: rtoService?.rtoClient?.aadhaarNumber || '',
-        phoneNumber: rtoService?.rtoClient?.phoneNumber || '',
-        email: '',
-        addressLine1: '',
-        addressLine2: '',
-        addressLine3: '',
-        city: '',
-        state: DEFAULT_STATE,
-        pincode: '',
-        birthDate: new Date(),
-        gender: 'MALE',
-        fatherName: '',
-        bloodGroup: undefined,
-        passportNumber: '',
-        emergencyContact: '',
-        emergencyContactName: '',
-        isCurrentAddressSameAsPermanentAddress: true,
-        permanentAddressLine1: '',
-        permanentAddressLine2: '',
-        permanentAddressLine3: '',
-        permanentCity: '',
-        permanentState: DEFAULT_STATE,
-        permanentPincode: '',
-      },
-    };
-  };
+  const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
+    useRTOServiceStepNavigation();
 
   // Watch all form values to detect changes
-  const watchedValues = form.watch();
+  const watchedValues = watch();
 
-  // Check if current step has any changes compared to original values
+  // Map step keys to components
+  const stepComponents = React.useMemo(() => {
+    return {
+      personal: {
+        component: <PersonalInfoStep />,
+        getData: () => getValues('personalInfo'),
+      },
+      license: {
+        component: <LicenseStep />,
+        getData: () => getValues('service'),
+      },
+      payment: {
+        component: <PaymentContainer />,
+        getData: () => ({}),
+      },
+    };
+  }, [getValues]);
+
+  // Get initial default values for comparison
+  const getInitialValues = (): RTOServiceFormValues => {
+    return methods.formState.defaultValues as RTOServiceFormValues;
+  };
+
+  // Check if current step has any changes compared to initial values
   const hasCurrentStepChanges = (): boolean => {
-    if (!rtoService) return false; // No changes to detect for new services
-
-    const originalValues = getDefaultValues();
-    const currentStepKey = externalStep;
+    const initialValues = getInitialValues();
+    const currentStepKey = currentStep;
 
     const getCurrentStepValues = () => {
       switch (currentStepKey) {
-        case 'service':
-          return {
-            serviceType: watchedValues.serviceType,
-            status: watchedValues.status,
-            priority: watchedValues.priority,
-            rtoOffice: watchedValues.rtoOffice,
-            existingLicenseNumber: watchedValues.existingLicenseNumber,
-            governmentFees: watchedValues.governmentFees,
-            serviceCharge: watchedValues.serviceCharge,
-            urgentFees: watchedValues.urgentFees,
-            totalAmount: watchedValues.totalAmount,
-            remarks: watchedValues.remarks,
-            requiresClientPresence: watchedValues.requiresClientPresence,
-          };
         case 'personal':
-          return watchedValues.clientInfo;
+          return watchedValues.personalInfo;
+        case 'license':
+          return watchedValues.service;
+        case 'payment':
+          return {};
         default:
           return {};
       }
     };
 
-    const getOriginalStepValues = () => {
+    const getInitialStepValues = () => {
       switch (currentStepKey) {
-        case 'service':
-          return {
-            serviceType: originalValues.serviceType,
-            status: originalValues.status,
-            priority: originalValues.priority,
-            rtoOffice: originalValues.rtoOffice,
-            existingLicenseNumber: originalValues.existingLicenseNumber,
-            governmentFees: originalValues.governmentFees,
-            serviceCharge: originalValues.serviceCharge,
-            urgentFees: originalValues.urgentFees,
-            totalAmount: originalValues.totalAmount,
-            remarks: originalValues.remarks,
-            requiresClientPresence: originalValues.requiresClientPresence,
-          };
         case 'personal':
-          return originalValues.clientInfo;
+          return initialValues.personalInfo;
+        case 'license':
+          return initialValues.service;
+        case 'payment':
+          return {};
         default:
           return {};
       }
     };
 
     const currentValues = getCurrentStepValues();
-    const originalStepValues = getOriginalStepValues();
+    const initialStepValues = getInitialStepValues();
 
-    return JSON.stringify(currentValues) !== JSON.stringify(originalStepValues);
+    // Deep comparison to check for changes
+    return JSON.stringify(currentValues) !== JSON.stringify(initialStepValues);
   };
 
-  // Handle discard changes
-  const handleDiscardChanges = () => {
-    form.reset(getDefaultValues());
-    toast.success('Changes discarded successfully');
-  };
+  const handleNext = async () => {
+    try {
+      const currentStepKey = currentStep;
 
-  // Set default RTO office when it becomes available and field is empty
-  useEffect(() => {
-    console.log('Debug RTO Default:', {
-      defaultRtoOffice,
-      rtoService: !!rtoService,
-      currentRtoOffice: form.getValues('rtoOffice'),
-    });
+      // Validate current step fields
+      const fieldsToValidate =
+        currentStepKey === 'personal'
+          ? ['personalInfo' as const]
+          : currentStepKey === 'license'
+            ? ['service' as const]
+            : [];
 
-    if (defaultRtoOffice && !rtoService && !form.getValues('rtoOffice')) {
-      console.log('Setting default RTO office:', defaultRtoOffice);
-      form.setValue('rtoOffice', defaultRtoOffice);
-    }
-  }, [defaultRtoOffice, rtoService, form]);
+      const isStepValid = await trigger(fieldsToValidate);
 
-  // Step management
-  const currentStepIndex = sortOrder.indexOf(externalStep);
-  const isLastStep = currentStepIndex === sortOrder.length - 1;
+      if (!isStepValid) {
+        return;
+      }
 
-  // Get validation fields for current step
-  const getStepValidationFields = useCallback((step: StepKey): Path<RTOServiceFormData>[] => {
-    switch (step) {
-      case 'service':
-        return [
-          'serviceType',
-          'rtoOffice',
-          'governmentFees',
-          'serviceCharge',
-          'totalAmount',
-        ] as Path<RTOServiceFormData>[];
-      case 'personal':
-        return [
-          'clientInfo.firstName',
-          'clientInfo.lastName',
-          'clientInfo.aadhaarNumber',
-          'clientInfo.phoneNumber',
-          'clientInfo.addressLine1',
-          'clientInfo.addressLine2',
-          'clientInfo.city',
-          'clientInfo.state',
-          'clientInfo.pincode',
-          'clientInfo.birthDate',
-          'clientInfo.gender',
-        ] as Path<RTOServiceFormData>[];
-      default:
-        return [];
-    }
-  }, []);
+      const hasChanges = hasCurrentStepChanges();
 
-  // Navigation functions
-  const goToNext = useCallback(() => {
-    const nextIndex = Math.min(currentStepIndex + 1, sortOrder.length - 1);
-    setExternalStep(sortOrder[nextIndex]);
-  }, [currentStepIndex, setExternalStep]);
+      if (!hasChanges) {
+        if (isLastStep) {
+          router.refresh();
+          router.push('/rto-services');
+        } else {
+          goToNext();
+        }
+        return;
+      }
 
-  const goToPrevious = useCallback(() => {
-    const prevIndex = Math.max(currentStepIndex - 1, 0);
-    setExternalStep(sortOrder[prevIndex]);
-  }, [currentStepIndex, setExternalStep]);
-
-  // Handle next button
-  const handleNext = useCallback(async () => {
-    const fieldsToValidate = getStepValidationFields(externalStep);
-    const isStepValid = await form.trigger(fieldsToValidate);
-
-    if (!isStepValid) {
-      toast.error('Please fill in all required fields correctly');
-      return;
-    }
-
-    if (isLastStep) {
-      // Submit the entire form
+      // Execute step-specific action only if there are changes
       setIsSubmitting(true);
       try {
-        const formData = form.getValues();
-        const result = rtoService
-          ? await updateRTOService(rtoService.id, formData)
-          : await addRTOService(formData);
-
-        if (result.error) {
-          toast.error(result.message);
-        } else {
-          toast.success(result.message);
+        // TODO: Implement step-by-step submission
+        if (isLastStep) {
+          // Final submission
+          toast.success('RTO service submitted successfully');
+          router.refresh();
           router.push('/rto-services');
+        } else {
+          goToNext();
         }
-      } catch {
+      } catch (error) {
+        console.error('Error in step submission:', error);
         toast.error('An unexpected error occurred');
       } finally {
         setIsSubmitting(false);
       }
-    } else {
-      goToNext();
+    } catch (error) {
+      console.error(`Error in step ${currentStep}:`, error);
+      toast.error('An error occurred while processing your information');
     }
-  }, [form, externalStep, isLastStep, getStepValidationFields, goToNext, rtoService, router]);
-
-  // Step components mapping
-  const stepComponents = useMemo(
-    () => ({
-      service: <ServiceDetailsStep />,
-      personal: <PersonalInfoStep />,
-    }),
-    []
-  );
+  };
 
   return (
-    <FormProvider {...form}>
-      <div className="h-full flex flex-col py-10 gap-4">
-        <ScrollArea className="h-[calc(100vh-220px)]">
-          <form className="space-y-8 pb-24">{stepComponents[externalStep]}</form>
+    <FormProvider {...methods}>
+      <div className="h-full flex flex-col py-4 gap-10">
+        <RTOServiceProgressBar currentStep={currentStep} onStepChange={goToStep} />
+
+        {/* Form content - scrollable area */}
+        <ScrollArea className="h-[calc(100vh-316px)]">
+          <form className="space-y-8 pb-24 pr-1">{stepComponents[currentStep]?.component}</form>
         </ScrollArea>
 
+        {/* Navigation buttons - fixed at the bottom */}
         <div className="bg-white py-4 px-6 border-t flex justify-between">
           <Button
             type="button"
             variant="outline"
             onClick={goToPrevious}
-            disabled={currentStepIndex === 0}
+            disabled={isFirstStep || isSubmitting}
           >
             Previous
           </Button>
 
-          <div className="flex gap-3">
-            {rtoService && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleDiscardChanges}
-                disabled={isSubmitting || !hasCurrentStepChanges()}
-              >
-                Discard Changes
-              </Button>
-            )}
-
-            <Button type="button" onClick={handleNext} disabled={isSubmitting}>
-              {isSubmitting
-                ? 'Saving...'
-                : isLastStep
-                  ? rtoService
-                    ? 'Update Service'
-                    : 'Create Service'
-                  : 'Next'}
-            </Button>
-          </div>
+          <Button
+            type="button"
+            onClick={handleNext}
+            disabled={isSubmitting}
+            isLoading={isSubmitting}
+          >
+            {isLastStep ? 'Submit' : 'Next'}
+          </Button>
         </div>
       </div>
     </FormProvider>

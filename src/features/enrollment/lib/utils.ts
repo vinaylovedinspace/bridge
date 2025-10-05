@@ -178,7 +178,6 @@ export const getDefaultValuesForEnrollmentForm = (
           originalAmount: payment.originalAmount,
           finalAmount: payment.finalAmount,
           clientId: payment.clientId,
-          planId: payment.planId,
           paymentMode: 'PAYMENT_LINK' as const,
         }
       : {
@@ -189,7 +188,6 @@ export const getDefaultValuesForEnrollmentForm = (
           originalAmount: 0,
           finalAmount: 0,
           clientId: client.id,
-          planId: enrollment.id,
           paymentMode: 'PAYMENT_LINK' as const,
         },
     clientId: client.id,

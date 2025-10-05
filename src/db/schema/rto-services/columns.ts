@@ -1,16 +1,13 @@
 import { pgEnum, pgTable, text, timestamp, uuid, integer, boolean } from 'drizzle-orm/pg-core';
 
 export const RTOServiceTypeEnum = pgEnum('rto_service_type', [
+  'NEW_DRIVING_LICENCE',
+  'ADDITION_OF_CLASS',
   'LICENSE_RENEWAL',
-  'ADDRESS_CHANGE',
   'DUPLICATE_LICENSE',
-  'INTERNATIONAL_PERMIT',
-  'NEW_LICENSE',
-  'LEARNER_LICENSE',
-  'CATEGORY_ADDITION',
-  'LICENSE_TRANSFER',
   'NAME_CHANGE',
-  'ENDORSEMENT_REMOVAL',
+  'ADDRESS_CHANGE',
+  'INTERNATIONAL_PERMIT',
 ]);
 
 export const RTOServiceStatusEnum = pgEnum('rto_service_status', [
@@ -30,24 +27,20 @@ export const RTOServicesTable = pgTable('rto_services', {
   id: uuid('id').primaryKey().defaultRandom(),
 
   // Client and branch relationship
-  rtoClientId: uuid('rto_client_id').notNull(),
+  clientId: uuid('client_id').notNull(),
+  paymentId: uuid('payment_id').unique(),
   branchId: uuid('branch_id').notNull(),
-  tenantId: uuid('tenant_id').notNull(),
 
   // Service details
   serviceType: RTOServiceTypeEnum().notNull(),
   status: RTOServiceStatusEnum().default('PENDING').notNull(),
-  priority: RTOServicePriorityEnum().default('NORMAL').notNull(),
 
   // Application details
   applicationNumber: text('application_number'),
-  rtoOffice: text('rto_office').notNull(),
-  existingLicenseNumber: text('existing_license_number'),
 
   // Fees breakdown
   governmentFees: integer('government_fees').notNull(),
   serviceCharge: integer('service_charge').notNull(),
-  urgentFees: integer('urgent_fees').default(0),
   totalAmount: integer('total_amount').notNull(),
 
   // Dates

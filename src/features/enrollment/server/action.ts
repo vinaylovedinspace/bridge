@@ -261,15 +261,12 @@ export const createPlan = async (
 };
 
 export const createPayment = async (
-  unsafeData: z.infer<typeof paymentSchema>
+  unsafeData: z.infer<typeof paymentSchema>,
+  planId: string
 ): Promise<{ error: boolean; message: string; paymentId?: string }> => {
-  if (!unsafeData.planId) {
-    return { error: true, message: 'Plan ID is required' };
-  }
-
   try {
     // 1. Get plan and vehicle for payment calculation
-    const result = await getPlanAndVehicleInDB(unsafeData.planId);
+    const result = await getPlanAndVehicleInDB(planId);
 
     if (!result) {
       return { error: true, message: 'Plan or vehicle not found' };
@@ -294,10 +291,7 @@ export const createPayment = async (
     }
 
     // 4. Upsert payment
-    const { paymentId, isExistingPayment } = await upsertPaymentInDB({
-      ...data,
-      vehicleRentAmount: vehicle.rent,
-    });
+    const { paymentId, isExistingPayment } = await upsertPaymentInDB(data, planId);
 
     // 5. Handle payment transactions (CASH or QR)
     if (data.paymentMode === 'CASH' || data.paymentMode === 'QR') {
@@ -376,7 +370,7 @@ export const createPayment = async (
     // 7. Create fallback sessions if needed (for new payments only)
     if (!isExistingPayment) {
       try {
-        await createFallbackSessions(unsafeData.planId);
+        await createFallbackSessions(planId);
       } catch (sessionError) {
         console.error('Error creating fallback sessions:', sessionError);
         // Don't fail the payment if session creation fails
@@ -434,13 +428,6 @@ export const updateDrivingLicense = async (
 
 export const updatePlan = async (_planId: string, data: PlanValues): ActionReturnType => {
   return createPlan(data);
-};
-
-export const updatePayment = async (
-  _paymentId: string,
-  data: z.infer<typeof paymentSchema>
-): ActionReturnType => {
-  return createPayment(data);
 };
 
 export const checkPhoneNumberExists = async (phoneNumber: string) => {
