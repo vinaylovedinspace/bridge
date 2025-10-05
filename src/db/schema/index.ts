@@ -50,3 +50,6 @@ export * from './rto-clients/relations';
 
 export * from './notifications/columns';
 export * from './notifications/relations';
+
+export * from './message-logs/columns';
+export * from './message-logs/relations';
