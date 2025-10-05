@@ -74,37 +74,38 @@ export const EditAdmissionForm = ({ enrollment, branchConfig }: EditAdmissionFor
   };
 
   const handleNext = async () => {
-    try {
-      const currentStepKey = currentStep as StepKey;
-      const fieldsToValidate = getMultistepAdmissionStepValidationFields(currentStepKey, getValues);
-      const isStepValid = await trigger(fieldsToValidate);
-      if (!isStepValid) return;
+    const currentStepKey = currentStep as StepKey;
+    const fieldsToValidate = getMultistepAdmissionStepValidationFields(currentStepKey, getValues);
+    const isStepValid = await trigger(fieldsToValidate);
 
-      const hasChanges = hasCurrentStepChanges();
-      if (!hasChanges) {
-        if (isLastStep) {
-          router.push('/enrollments');
-        } else {
-          goToNext();
-        }
-        return;
+    if (!isStepValid) {
+      return;
+    }
+
+    // If no changes, just navigate
+    if (!hasCurrentStepChanges()) {
+      if (isLastStep) {
+        router.push('/enrollments');
+      } else {
+        goToNext();
       }
+      return;
+    }
 
-      setIsSubmitting(true);
-      try {
-        const stepData = getStepData(currentStepKey);
-        const shouldRefresh = currentStepKey === 'plan' || currentStepKey === 'payment';
+    // Submit changes
+    setIsSubmitting(true);
+    try {
+      const stepData = getStepData(currentStepKey);
+      const shouldRefresh = currentStepKey === 'plan' || currentStepKey === 'payment';
 
-        const success = await submitStep(currentStepKey, stepData, isLastStep, shouldRefresh);
+      const success = await submitStep(currentStepKey, stepData, isLastStep, shouldRefresh);
 
-        if (success && !isLastStep) {
-          goToNext();
-        }
-      } finally {
-        setIsSubmitting(false);
+      if (success && !isLastStep) {
+        goToNext();
       }
     } catch (error) {
-      console.error(`Error in step ${currentStep}:`, error);
+      console.error(`Error submitting step ${currentStepKey}:`, error);
+    } finally {
       setIsSubmitting(false);
     }
   };

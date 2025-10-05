@@ -58,44 +58,42 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
   }, [getValues]);
 
   const handleNext = async () => {
-    try {
-      const fieldsToValidate = getMultistepRTOServiceStepValidationFields(currentStep, getValues);
+    const fieldsToValidate = getMultistepRTOServiceStepValidationFields(currentStep, getValues);
+    const isStepValid = await trigger(fieldsToValidate);
 
-      const isStepValid = await trigger(fieldsToValidate);
+    if (!isStepValid) {
+      return;
+    }
 
-      if (!isStepValid) {
-        return;
-      }
+    // Personal step - just navigate
+    if (currentStep === 'personal') {
+      goToNext();
+      return;
+    }
 
-      if (currentStep == 'personal') {
-        goToNext();
-      } else if (currentStep == 'license') {
-        setIsSubmitting(true);
-        try {
-          const result = await saveRTOService(getValues());
+    // License step - save data then navigate
+    if (currentStep === 'license') {
+      setIsSubmitting(true);
+      try {
+        const result = await saveRTOService(getValues());
 
-          if (result.error) {
-            toast.error(result.message);
-            return;
-          }
-
-          setValue('clientId', result.clientId);
-          setValue('serviceId', result.serviceId);
-
-          toast.success(result.message);
-          router.refresh();
-        } catch (error) {
-          console.error('Error saving RTO service:', error);
-          toast.error('An unexpected error occurred');
-        } finally {
-          setIsSubmitting(false);
-          goToNext();
+        if (result.error) {
+          toast.error(result.message);
+          return;
         }
-      } else if (currentStep == 'payment') {
+
+        setValue('clientId', result.clientId);
+        setValue('serviceId', result.serviceId);
+
+        toast.success(result.message);
+        router.refresh();
+        goToNext();
+      } catch (error) {
+        console.error('Error saving RTO service:', error);
+        toast.error('Failed to save RTO service');
+      } finally {
+        setIsSubmitting(false);
       }
-    } catch (error) {
-      console.error(`Error in step ${currentStep}:`, error);
-      toast.error('An error occurred while processing your information');
     }
   };
 
