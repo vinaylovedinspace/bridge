@@ -49,70 +49,56 @@ export const ClientDetailForm = ({ client, branchConfig }: ClientDetailFormProps
     handleCancelNavigation,
   } = useUnsavedChanges(methods, currentStep, defaultValues);
 
+  const saveLicenseStep = async (formValues: ClientDetailFormValues) => {
+    if (formValues.learningLicense) {
+      const learningResult = await updateClientLearningLicense(
+        client.id,
+        formValues.learningLicense
+      );
+      if (learningResult.error) {
+        return learningResult;
+      }
+    }
+
+    if (formValues.drivingLicense) {
+      const drivingResult = await updateClientDrivingLicense(client.id, formValues.drivingLicense);
+      if (drivingResult.error) {
+        return drivingResult;
+      }
+    }
+
+    return { error: false, message: 'Licence information updated successfully' };
+  };
+
   const handleNext = async () => {
+    const isValid = await trigger();
+    if (!isValid) {
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-
-      // Validate current step
-      const isValid = await trigger();
-      if (!isValid) {
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Save data to server based on current step
       const formValues = getValues();
-      let result: { error: boolean; message: string } | null = null;
 
-      if (currentStep === 'personal') {
-        result = await updateClientPersonalInfo(client.id, formValues.personalInfo);
-      } else if (currentStep === 'license') {
-        // Update both learning and driving licenses if they have data
-        if (formValues.learningLicense) {
-          const learningResult = await updateClientLearningLicense(
-            client.id,
-            formValues.learningLicense
-          );
-          if (learningResult.error) {
-            result = learningResult;
-          }
-        }
+      const result =
+        currentStep === 'personal'
+          ? await updateClientPersonalInfo(client.id, formValues.personalInfo)
+          : await saveLicenseStep(formValues);
 
-        if (!result?.error && formValues.drivingLicense) {
-          const drivingResult = await updateClientDrivingLicense(
-            client.id,
-            formValues.drivingLicense
-          );
-          if (drivingResult.error) {
-            result = drivingResult;
-          }
-        }
-
-        if (!result) {
-          result = { error: false, message: 'Licence information updated successfully' };
-        }
-      }
-
-      // Show error if save failed
-      if (result?.error) {
+      if (result.error) {
         toast.error(result.message);
-        setIsSubmitting(false);
         return;
       }
 
-      // Show success message if we saved data
-      if (result) {
-        toast.success(result.message);
-      }
+      toast.success(result.message);
 
       if (isLastStep) {
-        // Navigate back to clients list
         window.location.href = '/clients';
       } else {
         goToNext();
       }
     } catch (error) {
-      console.error('Error saving client data:', error);
+      console.error(`Error saving ${currentStep} step:`, error);
       toast.error('Failed to save changes');
     } finally {
       setIsSubmitting(false);
