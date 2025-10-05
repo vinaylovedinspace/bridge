@@ -1,31 +1,25 @@
 import { useState } from 'react';
 import { UseFormSetValue } from 'react-hook-form';
-import {
-  checkPhoneNumberExists,
-  checkAadhaarNumberExists,
-} from '@/features/enrollment/server/action';
-import {
-  mapClientToPersonalInfo,
-  mapLearningLicense,
-  mapDrivingLicense,
-} from '@/features/enrollment/lib/utils';
-import { AdmissionFormValues } from '@/features/enrollment/types';
+
+import { mapClientToPersonalInfo, mapDrivingLicense } from '@/features/enrollment/lib/utils';
+import { checkPhoneNumberDuplicate, checkAadhaarNumberDuplicate } from '@/server/actions/clients';
+import { RTOServiceFormValues } from '../types';
 
 type ExistingClient = {
   id: string;
   name: string;
   matchedField: 'phone' | 'aadhaar';
-  data: Awaited<ReturnType<typeof checkPhoneNumberExists>>['client'];
+  data: Awaited<ReturnType<typeof checkPhoneNumberDuplicate>>['client'];
 };
 
-export const usePhoneNumberValidation = (setValue: UseFormSetValue<AdmissionFormValues>) => {
+export const useDuplicateClientCheck = (setValue: UseFormSetValue<RTOServiceFormValues>) => {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [existingClient, setExistingClient] = useState<ExistingClient | null>(null);
 
   const handlePhoneNumberBlur = async (phoneNumber: string) => {
     if (!phoneNumber || phoneNumber.length < 10) return;
 
-    const result = await checkPhoneNumberExists(phoneNumber);
+    const result = await checkPhoneNumberDuplicate(phoneNumber);
 
     if (result.exists && result.client) {
       const fullName = [result.client.firstName, result.client.middleName, result.client.lastName]
@@ -47,7 +41,7 @@ export const usePhoneNumberValidation = (setValue: UseFormSetValue<AdmissionForm
     const cleanedAadhaar = aadhaarNumber.replace(/\s/g, '');
     if (!cleanedAadhaar || cleanedAadhaar.length !== 12) return;
 
-    const result = await checkAadhaarNumberExists(cleanedAadhaar);
+    const result = await checkAadhaarNumberDuplicate(cleanedAadhaar);
 
     if (result.exists && result.client) {
       const fullName = [result.client.firstName, result.client.middleName, result.client.lastName]
@@ -68,18 +62,18 @@ export const usePhoneNumberValidation = (setValue: UseFormSetValue<AdmissionForm
     if (existingClient?.data) {
       // Fill the form with existing client data using the helper functions
       const personalInfo = mapClientToPersonalInfo(existingClient.data);
-      const learningLicense = mapLearningLicense(existingClient.data.learningLicense);
       const drivingLicense = mapDrivingLicense(existingClient.data.drivingLicense);
 
-      setValue('clientId', existingClient.data.id);
       setValue('personalInfo', personalInfo);
 
-      if (learningLicense) {
-        setValue('learningLicense', learningLicense);
+      if (drivingLicense?.licenseNumber) {
+        setValue('service.license.licenseNumber', drivingLicense.licenseNumber);
       }
-
-      if (drivingLicense) {
-        setValue('drivingLicense', drivingLicense);
+      if (drivingLicense?.issueDate) {
+        setValue('service.license.issueDate', drivingLicense.issueDate);
+      }
+      if (drivingLicense?.expiryDate) {
+        setValue('service.license.expiryDate', drivingLicense.expiryDate);
       }
     }
     setShowDuplicateModal(false);

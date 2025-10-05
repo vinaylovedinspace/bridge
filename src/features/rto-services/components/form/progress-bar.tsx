@@ -30,7 +30,7 @@ export const RTOServiceProgressBar = ({
 }: RTOServiceProgressBarProps) => {
   return (
     <ProgressBar
-      interactive={true}
+      interactive={false}
       currentStep={currentStep}
       onStepChange={onStepChange}
       steps={RTO_SERVICE_STEPS}

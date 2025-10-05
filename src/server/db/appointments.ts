@@ -63,7 +63,6 @@ export async function getAppointmentStatistics() {
           'DOCUMENT_COLLECTION',
           'APPLICATION_SUBMITTED',
           'UNDER_REVIEW',
-          'APPROVED',
         ])
       )
     );

@@ -239,6 +239,58 @@ export const getAdmissionStatistics = async (months: number = 6) => {
   return await _getAdmissionStatistics(branchId, months);
 };
 
+export const checkPhoneNumberExistsInDB = async (phoneNumber: string) => {
+  const { tenantId } = await getBranchConfig();
+
+  try {
+    const client = await db.query.ClientTable.findFirst({
+      where: and(eq(ClientTable.phoneNumber, phoneNumber), eq(ClientTable.tenantId, tenantId)),
+      with: {
+        learningLicense: true,
+        drivingLicense: true,
+      },
+    });
+
+    if (client) {
+      return {
+        exists: true,
+        client,
+      };
+    }
+
+    return { exists: false };
+  } catch (error) {
+    console.error('Error checking phone number:', error);
+    return { exists: false };
+  }
+};
+
+export const checkAadhaarNumberExistsInDB = async (aadhaarNumber: string) => {
+  const { tenantId } = await getBranchConfig();
+
+  try {
+    const client = await db.query.ClientTable.findFirst({
+      where: and(eq(ClientTable.aadhaarNumber, aadhaarNumber), eq(ClientTable.tenantId, tenantId)),
+      with: {
+        learningLicense: true,
+        drivingLicense: true,
+      },
+    });
+
+    if (client) {
+      return {
+        exists: true,
+        client,
+      };
+    }
+
+    return { exists: false };
+  } catch (error) {
+    console.error('Error checking Aadhaar number:', error);
+    return { exists: false };
+  }
+};
+
 export type Client = Awaited<ReturnType<typeof getClient>>;
 export type ClientDetail = Awaited<ReturnType<typeof getClients>>;
 export type ClientWithUnassignedSessions = Awaited<

@@ -39,6 +39,7 @@ export const rtoServicesFormSchema = z.object({
   service: z.object({
     type: z.enum(RTOServiceTypeEnum.enumValues, {
       required_error: 'Service type is required',
+      invalid_type_error: 'Service type is required',
     }),
     license: drivingLicenseSchema.pick({
       licenseNumber: true,

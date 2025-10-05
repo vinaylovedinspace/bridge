@@ -32,10 +32,23 @@ import { useEffect } from 'react';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Info } from 'lucide-react';
 import { RTOServiceFormValues } from '@/features/rto-services/types';
+import { DuplicateClientModal } from '@/components/duplicate-client-modal';
+import { useDuplicateClientCheck } from '@/features/rto-services/hooks/use-duplicate-client-check';
 
 export const PersonalInfoStep = () => {
   const methods = useFormContext<RTOServiceFormValues>();
   const { control, setValue, clearErrors } = methods;
+
+  // Use custom hook for phone and Aadhaar number validation
+  const {
+    showDuplicateModal,
+    setShowDuplicateModal,
+    existingClient,
+    handlePhoneNumberBlur,
+    handleAadhaarNumberBlur,
+    handleUseExisting,
+    handleContinueWithNew,
+  } = useDuplicateClientCheck(setValue);
 
   // Watch for changes in the checkbox and address fields
   const isSameAddress = useWatch({
@@ -123,8 +136,15 @@ export const PersonalInfoStep = () => {
                     <Input
                       placeholder="123456789012"
                       value={field.value || ''}
-                      onChange={field.onChange}
-                      maxLength={12}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9\s]/g, '');
+                        field.onChange(value);
+                      }}
+                      onBlur={(e) => {
+                        field.onBlur();
+                        handleAadhaarNumberBlur(e.target.value);
+                      }}
+                      maxLength={14}
                     />
                   </FormControl>
                   <FormMessage />
@@ -185,7 +205,7 @@ export const PersonalInfoStep = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Gender</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select gender" />
@@ -229,7 +249,7 @@ export const PersonalInfoStep = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Blood Group</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select blood group" />
@@ -253,7 +273,7 @@ export const PersonalInfoStep = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Educational Qualification</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select qualification" />
@@ -318,7 +338,7 @@ export const PersonalInfoStep = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Guardian Relationship</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select relationship" />
@@ -354,6 +374,10 @@ export const PersonalInfoStep = () => {
                     placeholder="Phone number"
                     value={field.value || ''}
                     onChange={field.onChange}
+                    onBlur={(e) => {
+                      field.onBlur();
+                      handlePhoneNumberBlur(e.target.value);
+                    }}
                   />
                 </FormControl>
                 <FormDescription className="flex gap-1">
@@ -667,7 +691,7 @@ export const PersonalInfoStep = () => {
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    defaultValue={field.value || 'BIRTH'}
+                    value={field.value || 'BIRTH'}
                     className="flex space-y-1"
                   >
                     {CitizenStatusEnum.enumValues.map((status) => (
@@ -688,6 +712,16 @@ export const PersonalInfoStep = () => {
           />
         </div>
       </div>
+
+      {/* Duplicate Client Modal */}
+      <DuplicateClientModal
+        open={showDuplicateModal}
+        onOpenChange={setShowDuplicateModal}
+        clientName={existingClient?.name || ''}
+        matchedField={existingClient?.matchedField}
+        onUseExisting={handleUseExisting}
+        onContinueWithNew={handleContinueWithNew}
+      />
     </div>
   );
 };

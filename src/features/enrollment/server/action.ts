@@ -19,9 +19,6 @@ import {
   getPlanAndVehicleInDB,
   upsertPaymentInDB,
 } from './db';
-import { db } from '@/db';
-import { eq, and } from 'drizzle-orm';
-import { ClientTable } from '@/db/schema/client/columns';
 import { dateToString } from '@/lib/date-utils';
 import {
   createPaymentLink,
@@ -367,56 +364,4 @@ export const updateDrivingLicense = async (
 
 export const updatePlan = async (_planId: string, data: PlanValues): ActionReturnType => {
   return createPlan(data);
-};
-
-export const checkPhoneNumberExists = async (phoneNumber: string) => {
-  const { tenantId } = await getBranchConfig();
-
-  try {
-    const client = await db.query.ClientTable.findFirst({
-      where: and(eq(ClientTable.phoneNumber, phoneNumber), eq(ClientTable.tenantId, tenantId)),
-      with: {
-        learningLicense: true,
-        drivingLicense: true,
-      },
-    });
-
-    if (client) {
-      return {
-        exists: true,
-        client,
-      };
-    }
-
-    return { exists: false };
-  } catch (error) {
-    console.error('Error checking phone number:', error);
-    return { exists: false };
-  }
-};
-
-export const checkAadhaarNumberExists = async (aadhaarNumber: string) => {
-  const { tenantId } = await getBranchConfig();
-
-  try {
-    const client = await db.query.ClientTable.findFirst({
-      where: and(eq(ClientTable.aadhaarNumber, aadhaarNumber), eq(ClientTable.tenantId, tenantId)),
-      with: {
-        learningLicense: true,
-        drivingLicense: true,
-      },
-    });
-
-    if (client) {
-      return {
-        exists: true,
-        client,
-      };
-    }
-
-    return { exists: false };
-  } catch (error) {
-    console.error('Error checking Aadhaar number:', error);
-    return { exists: false };
-  }
 };
