@@ -6,7 +6,6 @@ import {
   deleteRTOService as deleteRTOServiceInDB,
 } from './db';
 import { ActionReturnType } from '@/types/actions';
-import { getRTOService } from './db';
 import { getBranchConfig } from '@/server/db/branch';
 import { getNextClientCode } from '@/db/utils/client-code';
 import { rtoServicesFormSchema, rtoServicesFormSchemaWithOptionalPayment } from '../types';
@@ -16,114 +15,81 @@ import { dateToString } from '@/lib/date-utils';
 import { getRTOServiceCharges } from '../lib/charges';
 import { paymentSchema } from '@/features/enrollment/types';
 
-export async function addRTOService(
+export async function saveRTOService(
   unsafeData: z.infer<typeof rtoServicesFormSchema>
 ): Promise<{ clientId?: string; serviceId?: string; error: boolean; message: string }> {
   try {
     // Validate the data
-
-    console.log(unsafeData);
-    const {
-      success,
-      data,
-      error: validationError,
-    } = rtoServicesFormSchemaWithOptionalPayment.safeParse(unsafeData);
+    const { success, data } = rtoServicesFormSchemaWithOptionalPayment.safeParse(unsafeData);
 
     if (!success) {
-      console.error('RTO service validation failed:', validationError.errors);
-      console.error('Invalid data received:', JSON.stringify(unsafeData, null, 2));
       return {
         error: true,
-        message: `Invalid RTO service data: ${validationError.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')}`,
+        message: 'Invalid RTO service data',
       };
     }
 
     const { tenantId, id: branchId } = await getBranchConfig();
+    const isUpdate = !!data.serviceId;
 
-    // First, create the RTO client with generated client code
-    const clientCode = await getNextClientCode(tenantId);
+    // Prepare client information
+    let clientCode: string;
+
+    if (data.personalInfo.clientCode) {
+      // Use clientCode from form (exists during updates)
+      clientCode = data.personalInfo.clientCode;
+    } else {
+      // Generate new clientCode for new services
+      clientCode = await getNextClientCode(tenantId);
+    }
 
     const clientInformation = {
-      clientCode,
       ...data.personalInfo,
+      clientCode,
       birthDate: dateToString(data.personalInfo.birthDate),
     };
 
-    let client = null;
-    if (data.clientId) {
-      client = await updateClient(clientInformation, data.clientId);
-    } else {
-      client = await insertClient(clientInformation);
-    }
+    // Save client (update if exists, insert if new)
+    const client = data.clientId
+      ? await updateClient(clientInformation, data.clientId)
+      : await insertClient(clientInformation);
 
     if (!client) {
       return {
         error: true,
-        message: 'something went wrong',
+        message: 'Failed to save client information',
       };
     }
 
     const { governmentFees, additionalCharges } = getRTOServiceCharges(data.service.type);
 
-    const response = await addRTOServiceInDB({
-      branchId,
+    // Save RTO service (update if exists, insert if new)
+    let rtoService;
+    if (isUpdate) {
+      await updateRTOServiceInDB(data.serviceId!, {
+        serviceType: data.service.type,
+        governmentFees,
+        serviceCharge: additionalCharges.max,
+      });
+      rtoService = { id: data.serviceId!, clientId: client.id };
+    } else {
+      rtoService = await addRTOServiceInDB({
+        branchId,
+        clientId: client.id,
+        serviceType: data.service.type,
+        governmentFees,
+        serviceCharge: additionalCharges.max,
+      });
+    }
+
+    return {
+      error: false,
+      message: isUpdate ? 'RTO service updated successfully' : 'RTO service added successfully',
       clientId: client.id,
-      serviceType: data.service.type,
-      governmentFees,
-      serviceCharge: additionalCharges.max,
-    });
-
-    return {
-      error: false,
-      message: 'RTO service and client added successfully',
-      clientId: response.clientId,
-      serviceId: response.id,
+      serviceId: rtoService.id,
     };
   } catch (error) {
-    console.error('Error adding RTO service:', error);
-    return {
-      error: true,
-      message: error instanceof Error ? error.message : 'An unknown error occurred',
-    };
-  }
-}
-
-/**
- * Server action to update an existing RTO service
- */
-export async function updateRTOService(
-  id: string,
-  unsafeData: z.infer<typeof rtoServicesFormSchema>
-): ActionReturnType {
-  try {
-    // Validate the data
-    const { success, data, error: validationError } = rtoServicesFormSchema.safeParse(unsafeData);
-
-    if (!success) {
-      console.error('RTO service validation failed:', validationError.errors);
-      console.error('Invalid data received:', JSON.stringify(unsafeData, null, 2));
-      return {
-        error: true,
-        message: `Invalid RTO service data: ${validationError.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')}`,
-      };
-    }
-
-    // Get the existing RTO service to find the RTO client ID
-    const existingService = await getRTOService(id);
-    if (!existingService) {
-      return { error: true, message: 'RTO service not found' };
-    }
-
-    const { id: branchId } = await getBranchConfig();
-
-    console.log(data, branchId);
-
-    return {
-      error: false,
-      message: 'RTO service updated successfully',
-    };
-  } catch (error) {
-    console.error('Error updating RTO service:', error);
+    console.error('Error saving RTO service:', error);
     return {
       error: true,
       message: error instanceof Error ? error.message : 'An unknown error occurred',

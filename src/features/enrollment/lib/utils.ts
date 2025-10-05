@@ -61,6 +61,7 @@ export const mapClientToPersonalInfo = (
   client: NonNullable<Enrollment>['client']
 ): AdmissionFormValues['personalInfo'] => {
   return {
+    clientCode: client.clientCode,
     firstName: client.firstName,
     lastName: client.lastName,
     aadhaarNumber: client.aadhaarNumber,

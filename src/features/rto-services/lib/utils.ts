@@ -30,6 +30,7 @@ export const mapClientToPersonalInfo = (
   client: NonNullable<NonNullable<Awaited<ReturnType<typeof getRTOService>>>['client']>
 ): RTOServiceFormValues['personalInfo'] => {
   return {
+    clientCode: client.clientCode,
     firstName: client.firstName,
     lastName: client.lastName,
     middleName: client.middleName || '',

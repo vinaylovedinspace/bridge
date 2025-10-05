@@ -17,7 +17,7 @@ import {
   getMultistepRTOServiceStepValidationFields,
   getDefaultValuesForRTOServiceForm,
 } from '../../lib/utils';
-import { addRTOService } from '../../server/action';
+import { saveRTOService } from '../../server/action';
 import { getRTOService } from '../../server/db';
 
 type RTOServiceMultistepFormProps = {
@@ -72,17 +72,20 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
       } else if (currentStep == 'license') {
         setIsSubmitting(true);
         try {
-          const result = await addRTOService(getValues());
+          const result = await saveRTOService(getValues());
+
           if (result.error) {
             toast.error(result.message);
             return;
           }
+
           setValue('clientId', result.clientId);
           setValue('serviceId', result.serviceId);
-          toast.success('RTO service added successfully');
+
+          toast.success(result.message);
           router.refresh();
         } catch (error) {
-          console.error('Error adding RTO service:', error);
+          console.error('Error saving RTO service:', error);
           toast.error('An unexpected error occurred');
         } finally {
           setIsSubmitting(false);

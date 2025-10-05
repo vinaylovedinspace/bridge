@@ -54,4 +54,7 @@ export const personalInfoSchema = createInsertSchema(ClientTable, {
   guardianLastName: z.string().min(1, 'Guardian last name is required'),
 
   photoUrl: z.string().optional(),
-}).omit({ clientCode: true });
+
+  // Make clientCode optional - it's auto-generated on create, preserved on update
+  clientCode: z.string().optional(),
+});
