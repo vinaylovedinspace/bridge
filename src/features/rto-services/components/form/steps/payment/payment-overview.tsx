@@ -1,33 +1,12 @@
 import { useFormContext } from 'react-hook-form';
-import { RTOServiceFormValues, RTOServiceType } from '@/features/rto-services/types';
+import { RTOServiceFormValues } from '@/features/rto-services/types';
 import { TypographyLarge, TypographyMuted } from '@/components/ui/typography';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Info } from 'lucide-react';
 import { formatCurrency } from '@/lib/payment/calculate';
 import { PaymentInfoState } from './types';
-
-// Government fees based on RTO service type
-const RTO_GOVERNMENT_FEES: Record<RTOServiceType, number> = {
-  NEW_DRIVING_LICENCE: 716,
-  ADDITION_OF_CLASS: 1016,
-  LICENSE_RENEWAL: 416,
-  DUPLICATE_LICENSE: 216,
-  NAME_CHANGE: 200,
-  ADDRESS_CHANGE: 200,
-  INTERNATIONAL_PERMIT: 1000,
-};
-
-// Additional charges (smart card, courier, payment gateway)
-const RTO_ADDITIONAL_CHARGES: Record<RTOServiceType, { min: number; max: number }> = {
-  NEW_DRIVING_LICENCE: { min: 234, max: 434 }, // Smart card (200-400) + courier/gateway (34)
-  ADDITION_OF_CLASS: { min: 234, max: 434 },
-  LICENSE_RENEWAL: { min: 234, max: 434 },
-  DUPLICATE_LICENSE: { min: 234, max: 434 },
-  NAME_CHANGE: { min: 230, max: 430 },
-  ADDRESS_CHANGE: { min: 230, max: 430 },
-  INTERNATIONAL_PERMIT: { min: 50, max: 100 }, // Processing/courier (30-50) + gateway (20-50)
-};
+import { getRTOServiceCharges } from '@/features/rto-services/lib/charges';
 
 type PaymentOverviewProps = PaymentInfoState;
 
@@ -35,12 +14,9 @@ export const PaymentOverview = ({ discount: discountInfo }: PaymentOverviewProps
   const { watch } = useFormContext<RTOServiceFormValues>();
   const serviceType = watch('service.type');
 
-  // Get fees based on service type
-  const governmentFees = serviceType ? RTO_GOVERNMENT_FEES[serviceType] : 0;
-  const additionalCharges = serviceType ? RTO_ADDITIONAL_CHARGES[serviceType].max : 0;
-  const serviceCharge = additionalCharges;
+  const { governmentFees, additionalCharges } = getRTOServiceCharges(serviceType);
 
-  const totalFees = governmentFees + serviceCharge;
+  const totalFees = governmentFees + additionalCharges.max;
 
   // Get discount value from props
   const discountValue = discountInfo.isChecked ? Number(discountInfo.value) || 0 : 0;
@@ -51,7 +27,7 @@ export const PaymentOverview = ({ discount: discountInfo }: PaymentOverviewProps
 
   // Format amounts
   const formattedGovernmentFees = formatCurrency(governmentFees);
-  const formattedServiceCharge = formatCurrency(serviceCharge);
+  const formattedServiceCharge = formatCurrency(additionalCharges.max);
   const formattedDiscount = discountValue > 0 ? formatCurrency(discountValue) : null;
   const formattedAmountDue = formatCurrency(amountDue);
 

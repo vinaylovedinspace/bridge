@@ -65,6 +65,7 @@ export const useDuplicateClientCheck = (setValue: UseFormSetValue<RTOServiceForm
       const drivingLicense = mapDrivingLicense(existingClient.data.drivingLicense);
 
       setValue('personalInfo', personalInfo);
+      setValue('clientId', existingClient.id);
 
       if (drivingLicense?.licenseNumber) {
         setValue('service.license.licenseNumber', drivingLicense.licenseNumber);

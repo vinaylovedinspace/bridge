@@ -41,7 +41,6 @@ export const RTOServicesTable = pgTable('rto_services', {
   // Fees breakdown
   governmentFees: integer('government_fees').notNull(),
   serviceCharge: integer('service_charge').notNull(),
-  totalAmount: integer('total_amount').notNull(),
 
   // Dates
   applicationDate: timestamp('application_date').defaultNow().notNull(),

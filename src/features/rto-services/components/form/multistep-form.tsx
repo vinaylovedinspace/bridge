@@ -14,6 +14,8 @@ import { PaymentContainer } from './steps/payment';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRTOServiceStepNavigation, RTOServiceProgressBar } from './progress-bar';
 import { DEFAULT_STATE } from '@/lib/constants/business';
+import { getMultistepRTOServiceStepValidationFields } from '../../lib/utils';
+import { addRTOService } from '../../server/action';
 
 export function RTOServiceMultistepForm() {
   const router = useRouter();
@@ -37,13 +39,10 @@ export function RTOServiceMultistepForm() {
     mode: 'onChange',
   });
 
-  const { trigger, getValues, watch } = methods;
+  const { trigger, getValues, setValue } = methods;
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
     useRTOServiceStepNavigation();
-
-  // Watch all form values to detect changes
-  const watchedValues = watch();
 
   // Map step keys to components
   const stepComponents = React.useMemo(() => {
@@ -63,60 +62,9 @@ export function RTOServiceMultistepForm() {
     };
   }, [getValues]);
 
-  // Get initial default values for comparison
-  const getInitialValues = (): RTOServiceFormValues => {
-    return methods.formState.defaultValues as RTOServiceFormValues;
-  };
-
-  // Check if current step has any changes compared to initial values
-  const hasCurrentStepChanges = (): boolean => {
-    const initialValues = getInitialValues();
-    const currentStepKey = currentStep;
-
-    const getCurrentStepValues = () => {
-      switch (currentStepKey) {
-        case 'personal':
-          return watchedValues.personalInfo;
-        case 'license':
-          return watchedValues.service;
-        case 'payment':
-          return {};
-        default:
-          return {};
-      }
-    };
-
-    const getInitialStepValues = () => {
-      switch (currentStepKey) {
-        case 'personal':
-          return initialValues.personalInfo;
-        case 'license':
-          return initialValues.service;
-        case 'payment':
-          return {};
-        default:
-          return {};
-      }
-    };
-
-    const currentValues = getCurrentStepValues();
-    const initialStepValues = getInitialStepValues();
-
-    // Deep comparison to check for changes
-    return JSON.stringify(currentValues) !== JSON.stringify(initialStepValues);
-  };
-
   const handleNext = async () => {
     try {
-      const currentStepKey = currentStep;
-
-      // Validate current step fields
-      const fieldsToValidate =
-        currentStepKey === 'personal'
-          ? ['personalInfo' as const]
-          : currentStepKey === 'license'
-            ? ['service' as const]
-            : [];
+      const fieldsToValidate = getMultistepRTOServiceStepValidationFields(currentStep, getValues);
 
       const isStepValid = await trigger(fieldsToValidate);
 
@@ -124,35 +72,28 @@ export function RTOServiceMultistepForm() {
         return;
       }
 
-      const hasChanges = hasCurrentStepChanges();
-
-      if (!hasChanges) {
-        if (isLastStep) {
+      if (currentStep == 'personal') {
+        goToNext();
+      } else if (currentStep == 'license') {
+        setIsSubmitting(true);
+        try {
+          const result = await addRTOService(getValues());
+          if (result.error) {
+            toast.error(result.message);
+            return;
+          }
+          setValue('clientId', result.clientId);
+          setValue('serviceId', result.serviceId);
+          toast.success('RTO service added successfully');
           router.refresh();
-          router.push('/rto-services');
-        } else {
+        } catch (error) {
+          console.error('Error adding RTO service:', error);
+          toast.error('An unexpected error occurred');
+        } finally {
+          setIsSubmitting(false);
           goToNext();
         }
-        return;
-      }
-
-      // Execute step-specific action only if there are changes
-      setIsSubmitting(true);
-      try {
-        // TODO: Implement step-by-step submission
-        if (isLastStep) {
-          // Final submission
-          toast.success('RTO service submitted successfully');
-          router.refresh();
-          router.push('/rto-services');
-        } else {
-          goToNext();
-        }
-      } catch (error) {
-        console.error('Error in step submission:', error);
-        toast.error('An unexpected error occurred');
-      } finally {
-        setIsSubmitting(false);
+      } else if (currentStep == 'payment') {
       }
     } catch (error) {
       console.error(`Error in step ${currentStep}:`, error);

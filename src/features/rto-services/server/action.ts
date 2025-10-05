@@ -9,17 +9,25 @@ import { ActionReturnType } from '@/types/actions';
 import { getRTOService } from './db';
 import { getBranchConfig } from '@/server/db/branch';
 import { getNextClientCode } from '@/db/utils/client-code';
-import { rtoServicesFormSchema } from '../types';
+import { rtoServicesFormSchema, rtoServicesFormSchemaWithOptionalPayment } from '../types';
+import { addRTOService as addRTOServiceInDB, createPayment as createPaymentInDB } from './db';
+import { insertClient, updateClient } from './db';
+import { dateToString } from '@/lib/date-utils';
+import { getRTOServiceCharges } from '../lib/charges';
+import { paymentSchema } from '@/features/enrollment/types';
 
-/**
- * Server action to add a new RTO service
- */
 export async function addRTOService(
   unsafeData: z.infer<typeof rtoServicesFormSchema>
-): ActionReturnType {
+): Promise<{ clientId?: string; serviceId?: string; error: boolean; message: string }> {
   try {
     // Validate the data
-    const { success, data, error: validationError } = rtoServicesFormSchema.safeParse(unsafeData);
+
+    console.log(unsafeData);
+    const {
+      success,
+      data,
+      error: validationError,
+    } = rtoServicesFormSchemaWithOptionalPayment.safeParse(unsafeData);
 
     if (!success) {
       console.error('RTO service validation failed:', validationError.errors);
@@ -30,16 +38,46 @@ export async function addRTOService(
       };
     }
 
-    const { tenantId } = await getBranchConfig();
+    const { tenantId, id: branchId } = await getBranchConfig();
 
     // First, create the RTO client with generated client code
     const clientCode = await getNextClientCode(tenantId);
 
-    console.log(data, clientCode);
+    const clientInformation = {
+      clientCode,
+      ...data.personalInfo,
+      birthDate: dateToString(data.personalInfo.birthDate),
+    };
+
+    let client = null;
+    if (data.clientId) {
+      client = await updateClient(clientInformation, data.clientId);
+    } else {
+      client = await insertClient(clientInformation);
+    }
+
+    if (!client) {
+      return {
+        error: true,
+        message: 'something went wrong',
+      };
+    }
+
+    const { governmentFees, additionalCharges } = getRTOServiceCharges(data.service.type);
+
+    const response = await addRTOServiceInDB({
+      branchId,
+      clientId: client.id,
+      serviceType: data.service.type,
+      governmentFees,
+      serviceCharge: additionalCharges.max,
+    });
 
     return {
       error: false,
       message: 'RTO service and client added successfully',
+      clientId: response.clientId,
+      serviceId: response.id,
     };
   } catch (error) {
     console.error('Error adding RTO service:', error);
@@ -145,3 +183,33 @@ export async function updateRTOServiceStatus(
     };
   }
 }
+
+export const createPayment = async (
+  unsafeData: z.infer<typeof paymentSchema>,
+  serviceId: string
+): Promise<{ error: boolean; message: string; paymentId?: string }> => {
+  try {
+    // 3. Validate payment data
+    const { success, data, error } = paymentSchema.safeParse({
+      ...unsafeData,
+    });
+
+    if (!success) {
+      console.error('Payment validation error:', error);
+      return { error: true, message: 'Invalid payment data' };
+    }
+
+    // 4. Upsert payment
+    const paymentId = await createPaymentInDB(data, data.paymentMode, serviceId);
+
+    return {
+      error: false,
+      message: 'Payment acknowledged successfully',
+      paymentId,
+    };
+  } catch (error) {
+    console.error('Error processing payment data:', error);
+    const message = error instanceof Error ? error.message : 'Failed to save payment information';
+    return { error: true, message };
+  }
+};

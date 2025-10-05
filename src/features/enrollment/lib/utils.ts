@@ -1,25 +1,7 @@
 import { Path } from 'react-hook-form';
 import { AdmissionFormValues } from '../types';
 import { Enrollment } from '@/server/db/plan';
-
-// Helper function to generate field paths from type
-const generateFieldPaths = ({
-  prefix,
-  excludeFields = [],
-  getValues,
-}: {
-  prefix: keyof AdmissionFormValues;
-  excludeFields?: string[];
-  getValues: (key: string) => unknown;
-}): Path<AdmissionFormValues>[] => {
-  // Get the value for the specified prefix and safely handle undefined
-  const value = getValues(prefix);
-  const fields = value ? Object.keys(value) : [];
-
-  return fields
-    .filter((field) => !excludeFields.includes(field))
-    .map((field) => `${String(prefix)}.${field}` as Path<AdmissionFormValues>);
-};
+import { generateFieldPaths } from '@/lib/utils';
 
 // Function to get validation fields for a specific step
 export const getMultistepAdmissionStepValidationFields = (
@@ -30,28 +12,28 @@ export const getMultistepAdmissionStepValidationFields = (
     case 'service':
       return ['serviceType'];
     case 'personal':
-      return generateFieldPaths({
+      return generateFieldPaths<AdmissionFormValues>({
         prefix: 'personalInfo',
         getValues,
       });
     case 'license':
       return [
-        ...generateFieldPaths({
+        ...generateFieldPaths<AdmissionFormValues>({
           prefix: 'learningLicense',
           getValues,
         }),
-        ...generateFieldPaths({
+        ...generateFieldPaths<AdmissionFormValues>({
           prefix: 'learningLicense',
           getValues,
         }),
       ];
     case 'plan':
-      return generateFieldPaths({
+      return generateFieldPaths<AdmissionFormValues>({
         prefix: 'plan',
         getValues,
       });
     case 'payment':
-      return generateFieldPaths({
+      return generateFieldPaths<AdmissionFormValues>({
         prefix: 'payment',
         getValues,
       });

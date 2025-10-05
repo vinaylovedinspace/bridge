@@ -1,7 +1,14 @@
 import { db } from '@/db';
-import { ClientTable, RTOServicesTable } from '@/db/schema';
+import {
+  ClientTable,
+  FullPaymentTable,
+  PaymentModeEnum,
+  PaymentTable,
+  RTOServicesTable,
+} from '@/db/schema';
 import { eq, and, ilike, or, isNull } from 'drizzle-orm';
 import type { RTOServiceStatus, RTOServiceType } from '../types';
+import { dateToString } from '@/lib/date-utils';
 
 export const addRTOService = async (data: typeof RTOServicesTable.$inferInsert) => {
   const [rtoService] = await db.insert(RTOServicesTable).values(data).returning();
@@ -82,6 +89,7 @@ export const getRTOServices = async (
       where: and(...conditions),
       with: {
         client: true,
+        payment: true,
       },
       orderBy: (RTOServicesTable, { desc }) => [desc(RTOServicesTable.createdAt)],
     });
@@ -134,4 +142,75 @@ export const getRTOServiceByClient = async (clientId: string) => {
     console.log(error);
     return undefined;
   }
+};
+
+export const insertClient = async (data: typeof ClientTable.$inferInsert) => {
+  const [client] = await db.insert(ClientTable).values(data).returning({
+    id: ClientTable.id,
+  });
+  return client;
+};
+
+export const updateClient = async (data: typeof ClientTable.$inferInsert, clientId: string) => {
+  const [client] = await db
+    .update(ClientTable)
+    .set(data)
+    .where(eq(ClientTable.id, clientId))
+    .returning({
+      id: ClientTable.id,
+    });
+  return client;
+};
+
+export const createPayment = async (
+  data: typeof PaymentTable.$inferInsert,
+  paymentMode: (typeof PaymentModeEnum.enumValues)[number],
+  serviceId: string
+) => {
+  const response = await db.transaction(async (tx) => {
+    const isPaymentModeCashOrQR = paymentMode === 'CASH' || paymentMode === 'QR';
+
+    let paymentId;
+    if (isPaymentModeCashOrQR) {
+      const [payment] = await tx
+        .insert(PaymentTable)
+        .values({
+          ...data,
+          paymentStatus: 'FULLY_PAID',
+        })
+        .returning({
+          id: PaymentTable.id,
+        });
+
+      await tx.insert(FullPaymentTable).values({
+        paymentId: payment.id,
+        paymentDate: dateToString(new Date()),
+        paymentMode,
+        isPaid: true,
+      });
+      paymentId = payment.id;
+    } else {
+      const [payment] = await tx
+        .insert(PaymentTable)
+        .values({
+          ...data,
+          paymentStatus: 'FULLY_PAID',
+        })
+        .returning({
+          id: PaymentTable.id,
+        });
+      paymentId = payment.id;
+    }
+
+    await tx
+      .update(RTOServicesTable)
+      .set({
+        paymentId,
+      })
+      .where(eq(RTOServicesTable.id, serviceId));
+
+    return paymentId;
+  });
+
+  return response;
 };
