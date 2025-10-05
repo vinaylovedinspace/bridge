@@ -2,10 +2,18 @@ import { TypographyH4 } from '@/components/ui/typography';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { RTOServiceMultistepForm } from '@/features/rto-services/components/form/multistep-form';
+import { getRTOService } from '@/features/rto-services/server/db';
+import { notFound } from 'next/navigation';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  console.log(id);
+
+  const rtoService = await getRTOService(id);
+
+  if (!rtoService) {
+    notFound();
+  }
+
   return (
     <div>
       <div className="flex gap-4 items-center">
@@ -14,7 +22,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         </Link>
         <TypographyH4>Edit RTO Service</TypographyH4>
       </div>
-      <RTOServiceMultistepForm />
+      <RTOServiceMultistepForm rtoService={rtoService} />
     </div>
   );
 }

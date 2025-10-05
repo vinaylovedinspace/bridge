@@ -13,29 +13,24 @@ import { LicenseStep } from './steps/service';
 import { PaymentContainer } from './steps/payment';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRTOServiceStepNavigation, RTOServiceProgressBar } from './progress-bar';
-import { DEFAULT_STATE } from '@/lib/constants/business';
-import { getMultistepRTOServiceStepValidationFields } from '../../lib/utils';
+import {
+  getMultistepRTOServiceStepValidationFields,
+  getDefaultValuesForRTOServiceForm,
+} from '../../lib/utils';
 import { addRTOService } from '../../server/action';
+import { getRTOService } from '../../server/db';
 
-export function RTOServiceMultistepForm() {
+type RTOServiceMultistepFormProps = {
+  rtoService?: Awaited<ReturnType<typeof getRTOService>>;
+};
+
+export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const methods = useForm<RTOServiceFormValues>({
     resolver: zodResolver(rtoServicesFormSchema),
-    defaultValues: {
-      personalInfo: {
-        educationalQualification: 'GRADUATE',
-        citizenStatus: 'BIRTH',
-        isCurrentAddressSameAsPermanentAddress: false,
-        state: DEFAULT_STATE,
-        permanentState: DEFAULT_STATE,
-      },
-      service: {
-        type: 'NEW_DRIVING_LICENCE',
-        license: {},
-      },
-    },
+    defaultValues: getDefaultValuesForRTOServiceForm(rtoService),
     mode: 'onChange',
   });
 

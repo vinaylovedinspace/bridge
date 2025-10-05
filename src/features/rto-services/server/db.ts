@@ -40,7 +40,12 @@ export const getRTOService = async (id: string) => {
     const rtoService = await db.query.RTOServicesTable.findFirst({
       where: and(...conditions),
       with: {
-        client: true,
+        client: {
+          with: {
+            drivingLicense: true,
+          },
+        },
+        payment: true,
       },
       orderBy: (RTOServicesTable, { desc }) => [desc(RTOServicesTable.createdAt)],
     });
