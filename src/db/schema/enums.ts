@@ -10,5 +10,3 @@ export const LicenseClassEnum = pgEnum('license_classes', [
   'E_CART',
   'OTHERS',
 ]);
-
-export const ServiceTypeEnum = pgEnum('service_type', ['FULL_SERVICE', 'DRIVING_ONLY']);

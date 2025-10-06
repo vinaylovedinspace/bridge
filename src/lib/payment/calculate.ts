@@ -4,6 +4,7 @@
  */
 
 import { PaymentTypeEnum } from '@/db/schema/payment/columns';
+import { DEFAULT_SESSION_DAYS, DEFAULT_SESSION_MINUTES } from '../constants/business';
 
 /**
  * Payment calculation constants
@@ -19,14 +20,6 @@ export const PAYMENT_CONSTANTS = {
   INSTALLMENT_SPLIT_RATIO: 0.5,
 } as const;
 
-export type PaymentCalculationInput = {
-  sessions: number;
-  duration: number;
-  rate: number;
-  discount: number;
-  paymentType: (typeof PaymentTypeEnum.enumValues)[number];
-};
-
 export type PaymentCalculationResult = {
   originalAmount: number;
   discount: number;
@@ -35,29 +28,14 @@ export type PaymentCalculationResult = {
   secondInstallmentAmount: number;
 };
 
-/**
- * Validates payment calculation inputs
- * @throws Error if inputs are invalid
- */
-function validatePaymentInputs(input: PaymentCalculationInput): void {
-  const { sessions, duration, rate, discount } = input;
-
-  if (sessions < 0 || !Number.isFinite(sessions)) {
-    throw new Error(`Invalid sessions count: ${sessions}. Must be a non-negative number.`);
-  }
-
-  if (duration < 0 || !Number.isFinite(duration)) {
-    throw new Error(`Invalid duration: ${duration}. Must be a non-negative number.`);
-  }
-
-  if (rate < 0 || !Number.isFinite(rate)) {
-    throw new Error(`Invalid rate: ${rate}. Must be a non-negative number.`);
-  }
-
-  if (discount < 0 || !Number.isFinite(discount)) {
-    throw new Error(`Invalid discount: ${discount}. Must be a non-negative number.`);
-  }
-}
+export type PaymentCalculationInput = {
+  sessions: number;
+  duration: number;
+  rate: number;
+  discount: number;
+  paymentType: (typeof PaymentTypeEnum.enumValues)[number];
+  licenseServiceFee: number;
+};
 
 /**
  * Calculate payment breakdown based on plan and vehicle data
@@ -89,34 +67,28 @@ function validatePaymentInputs(input: PaymentCalculationInput): void {
  * })
  * // Returns: { originalAmount: 2000, discount: 500, finalAmount: 1500, firstInstallmentAmount: 750, secondInstallmentAmount: 750 }
  */
-export function calculatePaymentBreakdown({
+export function calculateEnrollmentPaymentBreakdown({
   sessions,
   duration,
   rate,
   discount,
   paymentType,
+  licenseServiceFee,
 }: PaymentCalculationInput): PaymentCalculationResult {
-  // Validate inputs
-  validatePaymentInputs({ sessions, duration, rate, discount, paymentType });
-
   // Ensure all values are numbers and positive
-  const safeSessionCount = Math.max(0, Number(sessions) || 0);
-  const safeDuration = Math.max(0, Number(duration) || 0);
-  const safeRate = Math.max(0, Number(rate) || 0);
-  const safeDiscount = Math.max(0, Number(discount) || 0);
+  const safeSessionCount = Number(sessions) ?? DEFAULT_SESSION_DAYS;
+  const safeDuration = Number(duration) ?? DEFAULT_SESSION_MINUTES;
+  const safeRate = Number(rate) ?? 0;
+  const safeDiscount = Number(discount) ?? 0;
+  const safeLicenseServiceFee = Number(licenseServiceFee) ?? 0;
 
   // Calculate half-hour blocks, rounding up
   const halfHourBlocks = Math.ceil(safeDuration / PAYMENT_CONSTANTS.SESSION_BLOCK_MINUTES);
 
   // Calculate original amount
-  const originalAmount = safeSessionCount * halfHourBlocks * safeRate;
+  const trainingFees = safeSessionCount * halfHourBlocks * safeRate;
 
-  // Validate discount doesn't exceed original amount
-  if (safeDiscount > originalAmount) {
-    throw new Error(
-      `Discount amount (₹${safeDiscount}) cannot exceed original amount (₹${originalAmount})`
-    );
-  }
+  const originalAmount = trainingFees + safeLicenseServiceFee;
 
   // Calculate final amount after discount
   const finalAmount = Math.max(0, originalAmount - safeDiscount);
@@ -262,44 +234,6 @@ export function calculateOutstandingAmount(payment: PaymentData | null | undefin
 }
 
 /**
- * Recalculate installment amounts including additional fees (like license fees)
- * Used when grand total includes both base amount and additional charges
- *
- * @param grandTotal - Total amount including all fees
- * @param discount - Discount amount to apply
- * @returns Object with first and second installment amounts
- *
- * @example
- * recalculateInstallments(10000, 500)
- * // Returns: { firstInstallment: 4750, secondInstallment: 4750 }
- */
-export function recalculateInstallments(
-  grandTotal: number,
-  discount: number = 0
-): { firstInstallment: number; secondInstallment: number } {
-  if (grandTotal < 0 || !Number.isFinite(grandTotal)) {
-    throw new Error(`Invalid grand total: ${grandTotal}`);
-  }
-
-  if (discount < 0 || !Number.isFinite(discount)) {
-    throw new Error(`Invalid discount: ${discount}`);
-  }
-
-  if (discount > grandTotal) {
-    throw new Error(`Discount amount (₹${discount}) cannot exceed grand total (₹${grandTotal})`);
-  }
-
-  const finalAmount = grandTotal - discount;
-  const firstInstallment = Math.ceil(finalAmount * PAYMENT_CONSTANTS.INSTALLMENT_SPLIT_RATIO);
-  const secondInstallment = finalAmount - firstInstallment;
-
-  return {
-    firstInstallment,
-    secondInstallment,
-  };
-}
-
-/**
  * Calculate amount due for current payment, accounting for existing payments and discount changes
  *
  * @param params - Calculation parameters
@@ -418,34 +352,8 @@ export function calculateRTOPaymentBreakdown({
   branchServiceCharge,
   discount = 0,
 }: RTOPaymentCalculationInput): RTOPaymentCalculationResult {
-  // Validate inputs
-  if (governmentFees < 0 || !Number.isFinite(governmentFees)) {
-    throw new Error(`Invalid government fees: ${governmentFees}. Must be a non-negative number.`);
-  }
-
-  if (serviceCharge < 0 || !Number.isFinite(serviceCharge)) {
-    throw new Error(`Invalid service charge: ${serviceCharge}. Must be a non-negative number.`);
-  }
-
-  if (branchServiceCharge < 0 || !Number.isFinite(branchServiceCharge)) {
-    throw new Error(
-      `Invalid branch service charge: ${branchServiceCharge}. Must be a non-negative number.`
-    );
-  }
-
-  if (discount < 0 || !Number.isFinite(discount)) {
-    throw new Error(`Invalid discount: ${discount}. Must be a non-negative number.`);
-  }
-
   // Calculate amounts
   const originalAmount = governmentFees + serviceCharge + branchServiceCharge;
-
-  // Validate discount doesn't exceed original amount
-  if (discount > originalAmount) {
-    throw new Error(
-      `Discount amount (₹${discount}) cannot exceed original amount (₹${originalAmount})`
-    );
-  }
 
   const finalAmount = Math.max(0, originalAmount - discount);
 

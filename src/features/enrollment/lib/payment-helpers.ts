@@ -1,6 +1,4 @@
-import { PlanTable, VehicleTable, PaymentTypeEnum } from '@/db/schema';
 import { dateToString } from '@/lib/date-utils';
-import { calculatePaymentBreakdown } from '@/lib/payment/calculate';
 import { generateSessionsFromPlan } from '@/lib/sessions';
 import { getBranchConfig } from '@/server/db/branch';
 import { createSessions, getSessionsByClientId } from '@/server/actions/sessions';
@@ -11,68 +9,6 @@ import {
   getPlanForSessionsInDB,
   getClientForSessionsInDB,
 } from '../server/db';
-
-/**
- * Calculate payment amounts based on plan and vehicle
- */
-export const calculatePaymentAmounts = (
-  plan: typeof PlanTable.$inferSelect,
-  vehicle: typeof VehicleTable.$inferSelect,
-  discount: number,
-  paymentType: (typeof PaymentTypeEnum.enumValues)[number],
-  licenseServiceFee: number = 0
-) => {
-  // Validate inputs
-  if (plan.numberOfSessions <= 0) {
-    throw new Error('Number of sessions must be greater than 0');
-  }
-
-  if (plan.sessionDurationInMinutes <= 0) {
-    throw new Error('Session duration must be greater than 0');
-  }
-
-  if (vehicle.rent < 0) {
-    throw new Error('Vehicle rent cannot be negative');
-  }
-
-  if (discount < 0) {
-    throw new Error('Discount cannot be negative');
-  }
-
-  if (licenseServiceFee < 0) {
-    throw new Error('License service fee cannot be negative');
-  }
-
-  // Calculate vehicle rental fees
-  const vehicleRentalBreakdown = calculatePaymentBreakdown({
-    sessions: plan.numberOfSessions,
-    duration: plan.sessionDurationInMinutes,
-    rate: vehicle.rent,
-    discount: 0, // Don't apply discount yet
-    paymentType,
-  });
-
-  // Add license service fee to original amount
-  const originalAmount = vehicleRentalBreakdown.originalAmount + licenseServiceFee;
-  const finalAmount = originalAmount - discount;
-
-  // Recalculate installments if needed
-  let firstInstallmentAmount = 0;
-  let secondInstallmentAmount = 0;
-
-  if (paymentType === 'INSTALLMENTS') {
-    firstInstallmentAmount = Math.ceil(finalAmount / 2);
-    secondInstallmentAmount = finalAmount - firstInstallmentAmount;
-  }
-
-  return {
-    originalAmount,
-    discount,
-    finalAmount,
-    firstInstallmentAmount,
-    secondInstallmentAmount,
-  };
-};
 
 /**
  * Handle full payment creation

@@ -16,3 +16,6 @@ export const DAYS_OF_WEEK = [
   { id: 5, label: 'Friday', short: 'Fri' },
   { id: 6, label: 'Saturday', short: 'Sat' },
 ] as const;
+
+export const DEFAULT_SESSION_DAYS = 21;
+export const DEFAULT_SESSION_MINUTES = 30;

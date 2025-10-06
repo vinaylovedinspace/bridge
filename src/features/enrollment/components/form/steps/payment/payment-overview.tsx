@@ -16,7 +16,6 @@ export const PaymentOverview = ({ existingPayment }: PaymentOverviewProps) => {
     secondInstallmentPayment,
     isFirstInstallmentPaid,
     isSecondInstallmentPaid,
-    isCheckboxChecked,
     paymentType,
   } = usePaymentCalculations({ existingPayment });
 
@@ -96,7 +95,7 @@ export const PaymentOverview = ({ existingPayment }: PaymentOverviewProps) => {
             </>
           )}
 
-          {isCheckboxChecked && (
+          {paymentType === 'FULL_PAYMENT' && (
             <>
               <Separator className="my-6" />
               <div className="flex justify-between">

@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { createInsertSchema } from 'drizzle-zod';
-import { ServiceTypeEnum } from '@/db/schema/enums';
-import { PlanTable } from '@/db/schema/plan/columns';
+import { PlanTable, ServiceTypeEnum } from '@/db/schema/plan/columns';
 import { isTimeWithinOperatingHours } from '@/lib/utils/date-utils';
 import { personalInfoSchema } from '@/types/zod/client';
 import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';

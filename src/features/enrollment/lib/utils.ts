@@ -3,9 +3,12 @@ import { AdmissionFormValues } from '../types';
 import { Enrollment } from '@/server/db/plan';
 import { generateFieldPaths } from '@/lib/utils';
 import { getClientById } from '../server/action';
-import { DEFAULT_STATE } from '@/lib/constants/business';
+import {
+  DEFAULT_SESSION_DAYS,
+  DEFAULT_SESSION_MINUTES,
+  DEFAULT_STATE,
+} from '@/lib/constants/business';
 import { parseDateStringToDateObject } from '@/lib/date-utils';
-import { DEFAULT_SESSION_DAYS, DEFAULT_SESSION_MINUTES } from '@/types/defaults';
 
 // Function to get validation fields for a specific step
 export const getMultistepAdmissionStepValidationFields = (
@@ -224,6 +227,3 @@ export const getDefaultValuesForEditEnrollmentForm = (
     paymentId: payment?.id,
   };
 };
-
-// Re-export payment utilities from centralized location
-export { calculateOutstandingAmount, calculatePaymentBreakdown } from '@/lib/payment/calculate';

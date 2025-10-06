@@ -28,12 +28,12 @@ import {
   handleSessionGeneration,
 } from '../lib/plan-helpers';
 import {
-  calculatePaymentAmounts,
   createFallbackSessions,
   handleFullPayment,
   handleInstallmentPayment,
 } from '../lib/payment-helpers';
 import { paymentSchema } from '@/types/zod/payment';
+import { calculateEnrollmentPaymentBreakdown } from '@/lib/payment/calculate';
 
 export const createClient = async (
   unsafeData: z.infer<typeof personalInfoSchema>
@@ -265,15 +265,15 @@ export const createPayment = async (
 
     const { plan, vehicle } = result;
 
-    // 2. Calculate payment amounts (including license service fee)
     const { originalAmount, finalAmount, firstInstallmentAmount, secondInstallmentAmount } =
-      calculatePaymentAmounts(
-        plan,
-        vehicle,
-        unsafeData.discount,
-        unsafeData.paymentType,
-        unsafeData.licenseServiceFee || 0
-      );
+      calculateEnrollmentPaymentBreakdown({
+        sessions: plan.numberOfSessions,
+        duration: plan.sessionDurationInMinutes,
+        rate: vehicle.rent,
+        discount: unsafeData.discount,
+        paymentType: unsafeData.paymentType,
+        licenseServiceFee: unsafeData.licenseServiceFee,
+      });
 
     // 3. Validate payment data
     const { success, data, error } = paymentSchema.safeParse({

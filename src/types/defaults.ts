@@ -1,2 +1,0 @@
-export const DEFAULT_SESSION_DAYS = 21;
-export const DEFAULT_SESSION_MINUTES = 30;

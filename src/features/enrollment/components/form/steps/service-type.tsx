@@ -6,12 +6,18 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { TypographyH3, TypographyH4, TypographySmall } from '@/components/ui/typography';
 import { GraduationCap, Car } from 'lucide-react';
+import { ServiceTypeEnum } from '@/db/schema';
 
 type ServiceTypeStepProps = {
   disabled?: boolean;
 };
 
-const serviceTypeOptions = [
+const serviceTypeOptions: {
+  value: (typeof ServiceTypeEnum.enumValues)[number];
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
   {
     value: 'FULL_SERVICE' as const,
     label: 'Full Service Package',

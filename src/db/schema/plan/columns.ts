@@ -1,5 +1,4 @@
 import { pgTable, timestamp, uuid, integer, time, text, pgEnum } from 'drizzle-orm/pg-core';
-import { ServiceTypeEnum } from '../enums';
 
 export const PlanEnum = pgEnum('status', [
   'NOT_STARTED',
@@ -8,6 +7,7 @@ export const PlanEnum = pgEnum('status', [
   'WAITING_FOR_DL_TEST',
   'COMPLETED',
 ]);
+export const ServiceTypeEnum = pgEnum('service_type', ['FULL_SERVICE', 'DRIVING_ONLY']);
 
 export const PlanTable = pgTable('plans', {
   id: uuid('id').primaryKey().defaultRandom(),
