@@ -1,35 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  PaymentStep,
-  PaymentOverview,
-  PAYMENT_INFO,
-} from '@/features/enrollment/components/form/steps/payment';
+import { PaymentStep, PaymentOverview } from '@/features/enrollment/components/form/steps/payment';
 import { Enrollment } from '@/server/db/plan';
 
 export const PaymentContainer = ({ payment }: { payment: NonNullable<Enrollment>['payment'] }) => {
-  const [paymentCheckboxes, setPaymentCheckboxes] = useState(() => {
-    // Initialize with existing payment data if available
-    if (payment) {
-      return {
-        discount: {
-          label: 'Apply Discount',
-          isChecked: payment.discount > 0,
-          value: payment.discount > 0 ? payment.discount.toString() : '',
-        },
-        installments: {
-          label: 'Pay in Installments',
-          isChecked: payment.paymentType === 'INSTALLMENTS',
-          date: null,
-        },
-      };
-    }
-
-    // Default state for new payments
-    return PAYMENT_INFO;
-  });
-
   // If payment is fully paid, show only the payment summary
   if (payment?.paymentStatus === 'FULLY_PAID') {
     return (
@@ -46,11 +20,7 @@ export const PaymentContainer = ({ payment }: { payment: NonNullable<Enrollment>
           </div>
         </div>
         <div className="col-span-12 md:col-span-6 md:col-start-4">
-          <PaymentOverview
-            discountInfo={paymentCheckboxes.discount}
-            paymentCheckboxes={paymentCheckboxes}
-            existingPayment={payment}
-          />
+          <PaymentOverview existingPayment={payment} />
         </div>
       </div>
     );
@@ -58,17 +28,9 @@ export const PaymentContainer = ({ payment }: { payment: NonNullable<Enrollment>
 
   return (
     <div className="grid grid-cols-12 gap-6">
-      <PaymentStep
-        paymentCheckboxes={paymentCheckboxes}
-        setPaymentCheckboxes={setPaymentCheckboxes}
-        existingPayment={payment}
-      />
+      <PaymentStep existingPayment={payment} />
       <div className="col-span-4">
-        <PaymentOverview
-          discountInfo={paymentCheckboxes.discount}
-          paymentCheckboxes={paymentCheckboxes}
-          existingPayment={payment}
-        />
+        <PaymentOverview existingPayment={payment} />
       </div>
 
       {/* Show existing payment info if discount was applied */}
@@ -96,26 +58,6 @@ type PaymentContainerProps = {
 };
 
 export const PaymentContainerWithEnrollment = ({ enrollment }: PaymentContainerProps) => {
-  const [paymentCheckboxes, setPaymentCheckboxes] = useState(() => {
-    const payment = enrollment.payment;
-
-    if (payment) {
-      return {
-        discount: {
-          label: 'Apply Discount',
-          isChecked: payment.discount > 0,
-          value: payment.discount > 0 ? payment.discount.toString() : '',
-        },
-        installments: {
-          label: 'Pay in Installments',
-          isChecked: payment.paymentType === 'INSTALLMENTS',
-          date: null,
-        },
-      };
-    }
-    return PAYMENT_INFO;
-  });
-
   const { payment } = enrollment;
   const isPaymentProcessed = payment?.paymentStatus === 'FULLY_PAID';
 
@@ -134,11 +76,7 @@ export const PaymentContainerWithEnrollment = ({ enrollment }: PaymentContainerP
           </div>
         </div>
         <div className="col-span-12 md:col-span-6 md:col-start-4">
-          <PaymentOverview
-            discountInfo={paymentCheckboxes.discount}
-            paymentCheckboxes={paymentCheckboxes}
-            existingPayment={payment}
-          />
+          <PaymentOverview existingPayment={payment} />
         </div>
       </div>
     );
@@ -146,17 +84,9 @@ export const PaymentContainerWithEnrollment = ({ enrollment }: PaymentContainerP
 
   return (
     <div className="grid grid-cols-12 gap-6">
-      <PaymentStep
-        paymentCheckboxes={paymentCheckboxes}
-        setPaymentCheckboxes={setPaymentCheckboxes}
-        existingPayment={payment}
-      />
+      <PaymentStep existingPayment={payment} />
       <div className="col-span-4">
-        <PaymentOverview
-          discountInfo={paymentCheckboxes.discount}
-          paymentCheckboxes={paymentCheckboxes}
-          existingPayment={payment}
-        />
+        <PaymentOverview existingPayment={payment} />
       </div>
 
       {/* Show existing payment info if discount was applied */}

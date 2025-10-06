@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { FormItem, FormLabel } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
@@ -11,14 +11,10 @@ import { toast } from 'sonner';
 import { Loader2, CheckCircle, MessageSquare, Phone } from 'lucide-react';
 import { createPaymentLinkAction } from '@/features/enrollment/server/action';
 import { useRouter } from 'next/navigation';
-import { Enrollment } from '@/server/db/plan';
 import { RTOServiceFormValues } from '@/features/rto-services/types';
 import { createPayment } from '@/features/rto-services/server/action';
-type PaymentModeSelectorProps = {
-  existingPayment: NonNullable<Enrollment>['payment'];
-};
 
-export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProps) => {
+export const PaymentModeSelector = () => {
   const { getValues, setValue } = useFormContext<RTOServiceFormValues>();
   const router = useRouter();
 
@@ -30,23 +26,8 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
   const [smsSent, setSmsSent] = useState(false);
   const [isAcceptingPayment, setIsAcceptingPayment] = useState(false);
 
-  // Check if this is installment payment and if 1st installment is paid
-  const isFirstInstallmentPaid = useMemo(() => {
-    if (!existingPayment || existingPayment.paymentType !== 'INSTALLMENTS') {
-      return false;
-    }
-    const firstInstallment = existingPayment.installmentPayments?.find(
-      (inst) => inst.installmentNumber === 1
-    );
-    return firstInstallment?.isPaid ?? false;
-  }, [existingPayment]);
-
-  const buttonText = useMemo(() => {
-    if (isFirstInstallmentPaid) {
-      return 'Accept 2nd Installment';
-    }
-    return 'Accept Payment';
-  }, [isFirstInstallmentPaid]);
+  // RTO services always use FULL_PAYMENT, no installments
+  const buttonText = 'Accept Payment';
 
   const handleAcceptPayment = async () => {
     setIsAcceptingPayment(true);
@@ -254,7 +235,7 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
         )}
 
         {(paymentMode === 'CASH' || paymentMode === 'QR') && (
-          <div className="mt-6">
+          <div className="mt-8">
             <Button
               onClick={handleAcceptPayment}
               type="button"

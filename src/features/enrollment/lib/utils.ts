@@ -5,6 +5,7 @@ import { generateFieldPaths } from '@/lib/utils';
 import { getClientById } from '../server/action';
 import { DEFAULT_STATE } from '@/lib/constants/business';
 import { parseDateStringToDateObject } from '@/lib/date-utils';
+import { DEFAULT_SESSION_DAYS, DEFAULT_SESSION_MINUTES } from '@/types/defaults';
 
 // Function to get validation fields for a specific step
 export const getMultistepAdmissionStepValidationFields = (
@@ -132,8 +133,8 @@ export const mapDrivingLicense = (
 
 const DEFAULT_PLAN_VALUES = {
   vehicleId: '',
-  numberOfSessions: 21,
-  sessionDurationInMinutes: 30,
+  numberOfSessions: DEFAULT_SESSION_DAYS,
+  sessionDurationInMinutes: DEFAULT_SESSION_MINUTES,
   joiningDate: new Date(),
   joiningTime: '12:00',
   serviceType: 'FULL_SERVICE' as const,
@@ -142,6 +143,7 @@ const DEFAULT_PLAN_VALUES = {
 const DEFAULT_PAYMENT_VALUES = {
   discount: 0,
   paymentMode: 'PAYMENT_LINK' as const,
+  applyDiscount: false,
 };
 
 export const getDefaultValuesForAddEnrollmentForm = (
@@ -204,6 +206,7 @@ export const getDefaultValuesForEditEnrollmentForm = (
           finalAmount: payment.finalAmount,
           clientId: payment.clientId,
           paymentMode: 'PAYMENT_LINK' as const,
+          applyDiscount: payment.discount > 0,
         }
       : {
           discount: 0,
@@ -214,6 +217,7 @@ export const getDefaultValuesForEditEnrollmentForm = (
           finalAmount: 0,
           clientId: client.id,
           paymentMode: 'PAYMENT_LINK' as const,
+          applyDiscount: false,
         },
     clientId: client.id,
     planId: enrollment.id,

@@ -68,6 +68,8 @@ export const paymentSchema = createInsertSchema(PaymentTable, {
     paymentMode: z
       .enum(PaymentModeEnum.enumValues, { required_error: 'Payment mode is required' })
       .default('PAYMENT_LINK'),
+    // UI-only field to track discount checkbox state
+    applyDiscount: z.boolean().default(false).optional(),
   });
 
 export const fullPaymentSchema = createInsertSchema(FullPaymentTable, {

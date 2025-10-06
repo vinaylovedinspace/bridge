@@ -1,100 +1,30 @@
-import { useFormContext } from 'react-hook-form';
-import { AdmissionFormValues } from '@/features/enrollment/types';
-import { useVehicle } from '@/hooks/vehicles';
 import { TypographyLarge, TypographyMuted } from '@/components/ui/typography';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Info } from 'lucide-react';
-import {
-  calculatePaymentBreakdown,
-  formatCurrency,
-  calculateOutstandingAmount,
-} from '@/lib/payment/calculate';
 import { Enrollment } from '@/server/db/plan';
-import { PaymentInfoState } from './types';
+import { usePaymentCalculations } from '@/features/enrollment/hooks/use-payment-calculations';
 
 type PaymentOverviewProps = {
-  discountInfo: { isChecked: boolean; value: string };
-  paymentCheckboxes: PaymentInfoState;
   existingPayment: NonNullable<Enrollment>['payment'];
 };
 
-export const PaymentOverview = ({
-  discountInfo,
-  paymentCheckboxes,
-  existingPayment,
-}: PaymentOverviewProps) => {
-  const { getValues } = useFormContext<AdmissionFormValues>();
-  const { plan } = getValues();
-  const { data: vehicle } = useVehicle(plan?.vehicleId || '');
-
-  // Get discount value from props
-  const discountValue = discountInfo.isChecked ? Number(discountInfo.value) || 0 : 0;
-
-  // Determine payment type based on checkboxes
-  const paymentType = paymentCheckboxes.installments.isChecked ? 'INSTALLMENTS' : 'FULL_PAYMENT';
-
-  const firstInstallmentPayment = existingPayment?.installmentPayments?.find(
-    (installment) => installment.installmentNumber === 1 && installment.isPaid
-  );
-
-  const secondInstallmentPayment = existingPayment?.installmentPayments?.find(
-    (installment) => installment.installmentNumber === 2 && installment.isPaid
-  );
-
-  // Check if first installment is already paid
-  const isFirstInstallmentPaid = firstInstallmentPayment?.isPaid;
-  const amountPaidInFirstInstallment = firstInstallmentPayment?.amount;
-
-  const isSecondInstallmentPaid = secondInstallmentPayment?.isPaid;
-
-  // Use the shared utility function for payment calculations
+export const PaymentOverview = ({ existingPayment }: PaymentOverviewProps) => {
   const {
-    originalAmount: totalFees,
-    firstInstallmentAmount,
-    secondInstallmentAmount,
-  } = calculatePaymentBreakdown({
-    sessions: plan?.numberOfSessions || 0,
-    duration: plan?.sessionDurationInMinutes || 0,
-    rate: vehicle?.rent || 0,
-    discount: discountValue,
+    formatted,
+    firstInstallmentPayment,
+    secondInstallmentPayment,
+    isFirstInstallmentPaid,
+    isSecondInstallmentPaid,
+    isCheckboxChecked,
     paymentType,
-  });
-
-  // Calculate the amount due
-  // If existingPayment exists, use it to calculate based on payment history
-  // Otherwise, calculate based on current form values (new enrollment)
-  let amountDue: number;
-  if (existingPayment) {
-    amountDue = calculateOutstandingAmount(existingPayment);
-  } else {
-    // For new enrollments, calculate from form values
-    const finalAmount = totalFees - discountValue;
-    if (paymentType === 'INSTALLMENTS') {
-      // For installments, show first installment as amount due
-      amountDue = firstInstallmentAmount;
-    } else {
-      // For full payment, show total final amount
-      amountDue = finalAmount;
-    }
-  }
-
-  // Format amounts using the shared utility function
-  const formattedFees = formatCurrency(totalFees);
-  const formattedDiscount = discountValue > 0 ? formatCurrency(discountValue) : null;
-  const formattedFirstInstallment = formatCurrency(
-    amountPaidInFirstInstallment || firstInstallmentAmount
-  );
-  const formattedSecondInstallment = formatCurrency(secondInstallmentAmount);
-  const formattedAmountDue = formatCurrency(amountDue);
-
-  const isCheckboxChecked = Object.values(paymentCheckboxes).some((checkbox) => checkbox.isChecked);
+  } = usePaymentCalculations({ existingPayment });
 
   return (
     <Card className="p-6 flex flex-col pt-10 min-h-[32rem] h-full">
       <div className="space-y-3">
         <TypographyLarge className="text-primary text-4xl text-center">
-          {formattedAmountDue}
+          {formatted.amountDue}
         </TypographyLarge>
         <div className="flex items-center justify-center space-x-2">
           <span
@@ -110,21 +40,21 @@ export const PaymentOverview = ({
         <div>
           <div className="flex justify-between">
             <TypographyMuted>Total Fees</TypographyMuted>
-            <TypographyMuted className="font-semibold">{formattedFees}</TypographyMuted>
+            <TypographyMuted className="font-semibold">{formatted.totalFees}</TypographyMuted>
           </div>
 
-          {formattedDiscount && (
+          {formatted.discount && (
             <>
               <div className="flex justify-between mt-2">
                 <TypographyMuted>Discount</TypographyMuted>
                 <TypographyMuted className="font-semibold text-green-600">
-                  -{formattedDiscount}
+                  -{formatted.discount}
                 </TypographyMuted>
               </div>
             </>
           )}
 
-          {paymentCheckboxes.installments.isChecked && (
+          {paymentType === 'INSTALLMENTS' && (
             <>
               <div className="flex justify-between mt-4">
                 <TypographyMuted className="flex items-center gap-2">
@@ -138,7 +68,7 @@ export const PaymentOverview = ({
                 <TypographyMuted
                   className={`font-semibold ${isFirstInstallmentPaid ? 'text-green-600' : ''}`}
                 >
-                  {formattedFirstInstallment}
+                  {formatted.firstInstallment}
                 </TypographyMuted>
               </div>
               <div className="flex justify-between mt-2">
@@ -151,7 +81,7 @@ export const PaymentOverview = ({
                   )}
                 </TypographyMuted>
                 <TypographyMuted className="font-semibold">
-                  {formattedSecondInstallment}
+                  {formatted.secondInstallment}
                 </TypographyMuted>
               </div>
             </>
@@ -164,7 +94,7 @@ export const PaymentOverview = ({
                 <TypographyMuted>
                   {isFirstInstallmentPaid ? 'Remaining Due' : 'Total Due'}
                 </TypographyMuted>
-                <TypographyMuted className="font-semibold">{formattedAmountDue}</TypographyMuted>
+                <TypographyMuted className="font-semibold">{formatted.amountDue}</TypographyMuted>
               </div>
             </>
           )}
