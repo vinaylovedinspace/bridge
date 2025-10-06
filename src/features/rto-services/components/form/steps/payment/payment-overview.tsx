@@ -3,14 +3,9 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Info } from 'lucide-react';
 import { useRTOPaymentCalculations } from '@/features/rto-services/hooks/use-rto-payment-calculations';
-import { BranchConfig } from '@/server/db/branch';
 
-type PaymentOverviewProps = {
-  branchConfig: BranchConfig;
-};
-
-export const PaymentOverview = ({ branchConfig }: PaymentOverviewProps) => {
-  const { formattedValues: formatted } = useRTOPaymentCalculations(branchConfig);
+export const PaymentOverview = () => {
+  const { formattedValues: formatted } = useRTOPaymentCalculations();
 
   return (
     <Card className="p-6 flex flex-col pt-10 min-h-[32rem] h-full">

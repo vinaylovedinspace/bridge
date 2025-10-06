@@ -2,9 +2,10 @@ import { useFormContext } from 'react-hook-form';
 import { RTOServiceFormValues } from '@/features/rto-services/types';
 import { formatCurrency } from '@/lib/payment/calculate';
 import { getRTOServiceCharges } from '@/lib/constants/rto-fees';
-import { BranchConfig } from '@/server/db/branch';
+import { useAtomValue } from 'jotai';
+import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
 
-export const useRTOPaymentCalculations = (branchConfig: BranchConfig) => {
+export const useRTOPaymentCalculations = () => {
   const { watch } = useFormContext<RTOServiceFormValues>();
   const serviceType = watch('service.type');
   const discountAmount = watch('payment.discount') ?? 0;
@@ -15,8 +16,8 @@ export const useRTOPaymentCalculations = (branchConfig: BranchConfig) => {
   const { governmentFees, additionalCharges, additionalChargesRange } =
     getRTOServiceCharges(serviceType);
 
-  // Get branch service charge
-  const branchServiceCharge = branchConfig.licenseServiceCharge ?? 0;
+  // Get branch service charge from Jotai atom
+  const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
 
   // Calculate amounts (including branch service charge)
   const originalAmount = governmentFees + additionalCharges + branchServiceCharge;

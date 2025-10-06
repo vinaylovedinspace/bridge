@@ -2,14 +2,16 @@ import { useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import { getSessions } from '@/server/actions/sessions';
 import { generateTimeSlots } from '@/lib/sessions';
-import { BranchConfig } from '@/server/db/branch';
+import { useAtomValue } from 'jotai';
+import { branchOperatingHoursAtom } from '@/lib/atoms/branch-config';
 
 type SlotConflict = {
   hasConflict: boolean;
   availableSlots: string[];
 };
 
-export const useSlotAvailability = (branchConfig: BranchConfig, currentClientId?: string) => {
+export const useSlotAvailability = (currentClientId?: string) => {
+  const branchOperatingHours = useAtomValue(branchOperatingHoursAtom);
   const [slotConflict, setSlotConflict] = useState<SlotConflict>({
     hasConflict: false,
     availableSlots: [],
@@ -35,7 +37,7 @@ export const useSlotAvailability = (branchConfig: BranchConfig, currentClientId?
         });
 
         if (conflictSession) {
-          const allTimeSlots = generateTimeSlots(branchConfig.operatingHours!);
+          const allTimeSlots = generateTimeSlots(branchOperatingHours);
           const occupiedSlots = sessions
             .filter((session) => {
               const sessionDate = session.sessionDate;
@@ -78,7 +80,7 @@ export const useSlotAvailability = (branchConfig: BranchConfig, currentClientId?
         console.error('Error checking slot availability:', error);
       }
     },
-    [branchConfig.operatingHours, currentClientId]
+    [branchOperatingHours, currentClientId]
   );
 
   return {

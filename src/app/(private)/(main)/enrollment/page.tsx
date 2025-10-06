@@ -1,6 +1,5 @@
 import { Suspense } from 'react';
 import MultistepForm from '@/features/enrollment/components/form/multistep-form';
-import { getBranchConfig } from '@/server/db/branch';
 import { getClientById } from '@/features/enrollment/server/action';
 
 export default async function AdmissionPage({
@@ -9,7 +8,6 @@ export default async function AdmissionPage({
   searchParams: Promise<{ clientId?: string }>;
 }) {
   const { clientId } = await searchParams;
-  const branch = await getBranchConfig();
 
   let existingClient = undefined;
   if (clientId) {
@@ -24,7 +22,7 @@ export default async function AdmissionPage({
       <Suspense
         fallback={<div className="flex items-center justify-center h-full w-full">loading...</div>}
       >
-        <MultistepForm branchConfig={branch} existingClient={existingClient} />
+        <MultistepForm existingClient={existingClient} />
       </Suspense>
     </div>
   );

@@ -5,12 +5,11 @@ import { useBranchSettings } from '../hooks/settings';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAtomValue } from 'jotai';
+import { branchIdAtom } from '@/lib/atoms/branch-config';
 
-interface SettingsPageProps {
-  branchId: string;
-}
-
-export const SettingsPage = ({ branchId }: SettingsPageProps) => {
+export const SettingsPage = () => {
+  const branchId = useAtomValue(branchIdAtom);
   const { data: settings, isLoading, error } = useBranchSettings();
 
   if (error) {

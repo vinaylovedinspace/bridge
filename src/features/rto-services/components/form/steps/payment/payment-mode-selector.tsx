@@ -14,16 +14,11 @@ import { useRouter } from 'next/navigation';
 import { RTOServiceFormValues } from '@/features/rto-services/types';
 import { createPayment } from '@/features/rto-services/server/action';
 import { useRTOPaymentCalculations } from '@/features/rto-services/hooks/use-rto-payment-calculations';
-import { BranchConfig } from '@/server/db/branch';
 
-type PaymentModeSelectorProps = {
-  branchConfig: BranchConfig;
-};
-
-export const PaymentModeSelector = ({ branchConfig }: PaymentModeSelectorProps) => {
+export const PaymentModeSelector = () => {
   const { getValues, setValue } = useFormContext<RTOServiceFormValues>();
   const router = useRouter();
-  const { finalAmountAfterDiscount, originalAmount } = useRTOPaymentCalculations(branchConfig);
+  const { finalAmountAfterDiscount, originalAmount } = useRTOPaymentCalculations();
 
   const [paymentMode, setPaymentMode] =
     useState<(typeof PaymentModeEnum.enumValues)[number]>('PAYMENT_LINK');

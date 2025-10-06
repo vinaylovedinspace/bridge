@@ -9,7 +9,6 @@ import {
   ProgressBar,
 } from '@/features/enrollment/components/progress-bar/progress-bar';
 import { getMultistepAdmissionStepValidationFields } from '@/features/enrollment/lib/utils';
-import { BranchConfig } from '@/server/db/branch';
 import { useEditAdmissionForm } from '../../../hooks/use-admission-form';
 import { useEditFormSubmissions } from '../../../hooks/use-edit-form-submissions';
 import { useUnsavedChanges } from '../../../hooks/use-unsaved-changes';
@@ -23,10 +22,9 @@ type StepKey = 'service' | 'personal' | 'license' | 'plan' | 'payment';
 
 type EditAdmissionFormProps = {
   enrollment: NonNullable<Enrollment>;
-  branchConfig: BranchConfig;
 };
 
-export const EditAdmissionForm = ({ enrollment, branchConfig }: EditAdmissionFormProps) => {
+export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const router = useRouter();
@@ -128,11 +126,7 @@ export const EditAdmissionForm = ({ enrollment, branchConfig }: EditAdmissionFor
 
         <ScrollArea className="h-[calc(100vh-20rem)] pr-10">
           <form className="space-y-8 pb-24">
-            <EditFormSteps
-              currentStep={currentStep as StepKey}
-              enrollment={enrollment}
-              branchConfig={branchConfig}
-            />
+            <EditFormSteps currentStep={currentStep as StepKey} enrollment={enrollment} />
           </form>
         </ScrollArea>
 

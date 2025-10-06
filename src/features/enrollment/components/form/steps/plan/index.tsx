@@ -14,27 +14,24 @@ import { useSessionValidation } from '@/features/enrollment/hooks/use-session-va
 import { VehicleSelection } from './vehicle-selection';
 import { SessionDetails } from './session-details';
 import { SlotStatusDisplay } from './slot-status-display';
-import { BranchConfig } from '@/server/db/branch';
+import { branchWorkingDaysAtom } from '@/lib/atoms/branch-config';
+import { useAtomValue } from 'jotai';
 
 type PlanStepProps = {
-  branchConfig: BranchConfig;
   currentClientId?: string;
 };
 
-export const PlanStep = ({ branchConfig, currentClientId }: PlanStepProps) => {
+export const PlanStep = ({ currentClientId }: PlanStepProps) => {
   const { control, watch, setValue } = useFormContext<AdmissionFormValues>();
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const branchWorkingDays = useAtomValue(branchWorkingDaysAtom);
 
   const selectedVehicleId = watch('plan.vehicleId');
   const selectedDateTime = watch('plan.joiningDate');
   const numberOfSessions = watch('plan.numberOfSessions');
 
-  const { slotConflict, checkSlotAvailability } = useSlotAvailability(
-    branchConfig,
-    currentClientId
-  );
+  const { slotConflict, checkSlotAvailability } = useSlotAvailability(currentClientId);
   const { hasCompletedSessions, isTimeOutsideOperatingHours } = useSessionValidation(
-    branchConfig,
     currentClientId,
     selectedDateTime
   );
@@ -88,7 +85,7 @@ export const PlanStep = ({ branchConfig, currentClientId }: PlanStepProps) => {
                       placeholderText="Select joining date and time"
                       maxDate={new Date(2100, 0, 1)}
                       disableDateChange={hasCompletedSessions}
-                      workingDays={branchConfig.workingDays}
+                      workingDays={branchWorkingDays}
                     />
                   </FormControl>
                   <FormMessage />
@@ -100,7 +97,6 @@ export const PlanStep = ({ branchConfig, currentClientId }: PlanStepProps) => {
               <SlotStatusDisplay
                 isTimeOutsideOperatingHours={isTimeOutsideOperatingHours}
                 slotConflict={slotConflict}
-                branchConfig={branchConfig}
               />
             )}
 
@@ -123,7 +119,6 @@ export const PlanStep = ({ branchConfig, currentClientId }: PlanStepProps) => {
         onClose={handleAvailabilityModalClose}
         vehicleId={selectedVehicleId}
         selectedDate={selectedDateTime}
-        branchConfig={branchConfig}
         currentClientId={currentClientId}
         numberOfSessions={numberOfSessions || 1}
         onTimeSelect={(timeValue: string) => {

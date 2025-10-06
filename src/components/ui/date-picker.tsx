@@ -10,6 +10,7 @@ import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createDateFilter } from '@/lib/utils/date-utils';
 import { useController, Control, FieldPath, FieldValues } from 'react-hook-form';
+import { DEFAULT_WORKING_DAYS } from '@/lib/constants/business';
 
 type DatePickerProps<TFieldValues extends FieldValues = FieldValues> = {
   selected?: Date | null;
@@ -34,7 +35,7 @@ export function DatePicker<TFieldValues extends FieldValues = FieldValues>({
   className,
   minDate = new Date('1900-01-01'),
   maxDate = new Date(),
-  workingDays = [0, 1, 2, 3, 4, 5, 6], // Default to all days enabled
+  workingDays = DEFAULT_WORKING_DAYS, // Default to all days enabled
 }: DatePickerProps<TFieldValues>) {
   // Create a date filter function that combines working days, provided disabled function, and min/max date constraints
   const dateFilter = React.useCallback(
@@ -96,7 +97,7 @@ function ControlledDatePicker<TFieldValues extends FieldValues>({
   className,
   minDate,
   maxDate,
-  workingDays = [0, 1, 2, 3, 4, 5, 6], // Default to all days enabled
+  workingDays = DEFAULT_WORKING_DAYS, // Default to all days enabled
 }: Omit<DatePickerProps<TFieldValues>, 'selected' | 'onChange'> & {
   name: FieldPath<TFieldValues>;
   control: Control<TFieldValues>;

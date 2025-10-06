@@ -19,6 +19,8 @@ import {
   DAYS_OF_WEEK,
 } from '@/lib/constants/business';
 import { BranchConfig } from '@/server/db/branch';
+import { useSetAtom } from 'jotai';
+import { branchConfigAtom } from '@/lib/atoms/branch-config';
 
 interface SettingsFormProps {
   branchId: string;
@@ -27,6 +29,7 @@ interface SettingsFormProps {
 
 export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
   const [isPending, setIsPending] = useState(false);
+  const setBranchConfig = useSetAtom(branchConfigAtom);
 
   const form = useForm<BranchSettings>({
     resolver: zodResolver(branchSettingsSchema),
@@ -63,6 +66,15 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
     try {
       const result = await updateBranchSettings(branchId, data);
       if (result.success) {
+        // Update the atom with new values
+        setBranchConfig((prev) => ({
+          ...prev!,
+          workingDays: data.workingDays,
+          operatingHours: data.operatingHours,
+          defaultRtoOffice: data.defaultRtoOffice || null,
+          licenseServiceCharge: data.licenseServiceCharge ?? 0,
+        }));
+
         toast.success(result.message);
 
         // If sessions were rescheduled, show additional info

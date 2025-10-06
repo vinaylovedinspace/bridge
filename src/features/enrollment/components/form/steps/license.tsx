@@ -10,13 +10,15 @@ import { MultiSelect } from '@/components/ui/multi-select';
 import { calculateLicenseFees } from '@/lib/constants/rto-fees';
 import { LICENSE_CLASS_OPTIONS } from '@/lib/constants/license-classes';
 import { useEffect } from 'react';
+import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
+import { useAtomValue } from 'jotai';
 
 type LicenseStepProps = {
-  branchServiceCharge?: number;
   isEditMode?: boolean;
 };
 
-export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: LicenseStepProps) => {
+export const LicenseStep = ({ isEditMode = false }: LicenseStepProps) => {
+  const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
   const { control, watch, setValue } = useFormContext<AdmissionFormValues>();
 
   // Watch service type to conditionally show/hide fields

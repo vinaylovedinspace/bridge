@@ -14,18 +14,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStepNavigation, ProgressBar } from '../progress-bar/progress-bar';
 import { PaymentContainer } from './steps/payment';
 import { getMultistepAdmissionStepValidationFields } from '../../lib/utils';
-import { BranchConfig } from '@/server/db/branch';
 import { useEnrollmentFormSubmissions } from '../../hooks/use-enrollment-form-submissions';
 import { getClientById } from '../../server/action';
 import { useAddAdmissionForm } from '../../hooks/use-admission-form';
 import { AdmissionFormValues } from '../../types';
 
 type MultistepFormProps = {
-  branchConfig: BranchConfig;
   existingClient?: Awaited<ReturnType<typeof getClientById>>['data'];
 };
 
-export const MultistepForm = ({ branchConfig, existingClient }: MultistepFormProps) => {
+export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -55,7 +53,7 @@ export const MultistepForm = ({ branchConfig, existingClient }: MultistepFormPro
         getData: () => getValues('personalInfo'),
       },
       license: {
-        component: <LicenseStep branchServiceCharge={branchConfig.licenseServiceCharge ?? 0} />,
+        component: <LicenseStep />,
 
         getData: () => ({
           learningLicense: getValues('learningLicense'),
@@ -63,7 +61,7 @@ export const MultistepForm = ({ branchConfig, existingClient }: MultistepFormPro
         }),
       },
       plan: {
-        component: <PlanStep branchConfig={branchConfig} currentClientId={clientId} />,
+        component: <PlanStep currentClientId={clientId} />,
         getData: () => getValues('plan'),
       },
       payment: {
@@ -71,7 +69,7 @@ export const MultistepForm = ({ branchConfig, existingClient }: MultistepFormPro
         getData: () => getValues('payment'),
       },
     };
-  }, [branchConfig, clientId, getValues]);
+  }, [clientId, getValues]);
 
   // Check if current step has any changes compared to initial values
   const hasCurrentStepChanges = (): boolean => {

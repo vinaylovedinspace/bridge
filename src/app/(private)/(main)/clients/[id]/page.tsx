@@ -3,12 +3,11 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { TypographyH4 } from '@/components/ui/typography';
 import { getClient } from '@/server/db/client';
-import { getBranchConfig } from '@/server/db/branch';
 import { ClientDetailForm } from '@/features/clients/components/detail/client-detail-form';
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [client, branchConfig] = await Promise.all([getClient(id), getBranchConfig()]);
+  const client = await getClient(id);
 
   if (!client) {
     notFound();
@@ -25,7 +24,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         </TypographyH4>
       </div>
 
-      <ClientDetailForm client={client} branchConfig={branchConfig} />
+      <ClientDetailForm client={client} />
     </div>
   );
 }

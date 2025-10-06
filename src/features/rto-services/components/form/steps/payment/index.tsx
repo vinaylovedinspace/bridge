@@ -4,21 +4,19 @@ import { PaymentOptions } from './payment-options';
 import { PaymentModeSelector } from './payment-mode-selector';
 import { PaymentOverview as PaymentOverviewComponent } from './payment-overview';
 import { getRTOService } from '@/features/rto-services/server/db';
-import { BranchConfig } from '@/server/db/branch';
 
 export { PaymentOverviewComponent as PaymentOverview };
 
 type PaymentStepProps = {
   existingPayment?: NonNullable<Awaited<ReturnType<typeof getRTOService>>>['payment'];
-  branchConfig: BranchConfig;
 };
 
-export const PaymentStep = ({ existingPayment, branchConfig }: PaymentStepProps) => {
+export const PaymentStep = ({ existingPayment }: PaymentStepProps) => {
   return (
     <Card className="grid grid-cols-12 col-span-8 align-center px-6 py-10 h-fit">
       <TypographyH5 className="col-span-3">Payment Info</TypographyH5>
       <PaymentOptions existingPayment={existingPayment} />
-      <PaymentModeSelector branchConfig={branchConfig} />
+      <PaymentModeSelector />
     </Card>
   );
 };
@@ -26,10 +24,9 @@ export const PaymentStep = ({ existingPayment, branchConfig }: PaymentStepProps)
 // Container component for rendering both PaymentOverview and PaymentStep
 type PaymentContainerProps = {
   existingPayment?: NonNullable<Awaited<ReturnType<typeof getRTOService>>>['payment'];
-  branchConfig: BranchConfig;
 };
 
-export const PaymentContainer = ({ existingPayment, branchConfig }: PaymentContainerProps) => {
+export const PaymentContainer = ({ existingPayment }: PaymentContainerProps) => {
   // If payment is fully paid, show only the payment summary
   if (existingPayment?.paymentStatus === 'FULLY_PAID') {
     return (
@@ -46,7 +43,7 @@ export const PaymentContainer = ({ existingPayment, branchConfig }: PaymentConta
           </div>
         </div>
         <div className="col-span-12 md:col-span-6 md:col-start-4">
-          <PaymentOverviewComponent branchConfig={branchConfig} />
+          <PaymentOverviewComponent />
         </div>
       </div>
     );
@@ -54,9 +51,9 @@ export const PaymentContainer = ({ existingPayment, branchConfig }: PaymentConta
 
   return (
     <div className="grid grid-cols-12 gap-6">
-      <PaymentStep existingPayment={existingPayment} branchConfig={branchConfig} />
+      <PaymentStep existingPayment={existingPayment} />
       <div className="col-span-4">
-        <PaymentOverviewComponent branchConfig={branchConfig} />
+        <PaymentOverviewComponent />
       </div>
 
       {/* Show existing payment info if discount was applied */}

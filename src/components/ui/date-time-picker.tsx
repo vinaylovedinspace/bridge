@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { DEFAULT_WORKING_DAYS } from '@/lib/constants/business';
 
 type DateTimePickerProps<TFieldValues extends FieldValues = FieldValues> = {
   selected?: Date | null;
@@ -42,7 +43,7 @@ export function DateTimePicker<TFieldValues extends FieldValues = FieldValues>({
   minDate = new Date('1900-01-01'),
   maxDate = new Date(2100, 0, 1),
   disableDateChange = false,
-  workingDays = [0, 1, 2, 3, 4, 5, 6], // Default to all days enabled
+  workingDays = DEFAULT_WORKING_DAYS, // Default to all days enabled
 }: DateTimePickerProps<TFieldValues>) {
   // Create a date filter function that combines working days, provided disabled function, and min/max date constraints
   const dateFilter = React.useCallback(
@@ -259,7 +260,7 @@ function ControlledDateTimePicker<TFieldValues extends FieldValues = FieldValues
   minDate = new Date('1900-01-01'),
   maxDate = new Date(2100, 0, 1),
   disableDateChange = false,
-  workingDays = [0, 1, 2, 3, 4, 5, 6], // Default to all days enabled
+  workingDays = DEFAULT_WORKING_DAYS, // Default to all days enabled
 }: Omit<DateTimePickerProps<TFieldValues>, 'selected' | 'onChange'> & {
   name: FieldPath<TFieldValues>;
   control: Control<TFieldValues>;

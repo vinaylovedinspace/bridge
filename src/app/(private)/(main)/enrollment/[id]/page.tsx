@@ -2,13 +2,12 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { TypographyH4 } from '@/components/ui/typography';
-import { getBranchConfig } from '@/server/db/branch';
 import { EditAdmissionForm } from '@/features/enrollment/components/form/edit';
 import { getEnrollmentByPlanId } from '@/server/db/plan';
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [enrollment, branch] = await Promise.all([getEnrollmentByPlanId(id), getBranchConfig()]);
+  const enrollment = await getEnrollmentByPlanId(id);
 
   if (!enrollment) {
     notFound();
@@ -25,7 +24,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         </TypographyH4>
       </div>
 
-      <EditAdmissionForm enrollment={enrollment} branchConfig={branch} />
+      <EditAdmissionForm enrollment={enrollment} />
     </div>
   );
 }

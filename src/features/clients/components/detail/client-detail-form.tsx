@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { BranchConfig } from '@/server/db/branch';
 import { Client } from '@/server/db/client';
 import { ClientDetailProgressBar, useClientDetailStepNavigation } from './progress-bar';
 import { ClientDetailSteps } from './client-detail-steps';
@@ -19,13 +18,15 @@ import {
   updateClientDrivingLicense,
 } from '../../server/action';
 import { toast } from 'sonner';
+import { useAtomValue } from 'jotai';
+import { branchConfigAtom } from '@/lib/atoms/branch-config';
 
 type ClientDetailFormProps = {
   client: NonNullable<Client>;
-  branchConfig: BranchConfig;
 };
 
-export const ClientDetailForm = ({ client, branchConfig }: ClientDetailFormProps) => {
+export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
+  const branchConfig = useAtomValue(branchConfigAtom)!;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const defaultValues = transformClientToFormData(client);
