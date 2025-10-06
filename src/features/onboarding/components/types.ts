@@ -39,11 +39,10 @@ export const onboardingFormSchema = z.object({
 // Type for our form values
 export type OnboardingFormValues = z.infer<typeof onboardingFormSchema>;
 
-// Type for branch field in the UI
-export type BranchField = {
-  id: number;
-  value: string;
-};
-
 // Define the step configuration with components
 export type StepKey = 'school-name' | 'school-whatsapp' | 'branches';
+
+export type BranchField = {
+  id: number;
+  name: string;
+};

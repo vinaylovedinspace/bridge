@@ -4,9 +4,9 @@ import { useEffect } from 'react';
 import Img from 'next/image';
 import { motion } from 'motion/react';
 
-interface SuccessScreenProps {
+type SuccessScreenProps = {
   onRedirect: () => void;
-}
+};
 
 export const SuccessScreen = ({ onRedirect }: SuccessScreenProps) => {
   useEffect(() => {

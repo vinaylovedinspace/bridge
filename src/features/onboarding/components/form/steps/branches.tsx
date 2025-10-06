@@ -5,13 +5,7 @@ import { TypographyH1, TypographyMuted } from '@/components/ui/typography';
 import { PlusCircle } from 'lucide-react';
 import { Controller, useFormContext } from 'react-hook-form';
 import MultiStepFormInput from '../form-input';
-import { OnboardingFormValues } from '../../types';
-
-// Type for branch field in UI
-export type BranchField = {
-  id: number;
-  name: string;
-};
+import { BranchField, OnboardingFormValues } from '../../types';
 
 export const BranchesStep = () => {
   const {
