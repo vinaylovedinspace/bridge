@@ -112,7 +112,7 @@ export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
         <ClientDetailProgressBar currentStep={currentStep} onStepChange={goToStep} />
 
         <ScrollArea className="h-[calc(100vh-20rem)] pr-10">
-          <form className="space-y-8 pb-24">
+          <form className="space-y-8 pb-24 pr-1">
             <ClientDetailSteps
               currentStep={currentStep}
               client={client}

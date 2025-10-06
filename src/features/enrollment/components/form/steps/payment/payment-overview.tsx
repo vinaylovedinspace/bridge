@@ -7,9 +7,10 @@ import { usePaymentCalculations } from '@/features/enrollment/hooks/use-payment-
 
 type PaymentOverviewProps = {
   existingPayment: NonNullable<Enrollment>['payment'];
+  isEditMode?: boolean;
 };
 
-export const PaymentOverview = ({ existingPayment }: PaymentOverviewProps) => {
+export const PaymentOverview = ({ existingPayment, isEditMode = false }: PaymentOverviewProps) => {
   const {
     formatted,
     firstInstallmentPayment,
@@ -17,7 +18,8 @@ export const PaymentOverview = ({ existingPayment }: PaymentOverviewProps) => {
     isFirstInstallmentPaid,
     isSecondInstallmentPaid,
     paymentType,
-  } = usePaymentCalculations({ existingPayment });
+    licenseFeeBreakdown,
+  } = usePaymentCalculations({ existingPayment, isEditMode });
 
   return (
     <Card className="p-6 flex flex-col pt-10 min-h-[32rem] h-full">
@@ -42,12 +44,20 @@ export const PaymentOverview = ({ existingPayment }: PaymentOverviewProps) => {
             <TypographyMuted className="font-semibold">{formatted.trainingFees}</TypographyMuted>
           </div>
 
-          {formatted.licenseServiceFee && (
-            <div className="flex justify-between mt-2">
-              <TypographyMuted>License Service Fee</TypographyMuted>
-              <TypographyMuted className="font-semibold">
-                {formatted.licenseServiceFee}
-              </TypographyMuted>
+          {formatted.licenseServiceFee && licenseFeeBreakdown && (
+            <div>
+              <div className="flex justify-between mt-2 cursor-help">
+                <TypographyMuted>License Service Fee</TypographyMuted>
+                <TypographyMuted className="font-semibold">
+                  {formatted.licenseServiceFee}
+                </TypographyMuted>
+              </div>
+              <div className="flex justify-end">
+                <TypographyMuted className="text-xs pt-1 ">
+                  Govt: ₹{licenseFeeBreakdown.governmentFees} + Service: ₹
+                  {licenseFeeBreakdown.serviceCharge}
+                </TypographyMuted>
+              </div>
             </div>
           )}
 

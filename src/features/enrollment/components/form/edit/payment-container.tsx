@@ -20,7 +20,7 @@ export const PaymentContainer = ({ payment }: { payment: NonNullable<Enrollment>
           </div>
         </div>
         <div className="col-span-12 md:col-span-6 md:col-start-4">
-          <PaymentOverview existingPayment={payment} />
+          <PaymentOverview existingPayment={payment} isEditMode={true} />
         </div>
       </div>
     );
@@ -30,7 +30,7 @@ export const PaymentContainer = ({ payment }: { payment: NonNullable<Enrollment>
     <div className="grid grid-cols-12 gap-6">
       <PaymentStep existingPayment={payment} />
       <div className="col-span-4">
-        <PaymentOverview existingPayment={payment} />
+        <PaymentOverview existingPayment={payment} isEditMode={true} />
       </div>
 
       {/* Show existing payment info if discount was applied */}
@@ -76,7 +76,7 @@ export const PaymentContainerWithEnrollment = ({ enrollment }: PaymentContainerP
           </div>
         </div>
         <div className="col-span-12 md:col-span-6 md:col-start-4">
-          <PaymentOverview existingPayment={payment} />
+          <PaymentOverview existingPayment={payment} isEditMode={true} />
         </div>
       </div>
     );
@@ -86,7 +86,7 @@ export const PaymentContainerWithEnrollment = ({ enrollment }: PaymentContainerP
     <div className="grid grid-cols-12 gap-6">
       <PaymentStep existingPayment={payment} />
       <div className="col-span-4">
-        <PaymentOverview existingPayment={payment} />
+        <PaymentOverview existingPayment={payment} isEditMode={true} />
       </div>
 
       {/* Show existing payment info if discount was applied */}

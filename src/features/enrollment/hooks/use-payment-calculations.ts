@@ -7,9 +7,14 @@ import {
   formatCurrency,
 } from '@/lib/payment/calculate';
 import { Enrollment } from '@/server/db/plan';
+import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
+import { useAtomValue } from 'jotai';
+import { calculateLicenseServiceFee } from '@/features/enrollment/lib/utils';
+import { calculateLicenseFees } from '@/lib/constants/rto-fees';
 
 type UsePaymentCalculationsProps = {
   existingPayment: NonNullable<Enrollment>['payment'];
+  isEditMode?: boolean;
 };
 
 type InstallmentPaymentInfo = {
@@ -19,12 +24,44 @@ type InstallmentPaymentInfo = {
   paymentMode?: string;
 };
 
-export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculationsProps) => {
+export const usePaymentCalculations = ({
+  existingPayment,
+  isEditMode = false,
+}: UsePaymentCalculationsProps) => {
+  const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
   const { watch } = useFormContext<AdmissionFormValues>();
   const plan = watch('plan');
   const discount = watch('payment.discount');
   const paymentType = watch('payment.paymentType');
-  const licenseServiceFee = watch('payment.licenseServiceFee');
+
+  // Calculate license fee from selected classes
+  const serviceType = watch('serviceType');
+  const selectedLicenseClasses = watch('learningLicense.class') || [];
+  const existingLearningLicenseNumber = watch('learningLicense.licenseNumber') || '';
+
+  const hasExistingLearners = existingLearningLicenseNumber.trim().length > 0;
+
+  // Use calculated license fee directly (only if service type requires it)
+  const licenseServiceFee =
+    serviceType !== 'DRIVING_ONLY'
+      ? calculateLicenseServiceFee(
+          selectedLicenseClasses,
+          hasExistingLearners,
+          isEditMode,
+          branchServiceCharge
+        )
+      : 0;
+
+  // Get license fee breakdown for display
+  const shouldApplyExistingLearnersDiscount = hasExistingLearners && !isEditMode;
+  const licenseFeeBreakdown =
+    serviceType !== 'DRIVING_ONLY'
+      ? calculateLicenseFees(
+          selectedLicenseClasses,
+          shouldApplyExistingLearnersDiscount,
+          branchServiceCharge
+        )
+      : null;
 
   const { data: vehicle } = useVehicle(plan?.vehicleId || '');
 
@@ -92,6 +129,9 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
 
     // Formatted values
     formatted,
+
+    // License fee breakdown
+    licenseFeeBreakdown,
 
     // Installment info
     firstInstallmentPayment: firstInstallmentPayment as InstallmentPaymentInfo | undefined,

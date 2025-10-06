@@ -9,7 +9,6 @@ import { AdmissionFormValues } from '@/features/enrollment/types';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { calculateLicenseFees } from '@/lib/constants/rto-fees';
 import { LICENSE_CLASS_OPTIONS } from '@/lib/constants/license-classes';
-import { useEffect } from 'react';
 import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
 import { useAtomValue } from 'jotai';
 
@@ -19,7 +18,7 @@ type LicenseStepProps = {
 
 export const LicenseStep = ({ isEditMode = false }: LicenseStepProps) => {
   const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
-  const { control, watch, setValue } = useFormContext<AdmissionFormValues>();
+  const { control, watch } = useFormContext<AdmissionFormValues>();
 
   // Watch service type to conditionally show/hide fields
   const serviceType = watch('serviceType');
@@ -31,22 +30,13 @@ export const LicenseStep = ({ isEditMode = false }: LicenseStepProps) => {
   // Check if student already has a learners license
   const hasExistingLearners = existingLearningLicenseNumber.trim().length > 0;
 
-  // In edit mode, don't apply the existing learners discount since it was already applied during creation
+  // Calculate fees breakdown for display
   const shouldApplyExistingLearnersDiscount = hasExistingLearners && !isEditMode;
-
-  // Calculate fees based on scenario
   const feeCalculation = calculateLicenseFees(
     selectedLicenseClasses,
     shouldApplyExistingLearnersDiscount,
     branchServiceCharge
   );
-
-  // Update payment.licenseServiceFee whenever the calculated total changes
-  useEffect(() => {
-    if (serviceType !== 'DRIVING_ONLY') {
-      setValue('payment.licenseServiceFee', feeCalculation.total, { shouldDirty: true });
-    }
-  }, [feeCalculation.total, serviceType, setValue]);
 
   return (
     <div className="space-y-10">

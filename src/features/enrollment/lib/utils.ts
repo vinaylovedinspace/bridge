@@ -9,6 +9,23 @@ import {
   DEFAULT_STATE,
 } from '@/lib/constants/business';
 import { parseDateStringToDateObject } from '@/lib/date-utils';
+import { calculateLicenseFees } from '@/lib/constants/rto-fees';
+import { LicenseClass } from '@/lib/constants/license-classes';
+
+export const calculateLicenseServiceFee = (
+  selectedClasses: LicenseClass[],
+  hasExistingLearners: boolean,
+  isEditMode: boolean,
+  branchServiceCharge: number
+): number => {
+  const shouldApplyExistingLearnersDiscount = hasExistingLearners && !isEditMode;
+  const feeCalculation = calculateLicenseFees(
+    selectedClasses,
+    shouldApplyExistingLearnersDiscount,
+    branchServiceCharge
+  );
+  return feeCalculation.total;
+};
 
 // Function to get validation fields for a specific step
 export const getMultistepAdmissionStepValidationFields = (
