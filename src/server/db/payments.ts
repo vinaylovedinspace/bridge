@@ -22,8 +22,7 @@ const _getPayments = async (branchId: string, name?: string, paymentStatus?: str
       clientMiddleName: ClientTable.middleName,
       clientLastName: ClientTable.lastName,
       clientCode: ClientTable.clientCode,
-      originalAmount: PaymentTable.originalAmount,
-      finalAmount: PaymentTable.finalAmount,
+      totalAmount: PaymentTable.totalAmount,
       discount: PaymentTable.discount,
       paymentStatus: PaymentTable.paymentStatus,
       paymentType: PaymentTable.paymentType,
@@ -51,7 +50,7 @@ const _getPayments = async (branchId: string, name?: string, paymentStatus?: str
         );
 
       // TODO: Reimplement amount due calculation with new schema
-      const amountDue = payment.finalAmount;
+      const amountDue = payment.totalAmount;
       const nextInstallmentDate: Date | null = null;
       const isOverdue = false;
 
@@ -69,7 +68,7 @@ const _getPayments = async (branchId: string, name?: string, paymentStatus?: str
         clientId: payment.clientId,
         clientName: `${payment.clientFirstName} ${payment.clientMiddleName ? payment.clientMiddleName + ' ' : ''}${payment.clientLastName}`,
         amountDue,
-        totalFees: payment.finalAmount,
+        totalAmount: payment.totalAmount,
         nextInstallmentDate,
         paymentStatus: displayStatus,
         lastPaymentDate: latestTransaction[0]?.createdAt

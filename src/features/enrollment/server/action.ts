@@ -265,7 +265,7 @@ export const createPayment = async (
 
     const { plan, vehicle } = result;
 
-    const { originalAmount, finalAmount, firstInstallmentAmount, secondInstallmentAmount } =
+    const { totalAmountAfterDiscount, firstInstallmentAmount, secondInstallmentAmount } =
       calculateEnrollmentPaymentBreakdown({
         sessions: plan.numberOfSessions,
         duration: plan.sessionDurationInMinutes,
@@ -278,8 +278,7 @@ export const createPayment = async (
     // 3. Validate payment data
     const { success, data, error } = paymentSchema.safeParse({
       ...unsafeData,
-      originalAmount,
-      finalAmount,
+      totalAmount: totalAmountAfterDiscount,
     });
 
     if (!success) {

@@ -185,8 +185,7 @@ export const createPaymentEntry = async (
     const { success, data, error } = paymentSchema.safeParse({
       ...unsafeData,
       clientId: rtoService.clientId,
-      originalAmount: paymentBreakdown.originalAmount,
-      finalAmount: paymentBreakdown.finalAmount,
+      totalAmount: paymentBreakdown.totalAmountAfterDiscount,
       licenseServiceFee: paymentBreakdown.branchServiceCharge,
     });
 
@@ -237,8 +236,7 @@ export const createPayment = async (
     const { success, data, error } = paymentSchema.safeParse({
       ...unsafeData,
       clientId: rtoService.clientId,
-      originalAmount: paymentBreakdown.originalAmount,
-      finalAmount: paymentBreakdown.finalAmount,
+      totalAmount: paymentBreakdown.totalAmountAfterDiscount,
       licenseServiceFee: paymentBreakdown.branchServiceCharge,
     });
 

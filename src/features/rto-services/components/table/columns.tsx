@@ -67,7 +67,7 @@ export const columns: ColumnDef<RTOServiceWithClient>[] = [
     accessorKey: 'totalAmount',
     header: 'Total Amount',
     cell: ({ row }) => {
-      const amount = row.original.payment?.finalAmount;
+      const amount = row.original.payment?.totalAmount;
       return amount ? `₹${amount.toLocaleString()}` : '-';
     },
   },

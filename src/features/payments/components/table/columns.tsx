@@ -55,10 +55,10 @@ export const columns: ColumnDef<Payment>[] = [
     },
   },
   {
-    accessorKey: 'totalFees',
-    header: 'Total Fees',
+    accessorKey: 'totalAmount',
+    header: 'Total Amount',
     cell: ({ row }) => {
-      return formatCurrency(row.original.totalFees);
+      return formatCurrency(row.original.totalAmount);
     },
   },
   {

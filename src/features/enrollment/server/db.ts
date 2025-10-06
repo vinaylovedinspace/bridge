@@ -212,15 +212,6 @@ export const updatePlanInDB = async (
 };
 
 export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert, planId: string) => {
-  // Validate payment amounts
-  if (data.finalAmount < 0) {
-    throw new Error('Final amount cannot be negative');
-  }
-
-  if (data.discount && data.discount > data.originalAmount) {
-    throw new Error('Discount cannot exceed original amount');
-  }
-
   const response = await db.transaction(async (tx) => {
     // Check if payment already exists for this plan
     const existingPayment = await tx.query.PlanTable.findFirst({

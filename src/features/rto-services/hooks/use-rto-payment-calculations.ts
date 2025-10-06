@@ -8,7 +8,7 @@ import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
 export const useRTOPaymentCalculations = () => {
   const { watch } = useFormContext<RTOServiceFormValues>();
   const serviceType = watch('service.type');
-  const discountAmount = watch('payment.discount') ?? 0;
+  const discount = watch('payment.discount') ?? 0;
   const shouldApplyDiscount = watch('payment.applyDiscount');
   const paymentStatus = watch('payment.paymentStatus');
 
@@ -20,35 +20,35 @@ export const useRTOPaymentCalculations = () => {
   const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
 
   // Calculate amounts using shared function (ensures consistency with backend)
-  const { originalAmount, finalAmount: finalAmountAfterDiscount } = calculateRTOPaymentBreakdown({
+  const { totalFeesBeforeDiscount, totalAmountAfterDiscount } = calculateRTOPaymentBreakdown({
     governmentFees,
     serviceCharge: additionalCharges,
     branchServiceCharge,
-    discount: discountAmount,
+    discount,
   });
 
   // If payment is fully paid, amount due should be 0
-  const amountDue = paymentStatus === 'FULLY_PAID' ? 0 : finalAmountAfterDiscount;
+  const amountDue = paymentStatus === 'FULLY_PAID' ? 0 : totalAmountAfterDiscount;
 
   // Format all amounts
   const formattedValues = {
     governmentFees: formatCurrency(governmentFees),
     serviceCharge: formatCurrency(additionalCharges),
     branchServiceCharge: branchServiceCharge > 0 ? formatCurrency(branchServiceCharge) : null,
-    discount: discountAmount > 0 ? formatCurrency(discountAmount) : null,
+    discount: discount > 0 ? formatCurrency(discount) : null,
     amountDue: formatCurrency(amountDue),
   };
 
-  const isDiscountApplied = shouldApplyDiscount || discountAmount > 0;
+  const isDiscountApplied = shouldApplyDiscount ?? discount > 0;
 
   return {
     // Raw values
+    totalFeesBeforeDiscount,
+    totalAmountAfterDiscount,
     governmentFees,
     serviceCharge: additionalCharges,
     branchServiceCharge,
-    originalAmount,
-    discountAmount,
-    finalAmountAfterDiscount,
+    discount,
     amountDue,
 
     // Formatted values

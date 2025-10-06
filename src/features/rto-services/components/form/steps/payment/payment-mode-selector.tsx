@@ -18,7 +18,7 @@ import { useRTOPaymentCalculations } from '@/features/rto-services/hooks/use-rto
 export const PaymentModeSelector = () => {
   const { getValues, setValue } = useFormContext<RTOServiceFormValues>();
   const router = useRouter();
-  const { finalAmountAfterDiscount, originalAmount } = useRTOPaymentCalculations();
+  const { totalAmountAfterDiscount } = useRTOPaymentCalculations();
 
   const [paymentMode, setPaymentMode] =
     useState<(typeof PaymentModeEnum.enumValues)[number]>('PAYMENT_LINK');
@@ -51,17 +51,15 @@ export const PaymentModeSelector = () => {
       }
 
       // If payment is empty, initialize with calculated values
-      if (!payment || !payment.originalAmount || !payment.finalAmount) {
-        setValue('payment.originalAmount', originalAmount);
-        setValue('payment.finalAmount', finalAmountAfterDiscount);
+      if (!payment || !payment.totalAmount) {
+        setValue('payment.totalAmount', totalAmountAfterDiscount);
       }
 
       const result = await createPayment(
         {
           ...payment,
           clientId,
-          originalAmount: payment?.originalAmount || originalAmount,
-          finalAmount: payment?.finalAmount || finalAmountAfterDiscount,
+          totalAmount: totalAmountAfterDiscount,
         },
         rtoServiceId
       );
@@ -101,13 +99,7 @@ export const PaymentModeSelector = () => {
         return;
       }
 
-      const payment = formValues.payment;
-
-      // Calculate amount based on payment type
-      let amount = 0;
-
-      // TODO: Reimplement amount calculation with new schema
-      amount = payment?.finalAmount || 0;
+      const amount = totalAmountAfterDiscount;
 
       if (amount <= 0) {
         toast.error('Invalid payment amount');

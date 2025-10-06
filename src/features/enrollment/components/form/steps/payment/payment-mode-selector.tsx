@@ -115,7 +115,7 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
       let amount = 0;
 
       // TODO: Reimplement amount calculation with new schema
-      amount = payment?.finalAmount || 0;
+      amount = payment?.totalAmount || 0;
 
       if (amount <= 0) {
         toast.error('Invalid payment amount');

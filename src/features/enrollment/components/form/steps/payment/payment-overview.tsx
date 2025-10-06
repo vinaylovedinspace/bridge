@@ -39,7 +39,7 @@ export const PaymentOverview = ({ existingPayment }: PaymentOverviewProps) => {
         <div>
           <div className="flex justify-between">
             <TypographyMuted>Training Fee</TypographyMuted>
-            <TypographyMuted className="font-semibold">{formatted.totalFees}</TypographyMuted>
+            <TypographyMuted className="font-semibold">{formatted.trainingFees}</TypographyMuted>
           </div>
 
           {formatted.licenseServiceFee && (

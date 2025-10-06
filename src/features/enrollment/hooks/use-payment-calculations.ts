@@ -30,7 +30,9 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
 
   // Calculate payment breakdown (vehicle rental fees only)
   const {
-    originalAmount: totalFees,
+    totalFeesBeforeDiscount,
+    totalAmountAfterDiscount,
+    trainingFees,
     firstInstallmentAmount,
     secondInstallmentAmount,
   } = calculateEnrollmentPaymentBreakdown({
@@ -57,15 +59,16 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
   // Calculate amount due using utility function
   const amountDue = calculateAmountDue({
     existingPayment,
-    totalFees,
-    discount,
+    totalAmount: totalAmountAfterDiscount,
     paymentType,
     firstInstallmentAmount,
   });
 
   // Format all amounts
   const formatted = {
-    totalFees: formatCurrency(totalFees),
+    totalAmountAfterDiscount: formatCurrency(totalAmountAfterDiscount),
+    totalFeesBeforeDiscount: formatCurrency(totalFeesBeforeDiscount),
+    trainingFees: formatCurrency(trainingFees),
     licenseServiceFee:
       licenseServiceFee && licenseServiceFee > 0 ? formatCurrency(licenseServiceFee) : null,
     discount: discount && discount > 0 ? formatCurrency(discount) : null,
@@ -77,7 +80,9 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
   const isDiscountApplied = discount > 0;
   return {
     // Raw values
-    totalFees,
+    totalFeesBeforeDiscount,
+    totalAmountAfterDiscount,
+    trainingFees,
     licenseServiceFee,
     discount,
     paymentType,

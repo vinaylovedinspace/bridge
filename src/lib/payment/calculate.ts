@@ -20,14 +20,6 @@ export const PAYMENT_CONSTANTS = {
   INSTALLMENT_SPLIT_RATIO: 0.5,
 } as const;
 
-export type PaymentCalculationResult = {
-  originalAmount: number;
-  discount: number;
-  finalAmount: number;
-  firstInstallmentAmount: number;
-  secondInstallmentAmount: number;
-};
-
 export type PaymentCalculationInput = {
   sessions: number;
   duration: number;
@@ -54,7 +46,7 @@ export type PaymentCalculationInput = {
  *   discount: 0,
  *   paymentType: 'FULL_PAYMENT'
  * })
- * // Returns: { originalAmount: 2100, discount: 0, finalAmount: 2100, ... }
+ * // Returns: {  discount: 0, totalAmount: 2100, ... }
  *
  * @example
  * // Installment payment with discount
@@ -65,7 +57,7 @@ export type PaymentCalculationInput = {
  *   discount: 500,
  *   paymentType: 'INSTALLMENTS'
  * })
- * // Returns: { originalAmount: 2000, discount: 500, finalAmount: 1500, firstInstallmentAmount: 750, secondInstallmentAmount: 750 }
+ * // Returns: { discount: 500, totalAmount: 1500, firstInstallmentAmount: 750, secondInstallmentAmount: 750 }
  */
 export function calculateEnrollmentPaymentBreakdown({
   sessions,
@@ -74,7 +66,7 @@ export function calculateEnrollmentPaymentBreakdown({
   discount,
   paymentType,
   licenseServiceFee,
-}: PaymentCalculationInput): PaymentCalculationResult {
+}: PaymentCalculationInput) {
   // Ensure all values are numbers and positive
   const safeSessionCount = Number(sessions) ?? DEFAULT_SESSION_DAYS;
   const safeDuration = Number(duration) ?? DEFAULT_SESSION_MINUTES;
@@ -88,24 +80,29 @@ export function calculateEnrollmentPaymentBreakdown({
   // Calculate original amount
   const trainingFees = safeSessionCount * halfHourBlocks * safeRate;
 
-  const originalAmount = trainingFees + safeLicenseServiceFee;
+  const totalFeesBeforeDiscount = trainingFees + safeLicenseServiceFee;
 
   // Calculate final amount after discount
-  const finalAmount = Math.max(0, originalAmount - safeDiscount);
+  const totalAmountAfterDiscount = Math.max(0, totalFeesBeforeDiscount - safeDiscount);
 
   // Calculate installment amounts if applicable
   let firstInstallmentAmount = 0;
   let secondInstallmentAmount = 0;
 
   if (paymentType === 'INSTALLMENTS') {
-    firstInstallmentAmount = Math.ceil(finalAmount * PAYMENT_CONSTANTS.INSTALLMENT_SPLIT_RATIO);
-    secondInstallmentAmount = finalAmount - firstInstallmentAmount;
+    firstInstallmentAmount = Math.ceil(
+      totalAmountAfterDiscount * PAYMENT_CONSTANTS.INSTALLMENT_SPLIT_RATIO
+    );
+    secondInstallmentAmount = totalAmountAfterDiscount - firstInstallmentAmount;
   }
 
   return {
-    originalAmount,
-    discount: safeDiscount,
-    finalAmount,
+    trainingFees,
+    licenseServiceFee,
+    discount,
+    paymentType,
+    totalFeesBeforeDiscount,
+    totalAmountAfterDiscount,
     firstInstallmentAmount,
     secondInstallmentAmount,
   };
@@ -139,7 +136,7 @@ export function formatCurrency(amount: number): string {
 export type PaymentData = {
   paymentType: 'FULL_PAYMENT' | 'INSTALLMENTS' | null;
   paymentStatus: 'PENDING' | 'PARTIALLY_PAID' | 'FULLY_PAID' | null;
-  finalAmount: number;
+  totalAmount: number;
   discount?: number | null;
   installmentPayments?: Array<{
     installmentNumber: number;
@@ -151,51 +148,16 @@ export type PaymentData = {
   };
 };
 
-/**
- * Calculate the outstanding amount (remaining unpaid balance) based on payment data
- * Handles all payment statuses and types consistently
- *
- * @param payment - Payment data object or null/undefined
- * @returns Outstanding amount to be paid (0 if fully paid or no payment data)
- *
- * @example
- * // Fully paid - returns 0
- * calculateOutstandingAmount({
- *   paymentType: 'FULL_PAYMENT',
- *   paymentStatus: 'FULLY_PAID',
- *   finalAmount: 5000
- * }) // Returns: 0
- *
- * @example
- * // Pending - returns full amount
- * calculateOutstandingAmount({
- *   paymentType: 'FULL_PAYMENT',
- *   paymentStatus: 'PENDING',
- *   finalAmount: 5000
- * }) // Returns: 5000
- *
- * @example
- * // Partially paid installments - returns remaining amount
- * calculateOutstandingAmount({
- *   paymentType: 'INSTALLMENTS',
- *   paymentStatus: 'PARTIALLY_PAID',
- *   finalAmount: 5000,
- *   installmentPayments: [
- *     { installmentNumber: 1, amount: 2500, isPaid: true },
- *     { installmentNumber: 2, amount: 2500, isPaid: false }
- *   ]
- * }) // Returns: 2500
- */
 export function calculateOutstandingAmount(payment: PaymentData | null | undefined): number {
   if (!payment) {
     return 0;
   }
 
-  const { paymentType, finalAmount, paymentStatus } = payment;
+  const { paymentType, totalAmount, paymentStatus } = payment;
 
   // Validate final amount
-  if (finalAmount < 0 || !Number.isFinite(finalAmount)) {
-    throw new Error(`Invalid final amount in payment data: ${finalAmount}`);
+  if (totalAmount < 0 || !Number.isFinite(totalAmount)) {
+    throw new Error(`Invalid final amount in payment data: ${totalAmount}`);
   }
 
   // Handle null values - default to PENDING and FULL_PAYMENT
@@ -209,7 +171,7 @@ export function calculateOutstandingAmount(payment: PaymentData | null | undefin
 
   // If pending (not paid at all), full amount is due
   if (safePaymentStatus === 'PENDING') {
-    return finalAmount;
+    return totalAmount;
   }
 
   // For partially paid status
@@ -220,89 +182,40 @@ export function calculateOutstandingAmount(payment: PaymentData | null | undefin
         .filter((installment) => installment.isPaid)
         .reduce((sum, installment) => sum + installment.amount, 0);
 
-      return Math.max(0, finalAmount - totalPaid);
+      return Math.max(0, totalAmount - totalPaid);
     }
 
     // For full payment that's partially paid (shouldn't happen, but handle it)
     if (safePaymentType === 'FULL_PAYMENT' && payment.fullPayment) {
-      return payment.fullPayment.isPaid ? 0 : finalAmount;
+      return payment.fullPayment.isPaid ? 0 : totalAmount;
     }
   }
 
   // Fallback: return full amount
-  return finalAmount;
+  return totalAmount;
 }
 
-/**
- * Calculate amount due for current payment, accounting for existing payments and discount changes
- *
- * @param params - Calculation parameters
- * @returns Amount currently due to be paid
- *
- * @example
- * // New enrollment with full payment
- * calculateAmountDue({
- *   existingPayment: null,
- *   totalFees: 5000,
- *   discount: 500,
- *   paymentType: 'FULL_PAYMENT',
- *   firstInstallmentAmount: 0
- * }) // Returns: 4500
- *
- * @example
- * // Installment payment - first installment due
- * calculateAmountDue({
- *   existingPayment: null,
- *   totalFees: 5000,
- *   discount: 0,
- *   paymentType: 'INSTALLMENTS',
- *   firstInstallmentAmount: 2500
- * }) // Returns: 2500
- */
 export function calculateAmountDue({
   existingPayment,
-  totalFees,
-  discount = 0,
+  totalAmount,
   paymentType,
   firstInstallmentAmount = 0,
 }: {
   existingPayment: PaymentData | null | undefined;
-  totalFees: number;
-  discount?: number;
+  totalAmount: number;
   paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS';
   firstInstallmentAmount?: number;
 }): number {
-  if (totalFees < 0 || !Number.isFinite(totalFees)) {
-    throw new Error(`Invalid total fees: ${totalFees}`);
-  }
-
   if (existingPayment) {
-    // Check if discount has changed from the stored value
-    const currentDiscount = discount ?? 0;
-    const storedDiscount = existingPayment.discount ?? 0;
-
-    if (currentDiscount !== storedDiscount) {
-      // Discount has changed - recalculate based on new values
-      const finalAmount = totalFees - currentDiscount;
-
-      // Check what has already been paid
-      const alreadyPaid = existingPayment.finalAmount - calculateOutstandingAmount(existingPayment);
-
-      // New amount due = new final amount - what's already been paid
-      return Math.max(0, finalAmount - alreadyPaid);
-    } else {
-      // Discount unchanged - use existing calculation
-      return calculateOutstandingAmount(existingPayment);
-    }
+    return calculateOutstandingAmount(existingPayment);
   } else {
     // For new enrollments, calculate from form values
-    const finalAmount = totalFees - (discount ?? 0);
     if (paymentType === 'INSTALLMENTS') {
       // For installments, show first installment as amount due
       return firstInstallmentAmount;
     } else {
       // For full payment, show total final amount
-      return finalAmount;
+      return totalAmount;
     }
   }
 }
@@ -317,52 +230,23 @@ export type RTOPaymentCalculationInput = {
   discount?: number;
 };
 
-/**
- * RTO Payment Calculation Result
- */
-export type RTOPaymentCalculationResult = {
-  governmentFees: number;
-  serviceCharge: number;
-  branchServiceCharge: number;
-  originalAmount: number;
-  discount: number;
-  finalAmount: number;
-};
-
-/**
- * Calculate RTO service payment amounts
- * Shared function used by both frontend and backend to ensure consistency
- *
- * @param input - RTO payment calculation parameters
- * @returns Complete payment breakdown for RTO services
- * @throws Error if inputs are invalid
- *
- * @example
- * calculateRTOPaymentBreakdown({
- *   governmentFees: 716,
- *   serviceCharge: 434,
- *   branchServiceCharge: 500,
- *   discount: 100
- * })
- * // Returns: { originalAmount: 1650, finalAmount: 1550, ... }
- */
 export function calculateRTOPaymentBreakdown({
   governmentFees,
   serviceCharge,
   branchServiceCharge,
   discount = 0,
-}: RTOPaymentCalculationInput): RTOPaymentCalculationResult {
+}: RTOPaymentCalculationInput) {
   // Calculate amounts
-  const originalAmount = governmentFees + serviceCharge + branchServiceCharge;
+  const totalFeesBeforeDiscount = governmentFees + serviceCharge + branchServiceCharge;
 
-  const finalAmount = Math.max(0, originalAmount - discount);
+  const totalAmountAfterDiscount = Math.max(0, totalFeesBeforeDiscount - discount);
 
   return {
     governmentFees,
     serviceCharge,
     branchServiceCharge,
-    originalAmount,
+    totalFeesBeforeDiscount,
     discount,
-    finalAmount,
+    totalAmountAfterDiscount,
   };
 }

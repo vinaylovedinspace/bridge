@@ -36,7 +36,7 @@ export const ServiceTypeStep = ({ disabled = false }: ServiceTypeStepProps) => {
   const { control } = useFormContext<AdmissionFormValues>();
 
   return (
-    <div className="space-y-10 flex flex-col justify-center items-center pt-10">
+    <div className="space-y-10 flex flex-col items-center pt-20 h-full">
       <TypographyH4>{disabled ? 'Selected Service Type' : 'Choose Your Service Type'}</TypographyH4>
 
       <FormField

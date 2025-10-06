@@ -13,9 +13,8 @@ export const PaymentTable = pgTable('payments', {
   id: uuid('id').primaryKey().defaultRandom(),
   clientId: uuid('client_id').notNull(),
 
-  originalAmount: integer('original_amount').notNull(),
   discount: integer('discount').notNull().default(0),
-  finalAmount: integer('final_amount').notNull(),
+  totalAmount: integer('total_amount').notNull(),
   licenseServiceFee: integer('license_service_fee').notNull().default(0),
   paymentStatus: PaymentStatusEnum('payment_status').default('PENDING'),
   paymentType: PaymentTypeEnum('payment_type').default('FULL_PAYMENT'),
