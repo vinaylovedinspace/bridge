@@ -1,5 +1,5 @@
 import { LicenseClassEnum } from '@/db/schema/enums';
-import { pgTable, text, uuid, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, timestamp, boolean } from 'drizzle-orm/pg-core';
 
 export const LearningLicenseTable = pgTable('learning_licenses', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -13,6 +13,9 @@ export const LearningLicenseTable = pgTable('learning_licenses', {
 
   // test details
   applicationNumber: text('application_number'),
+
+  // Fee exclusion flag - true if student already has LL and we shouldn't charge for it
+  excludeLearningLicenseFee: boolean('exclude_learning_license_fee').default(false).notNull(),
 
   clientId: uuid('client_id').notNull().unique(),
 

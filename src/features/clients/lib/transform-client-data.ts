@@ -44,6 +44,7 @@ export const transformClientToFormData = (client: NonNullable<Client>): ClientDe
           issueDate: parseDate(client.learningLicense.issueDate),
           expiryDate: parseDate(client.learningLicense.expiryDate),
           applicationNumber: client.learningLicense.applicationNumber,
+          excludeLearningLicenseFee: client.learningLicense.excludeLearningLicenseFee,
         }
       : undefined,
     drivingLicense: client.drivingLicense

@@ -110,7 +110,7 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
 
   return (
     <FormProvider {...methods}>
-      <div className="h-full flex flex-col py-2 gap-4">
+      <div className="h-full flex flex-col gap-10">
         <ProgressBar
           interactive={true}
           currentStep={currentStep}

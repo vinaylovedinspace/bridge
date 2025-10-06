@@ -74,11 +74,15 @@ export const getRTOServiceCharges = (serviceType: RTOServiceType) => {
   };
 };
 
-export const calculateLicenseFees = (
-  licenseClasses: LicenseClass[] = [],
-  hasExistingLearners: boolean = false,
-  _serviceCharge: number = 0
-) => {
+export const calculateLicenseFees = ({
+  licenseClasses,
+  excludeLearningLicenseFee,
+  serviceCharge: _serviceCharge,
+}: {
+  licenseClasses: LicenseClass[];
+  excludeLearningLicenseFee: boolean;
+  serviceCharge: number;
+}) => {
   if (licenseClasses.length === 0) {
     return {
       governmentFees: 0,
@@ -97,7 +101,7 @@ export const calculateLicenseFees = (
   let llFees = 0;
   let dlFees = 0;
 
-  if (hasExistingLearners) {
+  if (excludeLearningLicenseFee) {
     // Student already has learners license - only driving license needed
     llFees = 0;
     dlFees = MAHARASHTRA_RTO_FEES.DRIVING_LICENSE_PER_CLASS * classCount;
@@ -111,7 +115,7 @@ export const calculateLicenseFees = (
 
   // Create detailed breakdown
   let description = '';
-  if (hasExistingLearners) {
+  if (excludeLearningLicenseFee) {
     description = `DL Fees: ₹${dlFees} (₹${MAHARASHTRA_RTO_FEES.DRIVING_LICENSE_PER_CLASS} × ${classCount})`;
   } else {
     description = `LL Fees: ₹${llFees} (₹${MAHARASHTRA_RTO_FEES.LEARNING_LICENSE_PER_CLASS} × ${classCount}), DL Fees: ₹${dlFees} (₹${MAHARASHTRA_RTO_FEES.DRIVING_LICENSE_PER_CLASS} × ${classCount})`;

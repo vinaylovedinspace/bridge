@@ -9,7 +9,6 @@ import {
 import { Enrollment } from '@/server/db/plan';
 import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
 import { useAtomValue } from 'jotai';
-import { calculateLicenseServiceFee } from '@/features/enrollment/lib/utils';
 import { calculateLicenseFees } from '@/lib/constants/rto-fees';
 import { useEffect } from 'react';
 
@@ -25,10 +24,7 @@ type InstallmentPaymentInfo = {
   paymentMode?: string;
 };
 
-export const usePaymentCalculations = ({
-  existingPayment,
-  isEditMode = false,
-}: UsePaymentCalculationsProps) => {
+export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculationsProps) => {
   const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
   const { watch, setValue } = useFormContext<AdmissionFormValues>();
   const plan = watch('plan');
@@ -38,35 +34,22 @@ export const usePaymentCalculations = ({
   // Calculate license fee from selected classes
   const serviceType = watch('serviceType');
   const selectedLicenseClasses = watch('learningLicense.class') || [];
-  const existingLearningLicenseNumber = watch('learningLicense.licenseNumber') || '';
+  const excludeLearningLicenseFee = watch('learningLicense.excludeLearningLicenseFee') ?? false;
 
-  const hasExistingLearners = existingLearningLicenseNumber.trim().length > 0;
+  // Get license fee breakdown for display
+  const licenseFeeBreakdown =
+    serviceType === 'FULL_SERVICE'
+      ? calculateLicenseFees({
+          licenseClasses: selectedLicenseClasses,
+          excludeLearningLicenseFee,
+          serviceCharge: branchServiceCharge,
+        })
+      : null;
 
-  // Use calculated license fee directly (only if service type requires it)
-  const licenseServiceFee =
-    serviceType !== 'DRIVING_ONLY'
-      ? calculateLicenseServiceFee(
-          selectedLicenseClasses,
-          hasExistingLearners,
-          isEditMode,
-          branchServiceCharge
-        )
-      : 0;
-
+  const licenseServiceFee = licenseFeeBreakdown?.total ?? 0;
   useEffect(() => {
     setValue('payment.licenseServiceFee', licenseServiceFee);
   }, [licenseServiceFee, setValue]);
-
-  // Get license fee breakdown for display
-  const shouldApplyExistingLearnersDiscount = hasExistingLearners && !isEditMode;
-  const licenseFeeBreakdown =
-    serviceType !== 'DRIVING_ONLY'
-      ? calculateLicenseFees(
-          selectedLicenseClasses,
-          shouldApplyExistingLearnersDiscount,
-          branchServiceCharge
-        )
-      : null;
 
   const { data: vehicle } = useVehicle(plan?.vehicleId || '');
 

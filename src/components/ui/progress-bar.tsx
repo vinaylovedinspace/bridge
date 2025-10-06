@@ -29,7 +29,7 @@ export const ProgressBar = <T extends string>({
   };
 
   return (
-    <div className="flex justify-center gap-4 mb-8">
+    <div className="flex justify-center gap-4">
       {steps.map((step, index) => {
         const isActive = step.key === currentStep;
         const isPast = steps.findIndex((s) => s.key === currentStep) >= index;

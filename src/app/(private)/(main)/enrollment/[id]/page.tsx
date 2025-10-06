@@ -14,7 +14,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   }
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto">
       <div className="flex gap-4 items-center pb-4">
         <Link href="/enrollments">
           <ArrowLeft className="size-5 text-gray-700" />

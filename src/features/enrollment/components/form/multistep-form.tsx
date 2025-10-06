@@ -161,21 +161,18 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
 
   return (
     <FormProvider {...methods}>
-      <div
-        className="h-full flex flex-col py-4 gap-10"
-        data-testid={`admission-step-${currentStep}`}
-      >
+      <div className="h-full flex flex-col gap-10" data-testid={`admission-step-${currentStep}`}>
         <ProgressBar interactive={false} currentStep={currentStep} onStepChange={goToStep} />
 
         {/* Form content - scrollable area */}
-        <ScrollArea className="h-[calc(100vh-316px)] pr-10">
-          <form className="h-[calc(100vh-316px)] pr-1" data-testid="admission-multistep-form">
+        <ScrollArea className="h-[calc(100vh-17.4rem)] pr-10">
+          <form className="pr-1" data-testid="admission-multistep-form">
             {stepComponents[currentStep as keyof typeof stepComponents]?.component}
           </form>
         </ScrollArea>
 
         {/* Navigation buttons - fixed at the bottom */}
-        <div className="bg-white py-4 px-6 border-t flex justify-between">
+        <div className="bg-white pt-4 border-t flex justify-between">
           <Button
             type="button"
             variant="outline"
