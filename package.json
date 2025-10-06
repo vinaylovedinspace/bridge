@@ -30,6 +30,9 @@
       "prettier --write"
     ]
   },
+  "resolutions": {
+    "jotai": "^2.15.0"
+  },
   "dependencies": {
     "@clerk/nextjs": "^6.32.2",
     "@hookform/resolvers": "^4.1.3",
