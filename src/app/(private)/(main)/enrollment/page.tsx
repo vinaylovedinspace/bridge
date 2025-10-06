@@ -21,8 +21,10 @@ export default async function AdmissionPage({
   }
 
   return (
-    <div data-testid="admission-page">
-      <Suspense fallback={<Skeleton className="h-[calc(100vh-316px)] w-full" />}>
+    <div data-testid="admission-page" className="h-full">
+      <Suspense
+        fallback={<div className="flex items-center justify-center h-full w-full">loading...</div>}
+      >
         <MultistepForm branchConfig={branch} existingClient={existingClient} />
       </Suspense>
     </div>

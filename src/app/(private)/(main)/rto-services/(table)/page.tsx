@@ -7,8 +7,6 @@ export default async function RTOServicesPage({
 }) {
   const params = await searchParams;
   return (
-    <div>
-      <RTOServices status={params.status} serviceType={params.serviceType} search={params.search} />
-    </div>
+    <RTOServices status={params.status} serviceType={params.serviceType} search={params.search} />
   );
 }
