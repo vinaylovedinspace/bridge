@@ -18,7 +18,7 @@ import {
 import { insertClient, updateClient } from './db';
 import { dateToString } from '@/lib/date-utils';
 import { getRTOServiceCharges } from '../lib/charges';
-import { paymentSchema } from '@/features/enrollment/types';
+import { paymentSchema } from '@/types/zod/payment';
 
 export async function saveRTOService(
   unsafeData: z.infer<typeof rtoServicesFormSchema>

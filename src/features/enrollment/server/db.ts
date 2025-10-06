@@ -242,7 +242,7 @@ export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert, 
           ...data,
           updatedAt: new Date(),
         })
-        .where(eq(PaymentTable.id, existingPayment.id))
+        .where(eq(PaymentTable.id, existingPayment.payment.id))
         .returning();
 
       payment = updated;
@@ -259,6 +259,10 @@ export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert, 
           updatedAt: new Date(),
         })
         .where(eq(PlanTable.id, planId));
+    }
+
+    if (!payment) {
+      throw new Error('Failed to create or update payment');
     }
 
     return {

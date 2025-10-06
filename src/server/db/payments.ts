@@ -108,25 +108,51 @@ export const getPayments = async (name?: string, paymentStatus?: string) => {
 const _getOverduePaymentsCount = async (branchId: string) => {
   const conditions = [eq(PlanTable.branchId, branchId)];
 
-  const plans = await db.query.PlanTable.findMany({
+  const clients = await db.query.ClientTable.findMany({
     where: and(...conditions),
     with: {
-      payment: {
+      plan: {
         with: {
-          client: true,
-          installmentPayments: true,
-          fullPayment: true,
+          payment: {
+            with: {
+              installmentPayments: true,
+              fullPayment: true,
+            },
+          },
+        },
+      },
+      rtoServices: {
+        with: {
+          payment: {
+            with: {
+              fullPayment: true,
+            },
+          },
         },
       },
     },
   });
 
-  const overdueCount = plans.filter((plan) => {
-    // If no payment entry, consider it overdue
-    if (!plan.payment) return true;
+  let overdueCount = 0;
 
-    return isPaymentOverdue(plan.payment, plan);
-  }).length;
+  clients.forEach((client) => {
+    client.plan.forEach((plan) => {
+      if (!plan.payment) {
+        overdueCount++;
+      }
+      if (isPaymentOverdue(plan.payment, plan)) {
+        overdueCount++;
+      }
+    });
+    client.rtoServices.forEach((rtoService) => {
+      if (!rtoService.payment) {
+        overdueCount++;
+      }
+      if (rtoService.payment && rtoService.payment.paymentStatus !== 'FULLY_PAID') {
+        overdueCount++;
+      }
+    });
+  });
 
   return overdueCount;
 };

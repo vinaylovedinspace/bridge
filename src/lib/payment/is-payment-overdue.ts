@@ -16,13 +16,18 @@ export const isPaymentOverdue = (
   payment: PaymentWithRelations | null | undefined,
   plan: PlanWithJoiningDate
 ): boolean => {
-  if (!payment || payment.paymentStatus === 'FULLY_PAID') {
+  if (!payment) {
+    return true;
+  }
+  if (payment.paymentStatus === 'FULLY_PAID') {
     return false;
   }
 
+  console.log(payment);
+
   if (payment.paymentType === 'FULL_PAYMENT') {
     // For full payment, check if it's not paid yet
-    return payment.fullPayment ? !payment.fullPayment.isPaid : false;
+    return payment.fullPayment ? !payment.fullPayment.isPaid : true;
   } else if (payment.paymentType === 'INSTALLMENTS') {
     // Check if 1st installment is unpaid or doesn't exist
     const firstInstallment = payment.installmentPayments.find(
@@ -48,9 +53,9 @@ export const isPaymentOverdue = (
         (inst) => inst.installmentNumber === 2
       );
 
-      return secondInstallment ? !secondInstallment.isPaid : false;
+      return secondInstallment ? !secondInstallment.isPaid : true;
     }
   }
 
-  return false;
+  return true;
 };

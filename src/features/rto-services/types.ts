@@ -2,8 +2,8 @@ import { RTOServiceTypeEnum, type RTOServicesTable } from '@/db/schema';
 import { RTO_OFFICES as _RTO_OFFICES } from '@/lib/constants/rto-offices';
 import { personalInfoSchema } from '@/types/zod/client';
 import { drivingLicenseSchema } from '@/types/zod/license';
+import { paymentSchema } from '@/types/zod/payment';
 import { z } from 'zod';
-import { paymentSchema } from '../enrollment/types';
 
 export type RTOService = typeof RTOServicesTable.$inferSelect;
 export type RTOServiceInsert = typeof RTOServicesTable.$inferInsert;

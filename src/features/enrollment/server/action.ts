@@ -1,13 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import {
-  LearningLicenseValues,
-  DrivingLicenseValues,
-  PlanValues,
-  planSchema,
-  paymentSchema,
-} from '../types';
+import { LearningLicenseValues, DrivingLicenseValues, PlanValues, planSchema } from '../types';
 import { getBranchConfig } from '@/server/db/branch';
 import { ActionReturnType } from '@/types/actions';
 import {
@@ -39,6 +33,7 @@ import {
   handleFullPayment,
   handleInstallmentPayment,
 } from '../lib/payment-helpers';
+import { paymentSchema } from '@/types/zod/payment';
 
 export const createClient = async (
   unsafeData: z.infer<typeof personalInfoSchema>
