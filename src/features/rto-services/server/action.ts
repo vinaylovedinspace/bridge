@@ -19,6 +19,7 @@ import { insertClient, updateClient } from './db';
 import { dateToString } from '@/lib/date-utils';
 import { getRTOServiceCharges } from '@/lib/constants/rto-fees';
 import { paymentSchema } from '@/types/zod/payment';
+import { calculateRTOPaymentBreakdown } from '@/lib/payment/calculate';
 
 export async function saveRTOService(
   unsafeData: z.infer<typeof rtoServicesFormSchema>
@@ -169,21 +170,24 @@ export const createPaymentEntry = async (
       return { error: true, message: 'RTO service not found' };
     }
 
-    // 2. Calculate payment amounts
-    const { governmentFees, serviceCharge } = {
+    // 2. Get branch config for service charge
+    const { licenseServiceCharge: branchServiceCharge } = await getBranchConfig();
+
+    // 3. Calculate payment amounts using shared function (ensures consistency with frontend)
+    const paymentBreakdown = calculateRTOPaymentBreakdown({
       governmentFees: rtoService.governmentFees,
       serviceCharge: rtoService.serviceCharge,
-    };
+      branchServiceCharge,
+      discount: unsafeData.discount || 0,
+    });
 
-    const originalAmount = governmentFees + serviceCharge + (unsafeData.licenseServiceFee || 0);
-    const finalAmount = originalAmount - (unsafeData.discount || 0);
-
-    // 3. Validate payment data with calculated amounts
+    // 4. Validate payment data with calculated amounts
     const { success, data, error } = paymentSchema.safeParse({
       ...unsafeData,
       clientId: rtoService.clientId,
-      originalAmount,
-      finalAmount,
+      originalAmount: paymentBreakdown.originalAmount,
+      finalAmount: paymentBreakdown.finalAmount,
+      licenseServiceFee: paymentBreakdown.branchServiceCharge,
     });
 
     if (!success) {
@@ -191,7 +195,7 @@ export const createPaymentEntry = async (
       return { error: true, message: 'Invalid payment data' };
     }
 
-    // 4. Create payment entry
+    // 5. Create payment entry
     const paymentId = await createPaymentEntryInDB(data, serviceId);
 
     return {
@@ -211,9 +215,31 @@ export const createPayment = async (
   serviceId: string
 ): Promise<{ error: boolean; message: string; paymentId?: string }> => {
   try {
-    // 3. Validate payment data
+    // 1. Get RTO service to get clientId and service charges
+    const rtoService = await getRTOService(serviceId);
+
+    if (!rtoService) {
+      return { error: true, message: 'RTO service not found' };
+    }
+
+    // 2. Get branch config for service charge
+    const { licenseServiceCharge: branchServiceCharge } = await getBranchConfig();
+
+    // 3. Calculate payment amounts using shared function (ensures consistency with frontend)
+    const paymentBreakdown = calculateRTOPaymentBreakdown({
+      governmentFees: rtoService.governmentFees,
+      serviceCharge: rtoService.serviceCharge,
+      branchServiceCharge,
+      discount: unsafeData.discount || 0,
+    });
+
+    // 4. Validate payment data with calculated amounts
     const { success, data, error } = paymentSchema.safeParse({
       ...unsafeData,
+      clientId: rtoService.clientId,
+      originalAmount: paymentBreakdown.originalAmount,
+      finalAmount: paymentBreakdown.finalAmount,
+      licenseServiceFee: paymentBreakdown.branchServiceCharge,
     });
 
     if (!success) {
@@ -221,7 +247,7 @@ export const createPayment = async (
       return { error: true, message: 'Invalid payment data' };
     }
 
-    // 4. Upsert payment
+    // 5. Upsert payment
     const paymentId = await createPaymentInDB(data, data.paymentMode, serviceId);
 
     return {

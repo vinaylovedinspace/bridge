@@ -372,3 +372,89 @@ export function calculateAmountDue({
     }
   }
 }
+
+/**
+ * RTO Payment Calculation Input
+ */
+export type RTOPaymentCalculationInput = {
+  governmentFees: number;
+  serviceCharge: number;
+  branchServiceCharge: number;
+  discount?: number;
+};
+
+/**
+ * RTO Payment Calculation Result
+ */
+export type RTOPaymentCalculationResult = {
+  governmentFees: number;
+  serviceCharge: number;
+  branchServiceCharge: number;
+  originalAmount: number;
+  discount: number;
+  finalAmount: number;
+};
+
+/**
+ * Calculate RTO service payment amounts
+ * Shared function used by both frontend and backend to ensure consistency
+ *
+ * @param input - RTO payment calculation parameters
+ * @returns Complete payment breakdown for RTO services
+ * @throws Error if inputs are invalid
+ *
+ * @example
+ * calculateRTOPaymentBreakdown({
+ *   governmentFees: 716,
+ *   serviceCharge: 434,
+ *   branchServiceCharge: 500,
+ *   discount: 100
+ * })
+ * // Returns: { originalAmount: 1650, finalAmount: 1550, ... }
+ */
+export function calculateRTOPaymentBreakdown({
+  governmentFees,
+  serviceCharge,
+  branchServiceCharge,
+  discount = 0,
+}: RTOPaymentCalculationInput): RTOPaymentCalculationResult {
+  // Validate inputs
+  if (governmentFees < 0 || !Number.isFinite(governmentFees)) {
+    throw new Error(`Invalid government fees: ${governmentFees}. Must be a non-negative number.`);
+  }
+
+  if (serviceCharge < 0 || !Number.isFinite(serviceCharge)) {
+    throw new Error(`Invalid service charge: ${serviceCharge}. Must be a non-negative number.`);
+  }
+
+  if (branchServiceCharge < 0 || !Number.isFinite(branchServiceCharge)) {
+    throw new Error(
+      `Invalid branch service charge: ${branchServiceCharge}. Must be a non-negative number.`
+    );
+  }
+
+  if (discount < 0 || !Number.isFinite(discount)) {
+    throw new Error(`Invalid discount: ${discount}. Must be a non-negative number.`);
+  }
+
+  // Calculate amounts
+  const originalAmount = governmentFees + serviceCharge + branchServiceCharge;
+
+  // Validate discount doesn't exceed original amount
+  if (discount > originalAmount) {
+    throw new Error(
+      `Discount amount (₹${discount}) cannot exceed original amount (₹${originalAmount})`
+    );
+  }
+
+  const finalAmount = Math.max(0, originalAmount - discount);
+
+  return {
+    governmentFees,
+    serviceCharge,
+    branchServiceCharge,
+    originalAmount,
+    discount,
+    finalAmount,
+  };
+}

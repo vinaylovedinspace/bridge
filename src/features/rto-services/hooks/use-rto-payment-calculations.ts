@@ -1,6 +1,6 @@
 import { useFormContext } from 'react-hook-form';
 import { RTOServiceFormValues } from '@/features/rto-services/types';
-import { formatCurrency } from '@/lib/payment/calculate';
+import { formatCurrency, calculateRTOPaymentBreakdown } from '@/lib/payment/calculate';
 import { getRTOServiceCharges } from '@/lib/constants/rto-fees';
 import { useAtomValue } from 'jotai';
 import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
@@ -19,9 +19,13 @@ export const useRTOPaymentCalculations = () => {
   // Get branch service charge from Jotai atom
   const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
 
-  // Calculate amounts (including branch service charge)
-  const originalAmount = governmentFees + additionalCharges + branchServiceCharge;
-  const finalAmountAfterDiscount = originalAmount - discountAmount;
+  // Calculate amounts using shared function (ensures consistency with backend)
+  const { originalAmount, finalAmount: finalAmountAfterDiscount } = calculateRTOPaymentBreakdown({
+    governmentFees,
+    serviceCharge: additionalCharges,
+    branchServiceCharge,
+    discount: discountAmount,
+  });
 
   // If payment is fully paid, amount due should be 0
   const amountDue = paymentStatus === 'FULLY_PAID' ? 0 : finalAmountAfterDiscount;
