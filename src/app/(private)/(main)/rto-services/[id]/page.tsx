@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { TypographyH4 } from '@/components/ui/typography';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -22,7 +23,15 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         </Link>
         <TypographyH4>Edit RTO Service</TypographyH4>
       </div>
-      <RTOServiceMultistepForm rtoService={rtoService} />
+      <Suspense
+        fallback={
+          <div className="h-[calc(100vh-200px)] flex items-center justify-center">
+            Loading form...
+          </div>
+        }
+      >
+        <RTOServiceMultistepForm rtoService={rtoService} />
+      </Suspense>
     </div>
   );
 }

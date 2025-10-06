@@ -2,14 +2,6 @@ import { z } from 'zod';
 import { createInsertSchema } from 'drizzle-zod';
 import { ServiceTypeEnum } from '@/db/schema/enums';
 import { PlanTable } from '@/db/schema/plan/columns';
-import {
-  PaymentModeEnum,
-  PaymentTable,
-  PaymentTypeEnum,
-  PaymentStatusEnum,
-  FullPaymentTable,
-  InstallmentPaymentTable,
-} from '@/db/schema';
 import { isTimeWithinOperatingHours } from '@/lib/utils/date-utils';
 import { personalInfoSchema } from '@/types/zod/client';
 import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
