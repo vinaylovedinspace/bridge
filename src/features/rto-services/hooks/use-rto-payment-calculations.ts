@@ -1,30 +1,35 @@
 import { useFormContext } from 'react-hook-form';
 import { RTOServiceFormValues } from '@/features/rto-services/types';
 import { formatCurrency } from '@/lib/payment/calculate';
-import { getRTOServiceCharges } from '@/features/rto-services/lib/charges';
+import { getRTOServiceCharges } from '@/lib/constants/rto-fees';
+import { BranchConfig } from '@/server/db/branch';
 
-export const useRTOPaymentCalculations = () => {
+export const useRTOPaymentCalculations = (branchConfig: BranchConfig) => {
   const { watch } = useFormContext<RTOServiceFormValues>();
   const serviceType = watch('service.type');
   const discountAmount = watch('payment.discount') ?? 0;
   const shouldApplyDiscount = watch('payment.applyDiscount');
   const paymentStatus = watch('payment.paymentStatus');
 
-  // Get service charges based on RTO service type
-  const { governmentFees, additionalCharges } = getRTOServiceCharges(serviceType);
+  // Get service charges based on RTO service type (uses max by default)
+  const { governmentFees, additionalCharges, additionalChargesRange } =
+    getRTOServiceCharges(serviceType);
 
-  // Calculate amounts
-  const serviceChargeAmount = additionalCharges.max;
-  const originalAmount = governmentFees + serviceChargeAmount;
-  const finalAmount = originalAmount - discountAmount;
+  // Get branch service charge
+  const branchServiceCharge = branchConfig.licenseServiceCharge ?? 0;
+
+  // Calculate amounts (including branch service charge)
+  const originalAmount = governmentFees + additionalCharges + branchServiceCharge;
+  const finalAmountAfterDiscount = originalAmount - discountAmount;
 
   // If payment is fully paid, amount due should be 0
-  const amountDue = paymentStatus === 'FULLY_PAID' ? 0 : finalAmount;
+  const amountDue = paymentStatus === 'FULLY_PAID' ? 0 : finalAmountAfterDiscount;
 
   // Format all amounts
-  const formatted = {
+  const formattedValues = {
     governmentFees: formatCurrency(governmentFees),
-    serviceCharge: formatCurrency(serviceChargeAmount),
+    serviceCharge: formatCurrency(additionalCharges),
+    branchServiceCharge: branchServiceCharge > 0 ? formatCurrency(branchServiceCharge) : null,
     discount: discountAmount > 0 ? formatCurrency(discountAmount) : null,
     amountDue: formatCurrency(amountDue),
   };
@@ -34,16 +39,20 @@ export const useRTOPaymentCalculations = () => {
   return {
     // Raw values
     governmentFees,
-    serviceCharge: serviceChargeAmount,
+    serviceCharge: additionalCharges,
+    branchServiceCharge,
     originalAmount,
     discountAmount,
-    finalAmount,
+    finalAmountAfterDiscount,
     amountDue,
 
     // Formatted values
-    formatted,
+    formattedValues,
 
     // UI states
     isDiscountApplied,
+
+    // Additional info
+    additionalChargesRange,
   };
 };

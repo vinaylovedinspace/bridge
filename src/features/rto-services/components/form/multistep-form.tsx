@@ -20,12 +20,17 @@ import {
 import { saveRTOService } from '../../server/action';
 import { getRTOService } from '../../server/db';
 import { createPaymentEntry } from '../../server/action';
+import { BranchConfig } from '@/server/db/branch';
 
 type RTOServiceMultistepFormProps = {
   rtoService?: Awaited<ReturnType<typeof getRTOService>>;
+  branchConfig: BranchConfig;
 };
 
-export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormProps) {
+export function RTOServiceMultistepForm({
+  rtoService,
+  branchConfig,
+}: RTOServiceMultistepFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -52,11 +57,13 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
         getData: () => getValues('service'),
       },
       payment: {
-        component: <PaymentContainer existingPayment={rtoService?.payment} />,
+        component: (
+          <PaymentContainer existingPayment={rtoService?.payment} branchConfig={branchConfig} />
+        ),
         getData: () => ({}),
       },
     };
-  }, [getValues, rtoService?.payment]);
+  }, [getValues, rtoService?.payment, branchConfig]);
 
   // Step handlers
   const handlePersonalStep = useCallback(async () => {

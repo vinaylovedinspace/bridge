@@ -2,7 +2,6 @@ import { Suspense } from 'react';
 import MultistepForm from '@/features/enrollment/components/form/multistep-form';
 import { getBranchConfig } from '@/server/db/branch';
 import { getClientById } from '@/features/enrollment/server/action';
-import { Skeleton } from '@/components/ui/skeleton';
 
 export default async function AdmissionPage({
   searchParams,

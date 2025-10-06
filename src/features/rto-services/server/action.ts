@@ -17,7 +17,7 @@ import {
 } from './db';
 import { insertClient, updateClient } from './db';
 import { dateToString } from '@/lib/date-utils';
-import { getRTOServiceCharges } from '../lib/charges';
+import { getRTOServiceCharges } from '@/lib/constants/rto-fees';
 import { paymentSchema } from '@/types/zod/payment';
 
 export async function saveRTOService(
@@ -76,7 +76,7 @@ export async function saveRTOService(
       await updateRTOServiceInDB(data.serviceId!, {
         serviceType: data.service.type,
         governmentFees,
-        serviceCharge: additionalCharges.max,
+        serviceCharge: additionalCharges,
       });
       rtoService = { id: data.serviceId!, clientId: client.id };
     } else {
@@ -85,7 +85,7 @@ export async function saveRTOService(
         clientId: client.id,
         serviceType: data.service.type,
         governmentFees,
-        serviceCharge: additionalCharges.max,
+        serviceCharge: additionalCharges,
       });
     }
 

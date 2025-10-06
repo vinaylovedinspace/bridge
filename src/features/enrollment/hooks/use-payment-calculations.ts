@@ -3,7 +3,8 @@ import { AdmissionFormValues } from '@/features/enrollment/types';
 import { useVehicle } from '@/hooks/vehicles';
 import {
   calculatePaymentBreakdown,
-  calculateOutstandingAmount,
+  calculateAmountDue,
+  recalculateInstallments,
   formatCurrency,
 } from '@/lib/payment/calculate';
 import { Enrollment } from '@/server/db/plan';
@@ -61,22 +62,22 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
   const licenseFee = licenseServiceFee ?? 0;
   const grandTotal = totalFees + licenseFee;
 
-  // Recalculate installments including license fee
+  // Recalculate installments including license fee using utility function
   let firstInstallmentAmount = firstInstallmentAmountBase;
   let secondInstallmentAmount = secondInstallmentAmountBase;
 
   if (paymentType === 'INSTALLMENTS') {
-    const finalAmount = grandTotal - (discount ?? 0);
-    firstInstallmentAmount = Math.ceil(finalAmount / 2);
-    secondInstallmentAmount = finalAmount - firstInstallmentAmount;
+    const installments = recalculateInstallments(grandTotal, discount ?? 0);
+    firstInstallmentAmount = installments.firstInstallment;
+    secondInstallmentAmount = installments.secondInstallment;
   }
 
-  // Calculate amount due
+  // Calculate amount due using utility function
   const amountDue = calculateAmountDue({
     existingPayment,
+    totalFees: grandTotal,
     discount,
     paymentType,
-    totalFees: grandTotal,
     firstInstallmentAmount,
   });
 
@@ -118,48 +119,3 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
     isCheckboxChecked,
   };
 };
-
-// Helper function to calculate amount due
-function calculateAmountDue({
-  existingPayment,
-  discount,
-  paymentType,
-  totalFees,
-  firstInstallmentAmount,
-}: {
-  existingPayment: NonNullable<Enrollment>['payment'];
-  discount: number | undefined;
-  paymentType: 'FULL_PAYMENT' | 'INSTALLMENTS' | undefined;
-  totalFees: number;
-  firstInstallmentAmount: number;
-}): number {
-  if (existingPayment) {
-    // Check if discount has changed from the stored value
-    const currentDiscount = discount ?? 0;
-    const storedDiscount = existingPayment.discount ?? 0;
-
-    if (currentDiscount !== storedDiscount) {
-      // Discount has changed - recalculate based on new values
-      const finalAmount = totalFees - currentDiscount;
-
-      // Check what has already been paid
-      const alreadyPaid = existingPayment.finalAmount - calculateOutstandingAmount(existingPayment);
-
-      // New amount due = new final amount - what's already been paid
-      return Math.max(0, finalAmount - alreadyPaid);
-    } else {
-      // Discount unchanged - use existing calculation
-      return calculateOutstandingAmount(existingPayment);
-    }
-  } else {
-    // For new enrollments, calculate from form values
-    const finalAmount = totalFees - (discount ?? 0);
-    if (paymentType === 'INSTALLMENTS') {
-      // For installments, show first installment as amount due
-      return firstInstallmentAmount;
-    } else {
-      // For full payment, show total final amount
-      return finalAmount;
-    }
-  }
-}

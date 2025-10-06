@@ -1,7 +1,7 @@
 import { LicenseClassEnum } from '@/db/schema/enums';
 
 // Extract the enum values from the pgEnum definition
-type LicenseClass = (typeof LicenseClassEnum.enumValues)[number];
+export type LicenseClass = (typeof LicenseClassEnum.enumValues)[number];
 
 // License class labels mapped to their enum values
 export const LICENSE_CLASS_LABELS: Record<LicenseClass, string> = {

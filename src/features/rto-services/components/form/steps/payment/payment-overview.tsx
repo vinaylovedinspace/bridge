@@ -3,9 +3,14 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Info } from 'lucide-react';
 import { useRTOPaymentCalculations } from '@/features/rto-services/hooks/use-rto-payment-calculations';
+import { BranchConfig } from '@/server/db/branch';
 
-export const PaymentOverview = () => {
-  const { formatted } = useRTOPaymentCalculations();
+type PaymentOverviewProps = {
+  branchConfig: BranchConfig;
+};
+
+export const PaymentOverview = ({ branchConfig }: PaymentOverviewProps) => {
+  const { formattedValues: formatted } = useRTOPaymentCalculations(branchConfig);
 
   return (
     <Card className="p-6 flex flex-col pt-10 min-h-[32rem] h-full">
@@ -33,6 +38,15 @@ export const PaymentOverview = () => {
           <TypographyMuted className="text-xs">
             Includes smart card, courier & gateway charges
           </TypographyMuted>
+
+          {formatted.branchServiceCharge && (
+            <div className="flex justify-between">
+              <TypographyMuted>Branch Service Charge</TypographyMuted>
+              <TypographyMuted className="font-semibold">
+                {formatted.branchServiceCharge}
+              </TypographyMuted>
+            </div>
+          )}
 
           {formatted.discount && (
             <div className="flex justify-between">

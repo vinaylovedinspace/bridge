@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { RTOServiceMultistepForm } from '@/features/rto-services/components/form/multistep-form';
 import { getRTOService } from '@/features/rto-services/server/db';
 import { notFound } from 'next/navigation';
+import { getBranchConfig } from '@/server/db/branch';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -14,6 +15,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   if (!rtoService) {
     notFound();
   }
+
+  const branchConfig = await getBranchConfig();
 
   return (
     <div className="h-full">
@@ -26,7 +29,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <Suspense
         fallback={<div className="flex items-center justify-center h-full w-full">loading...</div>}
       >
-        <RTOServiceMultistepForm rtoService={rtoService} />
+        <RTOServiceMultistepForm rtoService={rtoService} branchConfig={branchConfig} />
       </Suspense>
     </div>
   );

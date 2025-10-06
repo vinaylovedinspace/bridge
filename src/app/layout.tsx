@@ -6,7 +6,6 @@ import { Toaster } from 'sonner';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { NextStepProvider } from 'nextstepjs';
 import { OnboardingWrapper } from '@/providers/onboarding-wrapper';
-import { markOnboardingComplete } from '@/server/actions/user';
 import { TourWrapper } from '@/components/tour-wrapper';
 
 const manrope = Manrope({

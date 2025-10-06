@@ -179,8 +179,6 @@ export const createPaymentEntry = async (
 
     const existingPaymentId = rtoService?.paymentId;
 
-    console.log('existingPaymentId', existingPaymentId);
-
     if (existingPaymentId) {
       const [updatedPayment] = await tx
         .update(PaymentTable)

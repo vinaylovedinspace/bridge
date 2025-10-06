@@ -14,11 +14,16 @@ import { useRouter } from 'next/navigation';
 import { RTOServiceFormValues } from '@/features/rto-services/types';
 import { createPayment } from '@/features/rto-services/server/action';
 import { useRTOPaymentCalculations } from '@/features/rto-services/hooks/use-rto-payment-calculations';
+import { BranchConfig } from '@/server/db/branch';
 
-export const PaymentModeSelector = () => {
+type PaymentModeSelectorProps = {
+  branchConfig: BranchConfig;
+};
+
+export const PaymentModeSelector = ({ branchConfig }: PaymentModeSelectorProps) => {
   const { getValues, setValue } = useFormContext<RTOServiceFormValues>();
   const router = useRouter();
-  const { finalAmount, originalAmount } = useRTOPaymentCalculations();
+  const { finalAmountAfterDiscount, originalAmount } = useRTOPaymentCalculations(branchConfig);
 
   const [paymentMode, setPaymentMode] =
     useState<(typeof PaymentModeEnum.enumValues)[number]>('PAYMENT_LINK');
@@ -53,15 +58,15 @@ export const PaymentModeSelector = () => {
       // If payment is empty, initialize with calculated values
       if (!payment || !payment.originalAmount || !payment.finalAmount) {
         setValue('payment.originalAmount', originalAmount);
-        setValue('payment.finalAmount', finalAmount);
+        setValue('payment.finalAmount', finalAmountAfterDiscount);
       }
 
       const result = await createPayment(
         {
           ...payment,
           clientId,
-          originalAmount: payment?.finalAmount || finalAmount,
-          finalAmount: payment?.finalAmount || finalAmount,
+          originalAmount: payment?.originalAmount || originalAmount,
+          finalAmount: payment?.finalAmount || finalAmountAfterDiscount,
         },
         rtoServiceId
       );
