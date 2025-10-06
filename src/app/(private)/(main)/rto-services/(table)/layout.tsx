@@ -1,10 +1,11 @@
 import { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { TypographyH4 } from '@/components/ui/typography';
-import { RTOServiceSearchBar } from '@/features/rto-services/components/search-bar';
 import { RTOServiceStatusFilter } from '@/features/rto-services/components/status-filter';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ClientSearch } from '@/features/clients/components/client-search';
 
 export default function RTOServicesTableLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,16 +13,16 @@ export default function RTOServicesTableLayout({ children }: { children: React.R
       <TypographyH4>RTO Services</TypographyH4>
       <div className="flex justify-between items-center">
         <div className="grid grid-cols-12 gap-4 items-center w-full">
-          <div className="col-span-4">
-            <Suspense fallback={<div>Loading search...</div>}>
-              <RTOServiceSearchBar />
-            </Suspense>
-          </div>
-          <div className="col-span-3">
-            <Suspense fallback={<div>Loading filter...</div>}>
+          <Suspense fallback={<Skeleton className="h-9 w-full" />}>
+            <div className="col-span-4">
+              <ClientSearch className="w-full" />
+            </div>
+          </Suspense>
+          <Suspense fallback={<Skeleton className="h-9 w-full" />}>
+            <div className="col-span-3">
               <RTOServiceStatusFilter />
-            </Suspense>
-          </div>
+            </div>
+          </Suspense>
         </div>
         <Link href="/rto-services/add">
           <Button>

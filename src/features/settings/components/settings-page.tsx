@@ -82,8 +82,8 @@ export const SettingsPage = ({ branchId }: SettingsPageProps) => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-9 w-full" />
+                  <Skeleton className="h-9 w-full" />
                 </div>
                 <Skeleton className="h-16 w-full" />
               </CardContent>

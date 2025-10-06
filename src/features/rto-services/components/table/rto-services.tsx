@@ -4,26 +4,27 @@ import { type RTOServiceStatus, type RTOServiceType } from '../../types';
 import { DataTable } from './data-table';
 import { columns } from './columns';
 import { getBranchConfig } from '@/server/db/branch';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type RTOServicesProps = {
   status?: string;
   serviceType?: string;
-  client?: string;
+  search?: string;
 };
 
-export async function RTOServices({ status, serviceType, client }: RTOServicesProps) {
+export async function RTOServices({ status, serviceType, search }: RTOServicesProps) {
   const { id: branchId } = await getBranchConfig();
 
   const filters = {
     ...(status && { status: status as RTOServiceStatus }),
     ...(serviceType && { serviceType: serviceType as RTOServiceType }),
-    ...(client && { client }),
+    ...(search && { search }),
   };
 
   const data = await getRTOServices(branchId, filters);
 
   return (
-    <Suspense fallback={<div>Loading RTO services...</div>}>
+    <Suspense fallback={<Skeleton className="h-96 w-full" />}>
       <DataTable columns={columns} data={data} />
     </Suspense>
   );

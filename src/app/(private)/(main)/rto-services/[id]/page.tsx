@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { RTOServiceMultistepForm } from '@/features/rto-services/components/form/multistep-form';
 import { getRTOService } from '@/features/rto-services/server/db';
 import { notFound } from 'next/navigation';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,13 +24,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         </Link>
         <TypographyH4>Edit RTO Service</TypographyH4>
       </div>
-      <Suspense
-        fallback={
-          <div className="h-[calc(100vh-200px)] flex items-center justify-center">
-            Loading form...
-          </div>
-        }
-      >
+      <Suspense fallback={<Skeleton className="h-[calc(100vh-200px)] w-full" />}>
         <RTOServiceMultistepForm rtoService={rtoService} />
       </Suspense>
     </div>

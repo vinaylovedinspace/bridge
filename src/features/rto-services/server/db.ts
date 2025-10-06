@@ -62,7 +62,7 @@ export const getRTOServices = async (
   filters?: {
     status?: RTOServiceStatus;
     serviceType?: RTOServiceType;
-    client?: string;
+    search?: string;
   }
 ) => {
   try {
@@ -79,13 +79,13 @@ export const getRTOServices = async (
       conditions.push(eq(RTOServicesTable.serviceType, filters.serviceType));
     }
 
-    if (filters?.client) {
+    if (filters?.search) {
       conditions.push(
         or(
-          ilike(ClientTable.firstName, `%${filters.client}%`),
-          ilike(ClientTable.lastName, `%${filters.client}%`),
-          ilike(ClientTable.aadhaarNumber, `%${filters.client}%`),
-          ilike(ClientTable.phoneNumber, `%${filters.client}%`)
+          ilike(ClientTable.firstName, `%${filters.search}%`),
+          ilike(ClientTable.lastName, `%${filters.search}%`),
+          ilike(ClientTable.aadhaarNumber, `%${filters.search}%`),
+          ilike(ClientTable.phoneNumber, `%${filters.search}%`)
         )!
       );
     }

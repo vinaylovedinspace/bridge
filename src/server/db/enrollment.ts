@@ -19,7 +19,8 @@ const _getEnrollments = async (branchId: string, search?: string, paymentStatus?
           or(
             ilike(ClientTable.firstName, `%${search}%`),
             ilike(ClientTable.lastName, `%${search}%`),
-            ilike(ClientTable.phoneNumber, `%${search}%`)
+            ilike(ClientTable.phoneNumber, `%${search}%`),
+            ilike(ClientTable.aadhaarNumber, `%${search}%`)
           )
         )
       );

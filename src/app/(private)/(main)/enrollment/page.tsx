@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import MultistepForm from '@/features/enrollment/components/form/multistep-form';
 import { getBranchConfig } from '@/server/db/branch';
 import { getClientById } from '@/features/enrollment/server/action';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default async function AdmissionPage({
   searchParams,
@@ -21,7 +22,7 @@ export default async function AdmissionPage({
 
   return (
     <div data-testid="admission-page">
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<Skeleton className="h-[calc(100vh-316px)] w-full" />}>
         <MultistepForm branchConfig={branch} existingClient={existingClient} />
       </Suspense>
     </div>
