@@ -18,10 +18,9 @@ export const calculateLicenseServiceFee = (
   isEditMode: boolean,
   branchServiceCharge: number
 ): number => {
-  const shouldApplyExistingLearnersDiscount = hasExistingLearners && !isEditMode;
   const feeCalculation = calculateLicenseFees(
     selectedClasses,
-    shouldApplyExistingLearnersDiscount,
+    hasExistingLearners,
     branchServiceCharge
   );
   return feeCalculation.total;

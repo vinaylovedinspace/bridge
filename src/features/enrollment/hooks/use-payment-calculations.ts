@@ -11,6 +11,7 @@ import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
 import { useAtomValue } from 'jotai';
 import { calculateLicenseServiceFee } from '@/features/enrollment/lib/utils';
 import { calculateLicenseFees } from '@/lib/constants/rto-fees';
+import { useEffect } from 'react';
 
 type UsePaymentCalculationsProps = {
   existingPayment: NonNullable<Enrollment>['payment'];
@@ -29,7 +30,7 @@ export const usePaymentCalculations = ({
   isEditMode = false,
 }: UsePaymentCalculationsProps) => {
   const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
-  const { watch } = useFormContext<AdmissionFormValues>();
+  const { watch, setValue } = useFormContext<AdmissionFormValues>();
   const plan = watch('plan');
   const discount = watch('payment.discount');
   const paymentType = watch('payment.paymentType');
@@ -51,6 +52,10 @@ export const usePaymentCalculations = ({
           branchServiceCharge
         )
       : 0;
+
+  useEffect(() => {
+    setValue('payment.licenseServiceFee', licenseServiceFee);
+  }, [licenseServiceFee, setValue]);
 
   // Get license fee breakdown for display
   const shouldApplyExistingLearnersDiscount = hasExistingLearners && !isEditMode;

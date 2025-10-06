@@ -16,7 +16,7 @@ type LicenseStepProps = {
   isEditMode?: boolean;
 };
 
-export const LicenseStep = ({ isEditMode = false }: LicenseStepProps) => {
+export const LicenseStep = ({}: LicenseStepProps) => {
   const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
   const { control, watch } = useFormContext<AdmissionFormValues>();
 
@@ -31,10 +31,9 @@ export const LicenseStep = ({ isEditMode = false }: LicenseStepProps) => {
   const hasExistingLearners = existingLearningLicenseNumber.trim().length > 0;
 
   // Calculate fees breakdown for display
-  const shouldApplyExistingLearnersDiscount = hasExistingLearners && !isEditMode;
   const feeCalculation = calculateLicenseFees(
     selectedLicenseClasses,
-    shouldApplyExistingLearnersDiscount,
+    hasExistingLearners,
     branchServiceCharge
   );
 

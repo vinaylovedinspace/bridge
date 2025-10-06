@@ -90,10 +90,8 @@ export function calculateEnrollmentPaymentBreakdown({
   let secondInstallmentAmount = 0;
 
   if (paymentType === 'INSTALLMENTS') {
-    firstInstallmentAmount = Math.ceil(
-      totalAmountAfterDiscount * PAYMENT_CONSTANTS.INSTALLMENT_SPLIT_RATIO
-    );
-    secondInstallmentAmount = totalAmountAfterDiscount - firstInstallmentAmount;
+    firstInstallmentAmount = Math.ceil(totalAmountAfterDiscount / 2);
+    secondInstallmentAmount = Math.ceil(totalAmountAfterDiscount / 2);
   }
 
   return {
