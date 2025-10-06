@@ -47,3 +47,6 @@ export * from './rto-services/relations';
 
 export * from './notifications/columns';
 export * from './notifications/relations';
+
+export * from './expenses/columns';
+export * from './expenses/relations';

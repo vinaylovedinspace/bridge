@@ -12,7 +12,7 @@ export function Sidebar() {
         <div className="min-h-8">
           <OrgSelector />
         </div>
-        <div className="flex-1 flex flex-col gap-4">
+        <div className="flex-1 flex flex-col gap-2">
           {navItems.map((item) => (
             <NavItem key={item.href} item={item} />
           ))}
