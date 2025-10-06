@@ -4,12 +4,19 @@ import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
 import { RTOServiceFormValues } from '@/features/rto-services/types';
 import { useFormContext } from 'react-hook-form';
+import { getRTOService } from '@/features/rto-services/server/db';
 
-export const PaymentOptions = () => {
+type PaymentOptionsProps = {
+  existingPayment?: NonNullable<Awaited<ReturnType<typeof getRTOService>>>['payment'];
+};
+
+export const PaymentOptions = ({ existingPayment }: PaymentOptionsProps) => {
   const { control, setValue, watch } = useFormContext<RTOServiceFormValues>();
 
   const discount = watch('payment.discount');
   const applyDiscount = watch('payment.applyDiscount');
+
+  const hasExistingDiscount = Boolean(existingPayment && existingPayment.discount > 0);
 
   // Derive checkbox state from form values
   const isDiscountChecked = applyDiscount || discount > 0;
@@ -30,9 +37,17 @@ export const PaymentOptions = () => {
         {/* Discount checkbox */}
         <FormItem className="flex items-center gap-3">
           <FormControl>
-            <Checkbox checked={isDiscountChecked} onCheckedChange={handleDiscountCheckboxChange} />
+            <Checkbox
+              checked={isDiscountChecked}
+              onCheckedChange={handleDiscountCheckboxChange}
+              disabled={hasExistingDiscount}
+            />
           </FormControl>
-          <FormLabel className="cursor-pointer">Apply Discount</FormLabel>
+          <FormLabel
+            className={hasExistingDiscount ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
+          >
+            Apply Discount
+          </FormLabel>
         </FormItem>
       </div>
 
@@ -55,10 +70,11 @@ export const PaymentOptions = () => {
                         field.onChange(isNaN(numValue) ? 0 : numValue);
                       }}
                       className="h-12 pr-10"
+                      disabled={hasExistingDiscount}
                     />
                   </FormControl>
                   <FormMessage />
-                  {field.value !== 0 && (
+                  {field.value !== 0 && !hasExistingDiscount && (
                     <button
                       type="button"
                       onClick={() => {

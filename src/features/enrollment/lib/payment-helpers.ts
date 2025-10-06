@@ -19,7 +19,8 @@ export const calculatePaymentAmounts = (
   plan: typeof PlanTable.$inferSelect,
   vehicle: typeof VehicleTable.$inferSelect,
   discount: number,
-  paymentType: (typeof PaymentTypeEnum.enumValues)[number]
+  paymentType: (typeof PaymentTypeEnum.enumValues)[number],
+  licenseServiceFee: number = 0
 ) => {
   // Validate inputs
   if (plan.numberOfSessions <= 0) {
@@ -38,13 +39,39 @@ export const calculatePaymentAmounts = (
     throw new Error('Discount cannot be negative');
   }
 
-  return calculatePaymentBreakdown({
+  if (licenseServiceFee < 0) {
+    throw new Error('License service fee cannot be negative');
+  }
+
+  // Calculate vehicle rental fees
+  const vehicleRentalBreakdown = calculatePaymentBreakdown({
     sessions: plan.numberOfSessions,
     duration: plan.sessionDurationInMinutes,
     rate: vehicle.rent,
-    discount,
+    discount: 0, // Don't apply discount yet
     paymentType,
   });
+
+  // Add license service fee to original amount
+  const originalAmount = vehicleRentalBreakdown.originalAmount + licenseServiceFee;
+  const finalAmount = originalAmount - discount;
+
+  // Recalculate installments if needed
+  let firstInstallmentAmount = 0;
+  let secondInstallmentAmount = 0;
+
+  if (paymentType === 'INSTALLMENTS') {
+    firstInstallmentAmount = Math.ceil(finalAmount / 2);
+    secondInstallmentAmount = finalAmount - firstInstallmentAmount;
+  }
+
+  return {
+    originalAmount,
+    discount,
+    finalAmount,
+    firstInstallmentAmount,
+    secondInstallmentAmount,
+  };
 };
 
 /**

@@ -28,6 +28,7 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
   const discount = watch('payment.discount');
   const paymentType = watch('payment.paymentType');
   const applyDiscount = watch('payment.applyDiscount');
+  const licenseServiceFee = watch('payment.licenseServiceFee');
 
   const { data: vehicle } = useVehicle(plan?.vehicleId || '');
 
@@ -43,11 +44,11 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
   const isFirstInstallmentPaid = firstInstallmentPayment?.isPaid ?? false;
   const isSecondInstallmentPaid = secondInstallmentPayment?.isPaid ?? false;
 
-  // Calculate payment breakdown
+  // Calculate payment breakdown (vehicle rental fees only)
   const {
     originalAmount: totalFees,
-    firstInstallmentAmount,
-    secondInstallmentAmount,
+    firstInstallmentAmount: firstInstallmentAmountBase,
+    secondInstallmentAmount: secondInstallmentAmountBase,
   } = calculatePaymentBreakdown({
     sessions: plan?.numberOfSessions ?? DEFAULT_SESSION_DAYS,
     duration: plan?.sessionDurationInMinutes ?? DEFAULT_SESSION_MINUTES,
@@ -56,18 +57,34 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
     paymentType: paymentType ?? 'FULL_PAYMENT',
   });
 
+  // Add license service fee to get grand total
+  const licenseFee = licenseServiceFee ?? 0;
+  const grandTotal = totalFees + licenseFee;
+
+  // Recalculate installments including license fee
+  let firstInstallmentAmount = firstInstallmentAmountBase;
+  let secondInstallmentAmount = secondInstallmentAmountBase;
+
+  if (paymentType === 'INSTALLMENTS') {
+    const finalAmount = grandTotal - (discount ?? 0);
+    firstInstallmentAmount = Math.ceil(finalAmount / 2);
+    secondInstallmentAmount = finalAmount - firstInstallmentAmount;
+  }
+
   // Calculate amount due
   const amountDue = calculateAmountDue({
     existingPayment,
     discount,
     paymentType,
-    totalFees,
+    totalFees: grandTotal,
     firstInstallmentAmount,
   });
 
   // Format all amounts
   const formatted = {
     totalFees: formatCurrency(totalFees),
+    licenseServiceFee:
+      licenseServiceFee && licenseServiceFee > 0 ? formatCurrency(licenseServiceFee) : null,
     discount: discount && discount > 0 ? formatCurrency(discount) : null,
     firstInstallment: formatCurrency(firstInstallmentPayment?.amount ?? firstInstallmentAmount),
     secondInstallment: formatCurrency(secondInstallmentAmount),
@@ -80,6 +97,8 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
   return {
     // Raw values
     totalFees,
+    licenseServiceFee,
+    grandTotal,
     discount,
     paymentType,
     firstInstallmentAmount,

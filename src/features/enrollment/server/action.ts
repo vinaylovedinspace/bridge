@@ -270,9 +270,15 @@ export const createPayment = async (
 
     const { plan, vehicle } = result;
 
-    // 2. Calculate payment amounts
+    // 2. Calculate payment amounts (including license service fee)
     const { originalAmount, finalAmount, firstInstallmentAmount, secondInstallmentAmount } =
-      calculatePaymentAmounts(plan, vehicle, unsafeData.discount, unsafeData.paymentType);
+      calculatePaymentAmounts(
+        plan,
+        vehicle,
+        unsafeData.discount,
+        unsafeData.paymentType,
+        unsafeData.licenseServiceFee || 0
+      );
 
     // 3. Validate payment data
     const { success, data, error } = paymentSchema.safeParse({

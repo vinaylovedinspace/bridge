@@ -9,6 +9,7 @@ import { AdmissionFormValues } from '@/features/enrollment/types';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { calculateLicenseFees } from '@/lib/constants/rto-fees';
 import { LICENSE_CLASS_OPTIONS } from '@/lib/constants/license-classes';
+import { useEffect } from 'react';
 
 type LicenseStepProps = {
   branchServiceCharge?: number;
@@ -16,7 +17,7 @@ type LicenseStepProps = {
 };
 
 export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: LicenseStepProps) => {
-  const { control, watch } = useFormContext<AdmissionFormValues>();
+  const { control, watch, setValue } = useFormContext<AdmissionFormValues>();
 
   // Watch service type to conditionally show/hide fields
   const serviceType = watch('serviceType');
@@ -37,6 +38,13 @@ export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: Lic
     shouldApplyExistingLearnersDiscount,
     branchServiceCharge
   );
+
+  // Update payment.licenseServiceFee whenever the calculated total changes
+  useEffect(() => {
+    if (serviceType !== 'DRIVING_ONLY') {
+      setValue('payment.licenseServiceFee', feeCalculation.total, { shouldDirty: true });
+    }
+  }, [feeCalculation.total, serviceType, setValue]);
 
   return (
     <div className="space-y-10">

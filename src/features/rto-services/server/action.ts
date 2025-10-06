@@ -4,12 +4,17 @@ import { z } from 'zod';
 import {
   updateRTOService as updateRTOServiceInDB,
   deleteRTOService as deleteRTOServiceInDB,
+  getRTOService,
 } from './db';
 import { ActionReturnType } from '@/types/actions';
 import { getBranchConfig } from '@/server/db/branch';
 import { getNextClientCode } from '@/db/utils/client-code';
 import { rtoServicesFormSchema, rtoServicesFormSchemaWithOptionalPayment } from '../types';
-import { addRTOService as addRTOServiceInDB, createPayment as createPaymentInDB } from './db';
+import {
+  addRTOService as addRTOServiceInDB,
+  createPayment as createPaymentInDB,
+  createPaymentEntry as createPaymentEntryInDB,
+} from './db';
 import { insertClient, updateClient } from './db';
 import { dateToString } from '@/lib/date-utils';
 import { getRTOServiceCharges } from '../lib/charges';
@@ -47,6 +52,8 @@ export async function saveRTOService(
       ...data.personalInfo,
       clientCode,
       birthDate: dateToString(data.personalInfo.birthDate),
+      branchId,
+      tenantId,
     };
 
     // Save client (update if exists, insert if new)
@@ -149,6 +156,55 @@ export async function updateRTOServiceStatus(
     };
   }
 }
+
+export const createPaymentEntry = async (
+  unsafeData: z.infer<typeof paymentSchema>,
+  serviceId: string
+): Promise<{ error: boolean; message: string; paymentId?: string }> => {
+  try {
+    // 1. Get RTO service to get clientId and service charges
+    const rtoService = await getRTOService(serviceId);
+
+    if (!rtoService) {
+      return { error: true, message: 'RTO service not found' };
+    }
+
+    // 2. Calculate payment amounts
+    const { governmentFees, serviceCharge } = {
+      governmentFees: rtoService.governmentFees,
+      serviceCharge: rtoService.serviceCharge,
+    };
+
+    const originalAmount = governmentFees + serviceCharge + (unsafeData.licenseServiceFee || 0);
+    const finalAmount = originalAmount - (unsafeData.discount || 0);
+
+    // 3. Validate payment data with calculated amounts
+    const { success, data, error } = paymentSchema.safeParse({
+      ...unsafeData,
+      clientId: rtoService.clientId,
+      originalAmount,
+      finalAmount,
+    });
+
+    if (!success) {
+      console.error('Payment validation error:', error);
+      return { error: true, message: 'Invalid payment data' };
+    }
+
+    // 4. Create payment entry
+    const paymentId = await createPaymentEntryInDB(data, serviceId);
+
+    return {
+      error: false,
+      message: 'Payment acknowledged successfully',
+      paymentId,
+    };
+  } catch (error) {
+    console.error('Error processing payment data:', error);
+    const message = error instanceof Error ? error.message : 'Failed to save payment information';
+    return { error: true, message };
+  }
+};
 
 export const createPayment = async (
   unsafeData: z.infer<typeof paymentSchema>,

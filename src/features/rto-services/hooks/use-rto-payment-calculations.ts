@@ -6,34 +6,37 @@ import { getRTOServiceCharges } from '@/features/rto-services/lib/charges';
 export const useRTOPaymentCalculations = () => {
   const { watch } = useFormContext<RTOServiceFormValues>();
   const serviceType = watch('service.type');
-  const discount = watch('payment.discount');
-  const applyDiscount = watch('payment.applyDiscount');
+  const discountAmount = watch('payment.discount') ?? 0;
+  const shouldApplyDiscount = watch('payment.applyDiscount');
+  const paymentStatus = watch('payment.paymentStatus');
 
   // Get service charges based on RTO service type
   const { governmentFees, additionalCharges } = getRTOServiceCharges(serviceType);
 
   // Calculate amounts
-  const totalFees = governmentFees + additionalCharges.max;
-  const discountValue = discount ?? 0;
-  const finalAmount = totalFees - discountValue;
-  const amountDue = finalAmount; // For RTO services, it's always FULL_PAYMENT (no installments)
+  const serviceChargeAmount = additionalCharges.max;
+  const originalAmount = governmentFees + serviceChargeAmount;
+  const finalAmount = originalAmount - discountAmount;
+
+  // If payment is fully paid, amount due should be 0
+  const amountDue = paymentStatus === 'FULLY_PAID' ? 0 : finalAmount;
 
   // Format all amounts
   const formatted = {
     governmentFees: formatCurrency(governmentFees),
-    serviceCharge: formatCurrency(additionalCharges.max),
-    discount: discountValue > 0 ? formatCurrency(discountValue) : null,
+    serviceCharge: formatCurrency(serviceChargeAmount),
+    discount: discountAmount > 0 ? formatCurrency(discountAmount) : null,
     amountDue: formatCurrency(amountDue),
   };
 
-  const isDiscountApplied = applyDiscount || discountValue > 0;
+  const isDiscountApplied = shouldApplyDiscount || discountAmount > 0;
 
   return {
     // Raw values
     governmentFees,
-    serviceCharge: additionalCharges.max,
-    totalFees,
-    discount: discountValue,
+    serviceCharge: serviceChargeAmount,
+    originalAmount,
+    discountAmount,
     finalAmount,
     amountDue,
 

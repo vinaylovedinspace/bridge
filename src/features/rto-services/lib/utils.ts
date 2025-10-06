@@ -94,6 +94,20 @@ export const getDefaultValuesForRTOServiceForm = (
       serviceId: rtoService.id,
       personalInfo: mapClientToPersonalInfo(rtoService.client),
       service: mapRTOServiceToServiceInfo(rtoService),
+      payment: rtoService.payment
+        ? {
+            id: rtoService.payment.id,
+            clientId: rtoService.payment.clientId,
+            discount: rtoService.payment.discount,
+            paymentMode: 'PAYMENT_LINK' as const, // Default since it's not stored for RTO
+            paymentType: rtoService.payment.paymentType || 'FULL_PAYMENT',
+            paymentStatus: rtoService.payment.paymentStatus || 'PENDING',
+            licenseServiceFee: rtoService.payment.licenseServiceFee || 0,
+            originalAmount: rtoService.payment.originalAmount,
+            finalAmount: rtoService.payment.finalAmount,
+            applyDiscount: rtoService.payment.discount > 0,
+          }
+        : undefined,
     };
   }
 

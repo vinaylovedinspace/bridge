@@ -13,10 +13,12 @@ import { createPaymentLinkAction } from '@/features/enrollment/server/action';
 import { useRouter } from 'next/navigation';
 import { RTOServiceFormValues } from '@/features/rto-services/types';
 import { createPayment } from '@/features/rto-services/server/action';
+import { useRTOPaymentCalculations } from '@/features/rto-services/hooks/use-rto-payment-calculations';
 
 export const PaymentModeSelector = () => {
   const { getValues, setValue } = useFormContext<RTOServiceFormValues>();
   const router = useRouter();
+  const { finalAmount, originalAmount } = useRTOPaymentCalculations();
 
   const [paymentMode, setPaymentMode] =
     useState<(typeof PaymentModeEnum.enumValues)[number]>('PAYMENT_LINK');
@@ -48,12 +50,18 @@ export const PaymentModeSelector = () => {
         return;
       }
 
+      // If payment is empty, initialize with calculated values
+      if (!payment || !payment.originalAmount || !payment.finalAmount) {
+        setValue('payment.originalAmount', originalAmount);
+        setValue('payment.finalAmount', finalAmount);
+      }
+
       const result = await createPayment(
         {
           ...payment,
           clientId,
-          originalAmount: payment.finalAmount,
-          finalAmount: payment.finalAmount,
+          originalAmount: payment?.finalAmount || finalAmount,
+          finalAmount: payment?.finalAmount || finalAmount,
         },
         rtoServiceId
       );

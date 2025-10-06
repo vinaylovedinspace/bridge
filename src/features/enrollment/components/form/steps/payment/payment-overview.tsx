@@ -39,9 +39,18 @@ export const PaymentOverview = ({ existingPayment }: PaymentOverviewProps) => {
       <div className="flex flex-col justify-between flex-grow h-full">
         <div>
           <div className="flex justify-between">
-            <TypographyMuted>Total Fees</TypographyMuted>
+            <TypographyMuted>Training Fee</TypographyMuted>
             <TypographyMuted className="font-semibold">{formatted.totalFees}</TypographyMuted>
           </div>
+
+          {formatted.licenseServiceFee && (
+            <div className="flex justify-between mt-2">
+              <TypographyMuted>License Service Fee</TypographyMuted>
+              <TypographyMuted className="font-semibold">
+                {formatted.licenseServiceFee}
+              </TypographyMuted>
+            </div>
+          )}
 
           {formatted.discount && (
             <>

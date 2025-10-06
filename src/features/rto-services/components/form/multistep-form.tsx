@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import React from 'react';
@@ -19,6 +19,7 @@ import {
 } from '../../lib/utils';
 import { saveRTOService } from '../../server/action';
 import { getRTOService } from '../../server/db';
+import { createPaymentEntry } from '../../server/action';
 
 type RTOServiceMultistepFormProps = {
   rtoService?: Awaited<ReturnType<typeof getRTOService>>;
@@ -51,11 +52,78 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
         getData: () => getValues('service'),
       },
       payment: {
-        component: <PaymentContainer />,
+        component: <PaymentContainer existingPayment={rtoService?.payment} />,
         getData: () => ({}),
       },
     };
-  }, [getValues]);
+  }, [getValues, rtoService?.payment]);
+
+  // Step handlers
+  const handlePersonalStep = useCallback(async () => {
+    goToNext();
+  }, [goToNext]);
+
+  const handleLicenseStep = useCallback(async () => {
+    setIsSubmitting(true);
+    try {
+      const result = await saveRTOService(getValues());
+
+      if (result.error) {
+        toast.error(result.message);
+        return;
+      }
+
+      setValue('clientId', result.clientId);
+      setValue('serviceId', result.serviceId);
+
+      toast.success(result.message);
+      router.refresh();
+      goToNext();
+    } catch (error) {
+      console.error('Error saving RTO service:', error);
+      toast.error('Failed to save RTO service');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [getValues, setValue, router, goToNext]);
+
+  const handlePaymentStep = useCallback(async () => {
+    const formData = getValues();
+    const { serviceId, payment } = formData;
+
+    if (!serviceId) {
+      toast.error('Service ID is missing');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const paymentResult = await createPaymentEntry(payment, serviceId);
+
+      if (paymentResult.error) {
+        toast.error(paymentResult.message);
+        return;
+      }
+
+      toast.success('RTO service and payment saved successfully');
+      router.push('/rto-services');
+      router.refresh();
+    } catch (error) {
+      console.error('Error saving payment:', error);
+      toast.error('Failed to save payment');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [getValues, router]);
+
+  // Map step handlers
+  const stepHandlers = React.useMemo(() => {
+    return {
+      personal: handlePersonalStep,
+      license: handleLicenseStep,
+      payment: handlePaymentStep,
+    };
+  }, [handlePersonalStep, handleLicenseStep, handlePaymentStep]);
 
   const handleNext = async () => {
     const fieldsToValidate = getMultistepRTOServiceStepValidationFields(currentStep, getValues);
@@ -65,42 +133,20 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
       return;
     }
 
-    // Personal step - just navigate
-    if (currentStep === 'personal') {
-      goToNext();
-      return;
-    }
-
-    // License step - save data then navigate
-    if (currentStep === 'license') {
-      setIsSubmitting(true);
-      try {
-        const result = await saveRTOService(getValues());
-
-        if (result.error) {
-          toast.error(result.message);
-          return;
-        }
-
-        setValue('clientId', result.clientId);
-        setValue('serviceId', result.serviceId);
-
-        toast.success(result.message);
-        router.refresh();
-        goToNext();
-      } catch (error) {
-        console.error('Error saving RTO service:', error);
-        toast.error('Failed to save RTO service');
-      } finally {
-        setIsSubmitting(false);
-      }
+    const handler = stepHandlers[currentStep];
+    if (handler) {
+      await handler();
     }
   };
 
   return (
     <FormProvider {...methods}>
       <div className="h-full flex flex-col py-4 gap-10">
-        <RTOServiceProgressBar currentStep={currentStep} onStepChange={goToStep} />
+        <RTOServiceProgressBar
+          currentStep={currentStep}
+          onStepChange={goToStep}
+          interactive={Boolean(rtoService?.id)}
+        />
 
         {/* Form content - scrollable area */}
         <ScrollArea className="h-[calc(100vh-316px)]">

@@ -38,7 +38,10 @@ export type RTOOffice = (typeof RTO_OFFICES)[number];
 export const rtoServicesFormSchema = z.object({
   clientId: z.string().optional(),
   serviceId: z.string().optional(),
-  personalInfo: personalInfoSchema,
+  personalInfo: personalInfoSchema.extend({
+    branchId: z.string().optional(),
+    tenantId: z.string().optional(),
+  }),
   service: z.object({
     type: z.enum(RTOServiceTypeEnum.enumValues, {
       required_error: 'Service type is required',
