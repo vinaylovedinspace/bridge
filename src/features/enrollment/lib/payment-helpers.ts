@@ -3,12 +3,12 @@ import { generateSessionsFromPlan } from '@/lib/sessions';
 import { getBranchConfig } from '@/server/db/branch';
 import { createSessions, getSessionsByClientId } from '@/server/actions/sessions';
 import {
-  createFullPaymentInDB,
   createInstallmentPaymentsInDB,
   getExistingInstallmentsInDB,
   getPlanForSessionsInDB,
   getClientForSessionsInDB,
 } from '../server/db';
+import { upsertFullPaymentInDB } from '@/server/db/payments';
 
 /**
  * Handle full payment creation
@@ -19,7 +19,7 @@ export const handleFullPayment = async (
 ): Promise<void> => {
   const currentDate = dateToString(new Date());
 
-  await createFullPaymentInDB({
+  await upsertFullPaymentInDB({
     paymentId,
     paymentMode,
     paymentDate: currentDate,

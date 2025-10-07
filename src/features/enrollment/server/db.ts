@@ -3,7 +3,6 @@ import {
   ClientTable,
   PaymentTable,
   PlanTable,
-  FullPaymentTable,
   InstallmentPaymentTable,
   VehicleTable,
 } from '@/db/schema';
@@ -236,11 +235,7 @@ export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert, 
       with: { payment: true },
     });
 
-    if (!planWithPayment) {
-      throw new Error(`Plan not found: ${planId}`);
-    }
-
-    const existingPayment = planWithPayment.payment;
+    const existingPayment = planWithPayment?.payment;
 
     // Update existing payment
     if (existingPayment) {
@@ -258,17 +253,17 @@ export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert, 
     }
 
     // Create new payment and link to plan
-    const [created] = await tx.insert(PaymentTable).values(data).returning();
+    const [payment] = await tx.insert(PaymentTable).values(data).returning();
 
     await tx
       .update(PlanTable)
-      .set({ paymentId: created.id, updatedAt: new Date() })
+      .set({ paymentId: payment.id, updatedAt: new Date() })
       .where(eq(PlanTable.id, planId));
 
     return {
-      payment: created,
+      payment,
       isExistingPayment: false,
-      paymentId: created.id,
+      paymentId: payment.id,
     };
   });
 };
@@ -284,43 +279,6 @@ export const getClientById = async (clientId: string) => {
   });
 
   return client;
-};
-
-export const createFullPaymentInDB = async (data: typeof FullPaymentTable.$inferInsert) => {
-  return await db.transaction(async (tx) => {
-    // Check if full payment already exists
-    const existingFullPayment = await tx.query.FullPaymentTable.findFirst({
-      where: eq(FullPaymentTable.paymentId, data.paymentId),
-    });
-
-    // Update existing payment record
-    if (existingFullPayment) {
-      const [updated] = await tx
-        .update(FullPaymentTable)
-        .set({
-          paymentMode: data.paymentMode,
-          paymentDate: data.paymentDate,
-          isPaid: data.isPaid,
-        })
-        .where(eq(FullPaymentTable.paymentId, data.paymentId))
-        .returning();
-
-      return updated;
-    }
-
-    // Create new full payment and update status
-    const [created] = await tx.insert(FullPaymentTable).values(data).returning();
-
-    await tx
-      .update(PaymentTable)
-      .set({
-        paymentStatus: 'FULLY_PAID',
-        updatedAt: new Date(),
-      })
-      .where(eq(PaymentTable.id, data.paymentId));
-
-    return created;
-  });
 };
 
 const calculatePaymentStatus = (paidCount: number): 'PENDING' | 'PARTIALLY_PAID' | 'FULLY_PAID' => {

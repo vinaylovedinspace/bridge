@@ -1,14 +1,7 @@
 import { db } from '@/db';
-import {
-  ClientTable,
-  FullPaymentTable,
-  PaymentModeEnum,
-  PaymentTable,
-  RTOServicesTable,
-} from '@/db/schema';
+import { ClientTable, PaymentTable, RTOServicesTable } from '@/db/schema';
 import { eq, and, ilike, or, isNull } from 'drizzle-orm';
 import type { RTOServiceStatus, RTOServiceType } from '../types';
-import { dateToString } from '@/lib/date-utils';
 
 export const addRTOService = async (data: typeof RTOServicesTable.$inferInsert) => {
   const [rtoService] = await db.insert(RTOServicesTable).values(data).returning();
@@ -211,96 +204,46 @@ export const createPaymentEntry = async (
   });
 };
 
-export const createPayment = async (
+export const upsertPaymentInDB = async (
   data: typeof PaymentTable.$inferInsert,
-  paymentMode: (typeof PaymentModeEnum.enumValues)[number],
   serviceId: string
 ) => {
-  const response = await db.transaction(async (tx) => {
-    const isPaymentModeCashOrQR = paymentMode === 'CASH' || paymentMode === 'QR';
-
-    // Check if payment already exists for this RTO service
-    const existingRTOService = await tx.query.RTOServicesTable.findFirst({
+  return await db.transaction(async (tx) => {
+    // Fetch plan with associated payment
+    const serviceWithPayment = await tx.query.RTOServicesTable.findFirst({
       where: eq(RTOServicesTable.id, serviceId),
-      with: {
-        payment: true,
-      },
+      with: { payment: true },
     });
 
-    let paymentId;
+    const existingPayment = serviceWithPayment?.payment;
 
-    if (existingRTOService?.paymentId && existingRTOService.payment) {
-      // Payment already exists - update it
-      paymentId = existingRTOService.paymentId;
-
-      await tx
+    // Update existing payment
+    if (existingPayment) {
+      const [updated] = await tx
         .update(PaymentTable)
-        .set({
-          ...data,
-          paymentStatus: isPaymentModeCashOrQR ? 'FULLY_PAID' : data.paymentStatus,
-        })
-        .where(eq(PaymentTable.id, paymentId));
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(PaymentTable.id, existingPayment.id))
+        .returning();
 
-      // Create FullPaymentTable entry only for CASH/QR
-      if (isPaymentModeCashOrQR) {
-        // Check if FullPayment already exists
-        const existingFullPayment = await tx.query.FullPaymentTable.findFirst({
-          where: eq(FullPaymentTable.paymentId, paymentId),
-        });
-
-        if (!existingFullPayment) {
-          await tx.insert(FullPaymentTable).values({
-            paymentId,
-            paymentDate: dateToString(new Date()),
-            paymentMode,
-            isPaid: true,
-          });
-        }
-      }
-    } else {
-      // No payment exists - create new one
-      if (isPaymentModeCashOrQR) {
-        const [payment] = await tx
-          .insert(PaymentTable)
-          .values({
-            ...data,
-            paymentStatus: 'FULLY_PAID',
-          })
-          .returning({
-            id: PaymentTable.id,
-          });
-
-        await tx.insert(FullPaymentTable).values({
-          paymentId: payment.id,
-          paymentDate: dateToString(new Date()),
-          paymentMode,
-          isPaid: true,
-        });
-        paymentId = payment.id;
-      } else {
-        const [payment] = await tx
-          .insert(PaymentTable)
-          .values({
-            ...data,
-            paymentStatus: data.paymentStatus || 'PENDING',
-          })
-          .returning({
-            id: PaymentTable.id,
-          });
-        paymentId = payment.id;
-      }
-
-      // Link payment to RTO service
-      await tx
-        .update(RTOServicesTable)
-        .set({
-          paymentId,
-        })
-        .where(eq(RTOServicesTable.id, serviceId));
+      return {
+        payment: updated,
+        isExistingPayment: true,
+        paymentId: updated.id,
+      };
     }
 
-    return paymentId;
-  });
+    // Create new payment and link to rto-service
+    const [payment] = await tx.insert(PaymentTable).values(data).returning();
 
-  return response;
+    await tx
+      .update(RTOServicesTable)
+      .set({ paymentId: payment.id, updatedAt: new Date() })
+      .where(eq(RTOServicesTable.id, serviceId));
+
+    return {
+      payment,
+      isExistingPayment: false,
+      paymentId: payment.id,
+    };
+  });
 };

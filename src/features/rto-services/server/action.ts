@@ -5,21 +5,20 @@ import {
   updateRTOService as updateRTOServiceInDB,
   deleteRTOService as deleteRTOServiceInDB,
   getRTOService,
+  upsertPaymentInDB,
 } from './db';
 import { ActionReturnType } from '@/types/actions';
 import { getBranchConfig } from '@/server/db/branch';
 import { getNextClientCode } from '@/db/utils/client-code';
 import { rtoServicesFormSchema, rtoServicesFormSchemaWithOptionalPayment } from '../types';
-import {
-  addRTOService as addRTOServiceInDB,
-  createPayment as createPaymentInDB,
-  createPaymentEntry as createPaymentEntryInDB,
-} from './db';
+import { addRTOService as addRTOServiceInDB } from './db';
 import { insertClient, updateClient } from './db';
 import { dateToString } from '@/lib/date-utils';
 import { getRTOServiceCharges } from '@/lib/constants/rto-fees';
 import { paymentSchema } from '@/types/zod/payment';
 import { calculateRTOPaymentBreakdown } from '@/lib/payment/calculate';
+import { IMMEDIATE_PAYMENT_MODES } from '@/lib/constants/payment';
+import { upsertFullPaymentInDB } from '@/server/db/payments';
 
 export async function saveRTOService(
   unsafeData: z.infer<typeof rtoServicesFormSchema>
@@ -158,57 +157,6 @@ export async function updateRTOServiceStatus(
   }
 }
 
-export const createPaymentEntry = async (
-  unsafeData: z.infer<typeof paymentSchema>,
-  serviceId: string
-): Promise<{ error: boolean; message: string; paymentId?: string }> => {
-  try {
-    // 1. Get RTO service to get clientId and service charges
-    const rtoService = await getRTOService(serviceId);
-
-    if (!rtoService) {
-      return { error: true, message: 'RTO service not found' };
-    }
-
-    // 2. Get branch config for service charge
-    const { licenseServiceCharge: branchServiceCharge } = await getBranchConfig();
-
-    // 3. Calculate payment amounts using shared function (ensures consistency with frontend)
-    const paymentBreakdown = calculateRTOPaymentBreakdown({
-      governmentFees: rtoService.governmentFees,
-      serviceCharge: rtoService.serviceCharge,
-      branchServiceCharge,
-      discount: unsafeData.discount || 0,
-    });
-
-    // 4. Validate payment data with calculated amounts
-    const { success, data, error } = paymentSchema.safeParse({
-      ...unsafeData,
-      clientId: rtoService.clientId,
-      totalAmount: paymentBreakdown.totalAmountAfterDiscount,
-      licenseServiceFee: paymentBreakdown.branchServiceCharge,
-    });
-
-    if (!success) {
-      console.error('Payment validation error:', error);
-      return { error: true, message: 'Invalid payment data' };
-    }
-
-    // 5. Create payment entry
-    const paymentId = await createPaymentEntryInDB(data, serviceId);
-
-    return {
-      error: false,
-      message: 'Payment acknowledged successfully',
-      paymentId,
-    };
-  } catch (error) {
-    console.error('Error processing payment data:', error);
-    const message = error instanceof Error ? error.message : 'Failed to save payment information';
-    return { error: true, message };
-  }
-};
-
 export const createPayment = async (
   unsafeData: z.infer<typeof paymentSchema>,
   serviceId: string
@@ -228,8 +176,8 @@ export const createPayment = async (
     const paymentBreakdown = calculateRTOPaymentBreakdown({
       governmentFees: rtoService.governmentFees,
       serviceCharge: rtoService.serviceCharge,
-      branchServiceCharge,
-      discount: unsafeData.discount || 0,
+      branchServiceCharge: branchServiceCharge,
+      discount: unsafeData.discount,
     });
 
     // 4. Validate payment data with calculated amounts
@@ -245,8 +193,21 @@ export const createPayment = async (
       return { error: true, message: 'Invalid payment data' };
     }
 
-    // 5. Upsert payment
-    const paymentId = await createPaymentInDB(data, data.paymentMode, serviceId);
+    // 5. Create or update payment
+    const { paymentId } = await upsertPaymentInDB(data, serviceId);
+
+    const currentDate = dateToString(new Date());
+
+    if (
+      IMMEDIATE_PAYMENT_MODES.includes(data.paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])
+    ) {
+      await upsertFullPaymentInDB({
+        paymentId,
+        paymentMode: data.paymentMode,
+        paymentDate: currentDate,
+        isPaid: true,
+      });
+    }
 
     return {
       error: false,

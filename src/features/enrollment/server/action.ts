@@ -34,6 +34,7 @@ import {
 } from '../lib/payment-helpers';
 import { paymentSchema } from '@/types/zod/payment';
 import { calculateEnrollmentPaymentBreakdown } from '@/lib/payment/calculate';
+import { IMMEDIATE_PAYMENT_MODES } from '@/lib/constants/payment';
 
 export const createClient = async (
   unsafeData: z.infer<typeof personalInfoSchema>
@@ -252,8 +253,6 @@ export const createPlan = async (
   }
 };
 
-const IMMEDIATE_PAYMENT_MODES = ['CASH', 'QR'] as const;
-
 async function processPaymentTransaction(
   paymentId: string,
   paymentMode: 'CASH' | 'QR',
@@ -281,7 +280,6 @@ export const createPayment = async (
     // 1. Fetch plan and vehicle data
     const planResult = await getPlanAndVehicleInDB(planId);
     if (!planResult) {
-      console.error('[createPayment] Plan not found:', planId);
       return { error: true, message: 'Plan or vehicle not found' };
     }
 

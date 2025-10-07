@@ -1,5 +1,11 @@
 import { db } from '@/db';
-import { ClientTable, PaymentTable, TransactionTable, PlanTable } from '@/db/schema';
+import {
+  ClientTable,
+  PaymentTable,
+  TransactionTable,
+  PlanTable,
+  FullPaymentTable,
+} from '@/db/schema';
 import { eq, and, desc, max, or, ilike } from 'drizzle-orm';
 import { getBranchConfig } from './branch';
 import { isPaymentOverdue } from '@/lib/payment/is-payment-overdue';
@@ -163,3 +169,40 @@ export const getOverduePaymentsCount = async () => {
 };
 
 export type Payment = Awaited<ReturnType<typeof getPayments>>[0];
+
+export const upsertFullPaymentInDB = async (data: typeof FullPaymentTable.$inferInsert) => {
+  return await db.transaction(async (tx) => {
+    // Check if full payment already exists
+    const existingFullPayment = await tx.query.FullPaymentTable.findFirst({
+      where: eq(FullPaymentTable.paymentId, data.paymentId),
+    });
+
+    // Update existing payment record
+    if (existingFullPayment) {
+      const [updated] = await tx
+        .update(FullPaymentTable)
+        .set({
+          paymentMode: data.paymentMode,
+          paymentDate: data.paymentDate,
+          isPaid: data.isPaid,
+        })
+        .where(eq(FullPaymentTable.paymentId, data.paymentId))
+        .returning();
+
+      return updated;
+    }
+
+    // Create new full payment and update status
+    const [payment] = await tx.insert(FullPaymentTable).values(data).returning();
+
+    await tx
+      .update(PaymentTable)
+      .set({
+        paymentStatus: 'FULLY_PAID',
+        updatedAt: new Date(),
+      })
+      .where(eq(PaymentTable.id, data.paymentId));
+
+    return payment;
+  });
+};

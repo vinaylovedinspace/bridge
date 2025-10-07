@@ -4,7 +4,6 @@ import {
   type PaymentLinkResponse,
 } from './client';
 import { nanoid } from 'nanoid';
-import { getCurrentTenantName } from '@/server/db/tenant';
 import { z } from 'zod';
 import { env } from '@/env';
 import { getBranchConfigWithTenant } from '@/server/db/branch';

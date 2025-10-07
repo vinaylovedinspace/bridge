@@ -22,7 +22,7 @@ export const PendingPaymentsCard = ({ pendingCount }: PendingPaymentsCardProps) 
             <p className="text-gray-600">Overdue Payments</p>
           </div>
         </div>
-        <Link href="/enrollments?paymentStatus=OVERDUE">
+        <Link href="/payments?paymentStatus=PENDING">
           <Button variant="outline" className="w-full">
             View List
           </Button>

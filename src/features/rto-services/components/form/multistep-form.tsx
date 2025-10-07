@@ -18,7 +18,7 @@ import {
 } from '../../lib/utils';
 import { saveRTOService } from '../../server/action';
 import { getRTOService } from '../../server/db';
-import { createPaymentEntry } from '../../server/action';
+import { createPayment } from '../../server/action';
 import { FormNavigation } from '@/components/ui/form-navigation';
 import { cn } from '@/lib/utils';
 
@@ -99,7 +99,7 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
 
     setIsSubmitting(true);
     try {
-      const paymentResult = await createPaymentEntry(payment, serviceId);
+      const paymentResult = await createPayment(payment, serviceId);
 
       if (paymentResult.error) {
         toast.error(paymentResult.message);

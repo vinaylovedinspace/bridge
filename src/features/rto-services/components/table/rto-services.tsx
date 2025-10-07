@@ -23,6 +23,8 @@ export async function RTOServices({ status, serviceType, search }: RTOServicesPr
 
   const data = await getRTOServices(branchId, filters);
 
+  console.log(data);
+
   return (
     <Suspense fallback={<Skeleton className="h-96 w-full" />}>
       <DataTable columns={columns} data={data} />

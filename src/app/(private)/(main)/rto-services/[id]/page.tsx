@@ -18,7 +18,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   return (
     <div className="h-full">
       <div className="flex gap-4 items-center pb-4">
-        <Link href="/enrollments">
+        <Link href="/rto-services">
           <ArrowLeft className="size-5 text-gray-700" />
         </Link>
         <TypographyH4>
