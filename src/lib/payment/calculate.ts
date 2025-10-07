@@ -73,7 +73,6 @@ export function calculateEnrollmentPaymentBreakdown({
   const safeRate = Number(rate) ?? 0;
   const safeDiscount = Number(discount) ?? 0;
   const safeLicenseServiceFee = Number(licenseServiceFee) ?? 0;
-
   // Calculate half-hour blocks, rounding up
   const halfHourBlocks = Math.ceil(safeDuration / PAYMENT_CONSTANTS.SESSION_BLOCK_MINUTES);
 
@@ -84,7 +83,6 @@ export function calculateEnrollmentPaymentBreakdown({
 
   // Calculate final amount after discount
   const totalAmountAfterDiscount = Math.max(0, totalFeesBeforeDiscount - safeDiscount);
-
   // Calculate installment amounts if applicable
   let firstInstallmentAmount = 0;
   let secondInstallmentAmount = 0;
@@ -146,12 +144,15 @@ export type PaymentData = {
   };
 };
 
-export function calculateOutstandingAmount(payment: PaymentData | null | undefined): number {
+export function calculateOutstandingAmount(
+  payment: PaymentData | null | undefined,
+  totalAmount: number
+): number {
   if (!payment) {
     return 0;
   }
 
-  const { paymentType, totalAmount, paymentStatus } = payment;
+  const { paymentType, paymentStatus } = payment;
 
   // Validate final amount
   if (totalAmount < 0 || !Number.isFinite(totalAmount)) {
@@ -205,7 +206,7 @@ export function calculateAmountDue({
   firstInstallmentAmount?: number;
 }): number {
   if (existingPayment) {
-    return calculateOutstandingAmount(existingPayment);
+    return calculateOutstandingAmount(existingPayment, totalAmount);
   } else {
     // For new enrollments, calculate from form values
     if (paymentType === 'INSTALLMENTS') {

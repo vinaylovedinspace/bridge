@@ -13,6 +13,7 @@ import {
   createLearningLicense,
   createDrivingLicense,
   createPlan,
+  createPayment,
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
 import { UseFormGetValues, UseFormSetValue } from 'react-hook-form';
@@ -253,12 +254,21 @@ export const useEnrollmentFormSubmissions = (
   );
 
   const handlePaymentStep = useCallback(async (): ActionReturnType => {
-    // Payment step is handled separately by payment form
-    return {
-      error: false,
-      message: 'Payment step completed',
+    const formValues = getValues();
+
+    if (!formValues.clientId || !formValues.planId)
+      return {
+        error: true,
+        message: 'Payment information was not saved. Please try again later',
+      };
+
+    const paymentInput = {
+      ...formValues.payment,
+      clientId: formValues.clientId,
     };
-  }, []);
+
+    return await createPayment(paymentInput, formValues.planId);
+  }, [getValues]);
 
   const submitStep = async (
     stepKey: string,
