@@ -251,66 +251,80 @@ export const createPlan = async (
   }
 };
 
+const IMMEDIATE_PAYMENT_MODES = ['CASH', 'QR'] as const;
+
+async function processPaymentTransaction(
+  paymentId: string,
+  paymentMode: 'CASH' | 'QR',
+  paymentType: string,
+  firstInstallmentAmount: number,
+  secondInstallmentAmount: number
+): Promise<void> {
+  if (paymentType === 'FULL_PAYMENT') {
+    await handleFullPayment(paymentId, paymentMode);
+  } else if (paymentType === 'INSTALLMENTS') {
+    await handleInstallmentPayment(
+      paymentId,
+      paymentMode,
+      firstInstallmentAmount,
+      secondInstallmentAmount
+    );
+  }
+}
+
 export const createPayment = async (
   unsafeData: z.infer<typeof paymentSchema>,
   planId: string
 ): Promise<{ error: boolean; message: string; paymentId?: string }> => {
   try {
-    // 1. Get plan and vehicle for payment calculation
-    const result = await getPlanAndVehicleInDB(planId);
-
-    if (!result) {
+    // 1. Fetch plan and vehicle data
+    const planResult = await getPlanAndVehicleInDB(planId);
+    if (!planResult) {
+      console.error('[createPayment] Plan not found:', planId);
       return { error: true, message: 'Plan or vehicle not found' };
     }
 
-    const { plan, vehicle } = result;
+    const { plan, vehicle } = planResult;
 
-    const { totalAmountAfterDiscount, firstInstallmentAmount, secondInstallmentAmount } =
-      calculateEnrollmentPaymentBreakdown({
-        sessions: plan.numberOfSessions,
-        duration: plan.sessionDurationInMinutes,
-        rate: vehicle.rent,
-        discount: unsafeData.discount,
-        paymentType: unsafeData.paymentType,
-        licenseServiceFee: unsafeData.licenseServiceFee,
-      });
-
-    // 3. Validate payment data
-    const { success, data, error } = paymentSchema.safeParse({
-      ...unsafeData,
-      totalAmount: totalAmountAfterDiscount,
+    // 2. Calculate payment breakdown
+    const paymentBreakdown = calculateEnrollmentPaymentBreakdown({
+      sessions: plan.numberOfSessions,
+      duration: plan.sessionDurationInMinutes,
+      rate: vehicle.rent,
+      discount: unsafeData.discount,
+      paymentType: unsafeData.paymentType,
+      licenseServiceFee: unsafeData.licenseServiceFee,
     });
 
-    if (!success) {
-      console.error('Payment validation error:', error);
+    // 3. Validate payment data with calculated total
+    const validationResult = paymentSchema.safeParse({
+      ...unsafeData,
+      totalAmount: paymentBreakdown.totalAmountAfterDiscount,
+    });
+
+    if (!validationResult.success) {
+      console.error('[createPayment] Validation failed:', validationResult.error.format());
       return { error: true, message: 'Invalid payment data' };
     }
 
-    // 4. Upsert payment
-    const { paymentId, isExistingPayment } = await upsertPaymentInDB(data, planId);
+    // 4. Persist payment to database
+    const { paymentId, isExistingPayment } = await upsertPaymentInDB(validationResult.data, planId);
 
-    // 5. Handle payment transactions (CASH or QR)
-    if (data.paymentMode === 'CASH' || data.paymentMode === 'QR') {
-      if (data.paymentType === 'FULL_PAYMENT') {
-        await handleFullPayment(paymentId, data.paymentMode);
-      } else if (data.paymentType === 'INSTALLMENTS') {
-        await handleInstallmentPayment(
-          paymentId,
-          data.paymentMode,
-          firstInstallmentAmount,
-          secondInstallmentAmount
-        );
-      }
+    // 5. Process immediate payment transactions
+    const paymentMode = validationResult.data.paymentMode;
+    if (IMMEDIATE_PAYMENT_MODES.includes(paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])) {
+      await processPaymentTransaction(
+        paymentId,
+        paymentMode as 'CASH' | 'QR',
+        validationResult.data.paymentType,
+        paymentBreakdown.firstInstallmentAmount,
+        paymentBreakdown.secondInstallmentAmount
+      );
     }
 
-    // 6. Create fallback sessions if needed (for new payments only)
+    // 6. Schedule sessions for new payments (non-blocking)
     if (!isExistingPayment) {
-      try {
-        await createFallbackSessions(planId);
-      } catch (sessionError) {
-        console.error('Error creating fallback sessions:', sessionError);
-        // Don't fail the payment if session creation fails
-      }
+      createFallbackSessions(planId);
     }
 
     return {

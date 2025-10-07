@@ -118,20 +118,6 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
 
   const handlePaymentStep = useCallback(
     async (data: PaymentValues): ActionReturnType => {
-      // Check if discount has changed from existing payment
-      const currentDiscount = data.discount ?? 0;
-      const storedDiscount = enrollment.payment?.discount ?? 0;
-      const discountChanged = currentDiscount !== storedDiscount;
-
-      // If payment exists and discount hasn't changed, skip update
-      if (enrollment.payment && !discountChanged) {
-        return {
-          error: false,
-          message: 'Success',
-        };
-      }
-
-      // Create or update payment (upsertPaymentInDB handles both)
       try {
         const paymentData = {
           ...data,
