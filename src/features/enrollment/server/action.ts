@@ -55,6 +55,7 @@ export const createClient = async (
 
     const { isExistingClient, clientId } = await upsertClientInDB({
       ...unsafeData,
+      id: unsafeData.id, // Pass the client ID if editing
       branchId,
       tenantId,
       birthDate: birthDateString, // Convert to YYYY-MM-DD string

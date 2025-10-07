@@ -62,6 +62,7 @@ export const mapClientToPersonalInfo = (
   client: NonNullable<Enrollment>['client']
 ): AdmissionFormValues['personalInfo'] => {
   return {
+    id: client.id, // Include the client ID for edit mode
     clientCode: client.clientCode,
     firstName: client.firstName,
     lastName: client.lastName,
@@ -185,12 +186,15 @@ export const getDefaultValuesForEditEnrollmentForm = (
   enrollment: NonNullable<Enrollment>
 ): AdmissionFormValues => {
   const { client, payment } = enrollment;
-
+  console.log('clientId', client.id);
   return {
     serviceType: enrollment.serviceType,
     personalInfo: mapClientToPersonalInfo(client),
     learningLicense: mapLearningLicense(client?.learningLicense),
     drivingLicense: mapDrivingLicense(client?.drivingLicense),
+    clientId: client.id,
+    planId: enrollment.id,
+    paymentId: payment?.id,
     plan: {
       vehicleId: enrollment.vehicleId,
       numberOfSessions: enrollment.numberOfSessions,
@@ -221,8 +225,5 @@ export const getDefaultValuesForEditEnrollmentForm = (
           paymentMode: 'PAYMENT_LINK' as const,
           applyDiscount: false,
         },
-    clientId: client.id,
-    planId: enrollment.id,
-    paymentId: payment?.id,
   };
 };

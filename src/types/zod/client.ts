@@ -57,4 +57,5 @@ export const personalInfoSchema = createInsertSchema(ClientTable, {
 
   // Make clientCode optional - it's auto-generated on create, preserved on update
   clientCode: z.string().optional(),
+  id: z.string().optional(),
 });

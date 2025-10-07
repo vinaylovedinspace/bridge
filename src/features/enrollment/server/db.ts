@@ -14,8 +14,25 @@ import { getNextClientCode } from '@/db/utils/client-code';
 import { getNextPlanCode } from '@/db/utils/plan-code';
 
 export const upsertClientInDB = async (
-  data: Omit<typeof ClientTable.$inferInsert, 'clientCode'> & { clientCode?: string }
+  data: Omit<typeof ClientTable.$inferInsert, 'clientCode'> & { clientCode?: string; id?: string }
 ) => {
+  // If client ID is provided (edit mode), update the existing client by ID
+  if (data.id) {
+    const [client] = await db
+      .update(ClientTable)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(ClientTable.id, data.id))
+      .returning();
+
+    return {
+      isExistingClient: true,
+      clientId: client.id,
+    };
+  }
+
   // Create a variable to track if this was an update operation
   let isExistingClient = false;
 

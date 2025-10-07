@@ -18,7 +18,7 @@ export const EditFormSteps = ({ currentStep, enrollment }: EditFormStepsProps) =
     service: <ServiceTypeStep disabled={true} />,
     personal: <PersonalInfoStep />,
     license: <LicenseStep isEditMode={true} />,
-    plan: <PlanStep currentClientId={enrollment.id} />,
+    plan: <PlanStep currentClientId={enrollment.clientId} />,
     payment: <PaymentContainerWithEnrollment enrollment={enrollment} />,
   };
 
