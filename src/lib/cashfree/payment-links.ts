@@ -7,6 +7,7 @@ import { nanoid } from 'nanoid';
 import { getCurrentTenantName } from '@/server/db/tenant';
 import { z } from 'zod';
 import { env } from '@/env';
+import { getBranchConfigWithTenant } from '@/server/db/branch';
 
 const createPaymentLinkSchema = z.object({
   amount: z.number().positive('Amount must be greater than 0'),
@@ -47,14 +48,11 @@ export async function createPaymentLink(
   try {
     // Validate input
     const validatedData = createPaymentLinkSchema.parse(request);
+    const { tenant } = await getBranchConfigWithTenant();
 
     const client = getCashfreeClient();
 
-    const linkId = `bridge_plan_${nanoid(8)}`;
-
-    // Get tenant name for payment purpose
-    const tenantName = await getCurrentTenantName();
-    const organizationName = tenantName || 'Driving School';
+    const linkId = `${tenant.name}_${nanoid(8)}`;
 
     const params: CreatePaymentLinkParams = {
       link_id: linkId,
@@ -64,7 +62,7 @@ export async function createPaymentLink(
         customer_phone: validatedData.customerPhone,
         customer_name: validatedData.customerName,
       },
-      link_purpose: `Payment to ${organizationName}`,
+      link_purpose: `Payment to ${tenant.name}`,
       link_notify: {
         send_sms: validatedData.sendSms,
       },

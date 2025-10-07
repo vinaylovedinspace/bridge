@@ -31,7 +31,7 @@ export function OrgSelector() {
         appearance={{
           elements: {
             organizationSwitcherTrigger: {
-              width: '224px',
+              width: '216px',
             },
             organizationSwitcherPopoverActionButton__createOrganization: {
               display: 'none',
