@@ -63,7 +63,7 @@ export const PaymentContainerWithEnrollment = ({ enrollment }: PaymentContainerP
 
   if (isPaymentProcessed) {
     return (
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-12 gap-6 px-4">
         <div className="col-span-12">
           <div className="p-6 bg-green-50 border border-green-200 rounded-md mb-6">
             <div className="flex items-center gap-2">
@@ -83,7 +83,7 @@ export const PaymentContainerWithEnrollment = ({ enrollment }: PaymentContainerP
   }
 
   return (
-    <div className="grid grid-cols-12 gap-6">
+    <div className="grid grid-cols-12 gap-6 px-4">
       <PaymentStep existingPayment={payment} />
       <div className="col-span-4">
         <PaymentOverview existingPayment={payment} isEditMode={true} />

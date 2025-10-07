@@ -20,6 +20,8 @@ import {
 import { saveRTOService } from '../../server/action';
 import { getRTOService } from '../../server/db';
 import { createPaymentEntry } from '../../server/action';
+import { FormNavigation } from '@/components/ui/form-navigation';
+import { cn } from '@/lib/utils';
 
 type RTOServiceMultistepFormProps = {
   rtoService?: Awaited<ReturnType<typeof getRTOService>>;
@@ -141,7 +143,7 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
 
   return (
     <FormProvider {...methods}>
-      <div className="h-full flex flex-col py-4 gap-10">
+      <div className="h-full flex flex-col gap-10">
         <RTOServiceProgressBar
           currentStep={currentStep}
           onStepChange={goToStep}
@@ -149,30 +151,23 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
         />
 
         {/* Form content - scrollable area */}
-        <ScrollArea className="h-[calc(100vh-20rem)]">
-          <form className="space-y-8 pb-24 pr-1">{stepComponents[currentStep]?.component}</form>
+        <ScrollArea
+          className={cn('h-[calc(100vh-17.8rem)]', {
+            'h-[calc(100vh-20.5rem)]': rtoService?.id,
+          })}
+        >
+          <form className="space-y-8 pr-4">{stepComponents[currentStep]?.component}</form>
         </ScrollArea>
 
-        {/* Navigation buttons - fixed at the bottom */}
-        <div className="bg-white py-4 px-6 border-t flex justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={goToPrevious}
-            disabled={isFirstStep || isSubmitting}
-          >
-            Previous
-          </Button>
-
-          <Button
-            type="button"
-            onClick={handleNext}
-            disabled={isSubmitting}
-            isLoading={isSubmitting}
-          >
-            {isLastStep ? 'Submit' : 'Next'}
-          </Button>
-        </div>
+        <FormNavigation
+          isFirstStep={isFirstStep}
+          isLastStep={isLastStep}
+          isSubmitting={isSubmitting}
+          hasCurrentStepChanges={true}
+          onPrevious={goToPrevious}
+          onNext={handleNext}
+          showDiscardChangesButton={false}
+        />
       </div>
     </FormProvider>
   );

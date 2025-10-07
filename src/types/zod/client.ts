@@ -11,9 +11,8 @@ import { z } from 'zod';
 export const personalInfoSchema = createInsertSchema(ClientTable, {
   aadhaarNumber: z
     .string()
-    .min(12, 'Aadhaar number must be 12 digits')
-    .max(12, 'Aadhaar number must be 12 digits')
-    .regex(/^\d{12}$/, 'Aadhaar number must contain only digits'),
+    .regex(/^[2-9]\d{3}\s?\d{4}\s?\d{4}$/, 'Aadhaar must be 12 digits starting with 2-9')
+    .transform((val) => val.replace(/\s+/g, '')),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   phoneNumber: z.string().min(10, 'Phone number is required').max(10, 'Phone number is not valid'),

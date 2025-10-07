@@ -135,7 +135,7 @@ export const PersonalInfoStep = () => {
                   <FormLabel required>Aadhaar Number</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="123456789012"
+                      placeholder="xxxx xxxx xxxx"
                       value={field.value || ''}
                       onChange={(e) => {
                         const value = e.target.value.replace(/[^0-9\s]/g, '');

@@ -110,11 +110,11 @@ export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
 
   return (
     <FormProvider {...methods}>
-      <div className="h-full flex flex-col py-2 gap-4">
+      <div className="h-full flex flex-col gap-10">
         <ClientDetailProgressBar currentStep={currentStep} onStepChange={goToStep} />
 
-        <ScrollArea className="h-[calc(100vh-17.6rem)] pr-10">
-          <form className="space-y-8 pb-24 pr-1">
+        <ScrollArea className="h-[calc(100vh-20.5rem)] pr-10">
+          <form className="space-y-8 pr-4">
             <ClientDetailSteps
               currentStep={currentStep}
               client={client}
@@ -132,14 +132,14 @@ export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
           onNext={handleNext}
           onDiscardChanges={handleDiscardChanges}
         />
-      </div>
 
-      <UnsavedChangesDialog
-        open={showUnsavedChangesDialog}
-        onOpenChange={setShowUnsavedChangesDialog}
-        onConfirm={() => handleConfirmNavigation(goToStep)}
-        onCancel={handleCancelNavigation}
-      />
+        <UnsavedChangesDialog
+          open={showUnsavedChangesDialog}
+          onOpenChange={setShowUnsavedChangesDialog}
+          onConfirm={() => handleConfirmNavigation(goToStep)}
+          onCancel={handleCancelNavigation}
+        />
+      </div>
     </FormProvider>
   );
 };

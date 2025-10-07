@@ -30,7 +30,7 @@ export const PaymentContainer = ({ existingPayment }: PaymentContainerProps) => 
   // If payment is fully paid, show only the payment summary
   if (existingPayment?.paymentStatus === 'FULLY_PAID') {
     return (
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-12 gap-6 px-4">
         <div className="col-span-12">
           <div className="p-6 bg-green-50 border border-green-200 rounded-md mb-6">
             <div className="flex items-center gap-2">
@@ -50,7 +50,7 @@ export const PaymentContainer = ({ existingPayment }: PaymentContainerProps) => 
   }
 
   return (
-    <div className="grid grid-cols-12 gap-6">
+    <div className="grid grid-cols-12 gap-6 px-4">
       <PaymentStep existingPayment={existingPayment} />
       <div className="col-span-4">
         <PaymentOverviewComponent />

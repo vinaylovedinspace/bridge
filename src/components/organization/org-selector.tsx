@@ -30,6 +30,9 @@ export function OrgSelector() {
         hidePersonal
         appearance={{
           elements: {
+            organizationSwitcherTrigger: {
+              width: '224px',
+            },
             organizationSwitcherPopoverActionButton__createOrganization: {
               display: 'none',
             },

@@ -18,6 +18,7 @@ import { useEnrollmentFormSubmissions } from '../../hooks/use-enrollment-form-su
 import { getClientById } from '../../server/action';
 import { useAddAdmissionForm } from '../../hooks/use-admission-form';
 import { AdmissionFormValues } from '../../types';
+import { FormNavigation } from '@/components/ui/form-navigation';
 
 type MultistepFormProps = {
   existingClient?: Awaited<ReturnType<typeof getClientById>>['data'];
@@ -165,34 +166,21 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
         <ProgressBar interactive={false} currentStep={currentStep} onStepChange={goToStep} />
 
         {/* Form content - scrollable area */}
-        <ScrollArea className="h-[calc(100vh-17.4rem)] pr-10">
+        <ScrollArea className="h-[calc(100vh-17.8rem)] pr-10">
           <form className="pr-1" data-testid="admission-multistep-form">
             {stepComponents[currentStep as keyof typeof stepComponents]?.component}
           </form>
         </ScrollArea>
 
-        {/* Navigation buttons - fixed at the bottom */}
-        <div className="bg-white pt-4 border-t flex justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={goToPrevious}
-            disabled={isFirstStep || isSubmitting}
-            data-testid="admission-previous-button"
-          >
-            Previous
-          </Button>
-
-          <Button
-            type="button"
-            onClick={handleNext}
-            disabled={isSubmitting}
-            isLoading={isSubmitting}
-            data-testid={isLastStep ? 'admission-submit-button' : 'admission-next-button'}
-          >
-            {isLastStep ? 'Submit' : 'Next'}
-          </Button>
-        </div>
+        <FormNavigation
+          isFirstStep={isFirstStep}
+          isLastStep={isLastStep}
+          isSubmitting={isSubmitting}
+          hasCurrentStepChanges={hasCurrentStepChanges()}
+          onPrevious={goToPrevious}
+          onNext={handleNext}
+          showDiscardChangesButton={false}
+        />
       </div>
     </FormProvider>
   );

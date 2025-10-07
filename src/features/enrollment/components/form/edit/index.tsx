@@ -46,11 +46,6 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
     handleCancelNavigation,
   } = useUnsavedChanges(enrollment, methods, currentStep);
 
-  const { payment } = enrollment;
-  const isPaymentProcessed = payment?.paymentStatus === 'FULLY_PAID';
-  const isPaymentStep = currentStep === 'payment';
-  const shouldDisablePaymentEdit = isPaymentStep && isPaymentProcessed;
-
   const getStepData = (stepKey: StepKey) => {
     switch (stepKey) {
       case 'service':
@@ -124,8 +119,8 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
           }}
         />
 
-        <ScrollArea className="h-[calc(100vh-20rem)] pr-10">
-          <form className="space-y-8 pb-24 pr-1">
+        <ScrollArea className="h-[calc(100vh-20.5rem)] pr-10">
+          <form className="space-y-8 pr-4">
             <EditFormSteps currentStep={currentStep as StepKey} enrollment={enrollment} />
           </form>
         </ScrollArea>
@@ -135,8 +130,6 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
           isLastStep={isLastStep}
           isSubmitting={isSubmitting}
           hasCurrentStepChanges={hasCurrentStepChanges()}
-          shouldDisableNext={shouldDisablePaymentEdit}
-          nextButtonText={shouldDisablePaymentEdit ? 'Payment Processed' : undefined}
           onPrevious={goToPrevious}
           onNext={handleNext}
           onDiscardChanges={handleDiscardChanges}

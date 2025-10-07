@@ -17,12 +17,15 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   return (
     <div className="h-full">
-      <div className="flex gap-4 items-center">
-        <Link href="/rto-services">
+      <div className="flex gap-4 items-center pb-4">
+        <Link href="/enrollments">
           <ArrowLeft className="size-5 text-gray-700" />
         </Link>
-        <TypographyH4>Edit RTO Service</TypographyH4>
+        <TypographyH4>
+          {rtoService.client.firstName} {rtoService.client.middleName} {rtoService.client.lastName}
+        </TypographyH4>
       </div>
+
       <Suspense
         fallback={<div className="flex items-center justify-center h-full w-full">loading...</div>}
       >
