@@ -90,7 +90,11 @@ export const SessionAvailabilityModal = ({
         const conflictingSession = sessions.find((session) => {
           const sessionDateStr = session.sessionDate; // Already in YYYY-MM-DD format
           const sessionTime = session.startTime.substring(0, 5);
-          return sessionDateStr === dateStr && sessionTime === timeSlot;
+          return (
+            sessionDateStr === dateStr &&
+            sessionTime === timeSlot &&
+            session.clientId !== currentClientId
+          );
         });
 
         if (conflictingSession) {
@@ -109,7 +113,14 @@ export const SessionAvailabilityModal = ({
         conflictingSession: firstConflictingSession || sessionsByTimeSlot[timeSlot],
       };
     },
-    [numberOfSessions, selectedDate, sessionsByTimeSlot, branchWorkingDays, sessions]
+    [
+      numberOfSessions,
+      selectedDate,
+      sessionsByTimeSlot,
+      branchWorkingDays,
+      sessions,
+      currentClientId,
+    ]
   );
 
   const loadSessions = useCallback(async () => {
@@ -164,7 +175,7 @@ export const SessionAvailabilityModal = ({
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>
-            Session Availability - {format(selectedDate, 'PPP')}
+            Session Availability - {selectedDate && format(selectedDate, 'PPP')}
             {numberOfSessions > 1 && (
               <span className="text-sm font-normal text-gray-600 ml-2">
                 ({numberOfSessions} sessions)
