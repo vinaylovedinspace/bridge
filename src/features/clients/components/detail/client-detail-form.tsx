@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner';
 import { useAtomValue } from 'jotai';
 import { branchConfigAtom } from '@/lib/atoms/branch-config';
+import { useRouter } from 'next/navigation';
 
 type ClientDetailFormProps = {
   client: NonNullable<Client>;
@@ -28,6 +29,7 @@ type ClientDetailFormProps = {
 export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
   const branchConfig = useAtomValue(branchConfigAtom)!;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
 
   const defaultValues = transformClientToFormData(client);
   const methods = useForm<ClientDetailFormValues>({
@@ -94,7 +96,7 @@ export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
       toast.success(result.message);
 
       if (isLastStep) {
-        window.location.href = '/clients';
+        router.push('/clients');
       } else {
         goToNext();
       }
@@ -111,7 +113,7 @@ export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
       <div className="h-full flex flex-col py-2 gap-4">
         <ClientDetailProgressBar currentStep={currentStep} onStepChange={goToStep} />
 
-        <ScrollArea className="h-[calc(100vh-20rem)] pr-10">
+        <ScrollArea className="h-[calc(100vh-17.6rem)] pr-10">
           <form className="space-y-8 pb-24 pr-1">
             <ClientDetailSteps
               currentStep={currentStep}

@@ -149,7 +149,7 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
         />
 
         {/* Form content - scrollable area */}
-        <ScrollArea className="h-[calc(100vh-346px)]">
+        <ScrollArea className="h-[calc(100vh-20rem)]">
           <form className="space-y-8 pb-24 pr-1">{stepComponents[currentStep]?.component}</form>
         </ScrollArea>
 
