@@ -194,15 +194,6 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
                 <p className="text-sm text-destructive">{errors.defaultRtoOffice.message}</p>
               )}
             </div>
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm">
-                <strong>Current default:</strong>{' '}
-                {defaultRtoOffice ? defaultRtoOffice : 'No default RTO office set'}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                This will be pre-selected when creating new RTO service applications
-              </p>
-            </div>
           </CardContent>
         </Card>
 
@@ -234,15 +225,6 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
               {errors.licenseServiceCharge && (
                 <p className="text-sm text-destructive">{errors.licenseServiceCharge.message}</p>
               )}
-            </div>
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm">
-                <strong>Current service fee:</strong> ₹{licenseServiceCharge || 500}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                This amount will be added to licence applications when the branch handles the
-                licence process
-              </p>
             </div>
           </CardContent>
         </Card>

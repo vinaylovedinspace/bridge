@@ -130,5 +130,14 @@ export const getDefaultValuesForRTOServiceForm = (
       type: 'NEW_DRIVING_LICENCE',
       license: {},
     },
+    payment: {
+      discount: 0,
+      paymentType: 'FULL_PAYMENT' as const,
+      paymentStatus: 'PENDING' as const,
+      licenseServiceFee: 0,
+      totalAmount: 0,
+      paymentMode: 'PAYMENT_LINK' as const,
+      applyDiscount: false,
+    },
   } as Partial<RTOServiceFormValues>;
 };
