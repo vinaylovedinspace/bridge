@@ -56,8 +56,11 @@ export const rtoServicesFormSchema = z.object({
   payment: paymentSchema,
 });
 
-export const rtoServicesFormSchemaWithOptionalPayment = rtoServicesFormSchema
-  .omit({ payment: true })
-  .extend({ payment: paymentSchema.optional() });
+export const rtoServicesFormSchemaWithOptionalPayment = rtoServicesFormSchema.pick({
+  personalInfo: true,
+  service: true,
+  serviceId: true,
+  clientId: true,
+});
 
 export type RTOServiceFormValues = z.infer<typeof rtoServicesFormSchema>;

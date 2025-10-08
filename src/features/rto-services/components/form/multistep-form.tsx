@@ -100,7 +100,6 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
 
     setIsSubmitting(true);
     try {
-      console.log(payment);
       const paymentResult = await createPayment(payment, serviceId);
 
       if (paymentResult.error) {
