@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { FormProvider } from 'react-hook-form';
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -26,7 +26,7 @@ type EditAdmissionFormProps = {
 
 export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   const methods = useEditAdmissionForm(enrollment);
@@ -71,6 +71,11 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
     const isStepValid = await trigger(fieldsToValidate);
 
     if (!isStepValid) {
+      scrollRef.current?.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
+
       return;
     }
 
@@ -118,7 +123,7 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
           }}
         />
 
-        <ScrollArea className="h-[calc(100vh-22rem)] pr-10">
+        <ScrollArea className="h-[calc(100vh-22rem)] pr-10" ref={scrollRef}>
           <form className="space-y-8 pr-4">
             <EditFormSteps currentStep={currentStep as StepKey} enrollment={enrollment} />
           </form>

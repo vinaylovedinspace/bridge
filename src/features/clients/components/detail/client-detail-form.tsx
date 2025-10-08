@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,6 +30,7 @@ export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
   const branchConfig = useAtomValue(branchConfigAtom)!;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const defaultValues = transformClientToFormData(client);
   const methods = useForm<ClientDetailFormValues>({
@@ -74,6 +75,11 @@ export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
   const handleNext = async () => {
     const isValid = await trigger();
     if (!isValid) {
+      scrollRef.current?.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
+
       return;
     }
 
@@ -111,7 +117,7 @@ export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
       <div className="h-full flex flex-col gap-10">
         <ClientDetailProgressBar currentStep={currentStep} onStepChange={goToStep} />
 
-        <ScrollArea className="h-[calc(100vh-20.5rem)] pr-10">
+        <ScrollArea className="h-[calc(100vh-20.5rem)] pr-10" ref={scrollRef}>
           <form className="space-y-8 pr-4">
             <ClientDetailSteps
               currentStep={currentStep}
