@@ -18,7 +18,7 @@ import {
 import { ActionReturnType } from '@/types/actions';
 import { UseFormGetValues, UseFormSetValue } from 'react-hook-form';
 import { getSessions } from '@/server/actions/sessions';
-import { LAST_ENROLLMENT_CLIENT_ID } from '@/lib/constants/business';
+import { LAST_ENROLLMENT_CLIENT_ID, LAST_ENROLLMENT_STEP } from '@/lib/constants/business';
 
 /**
  * Validate that an object has meaningful data (not just empty object)
@@ -325,6 +325,8 @@ export const useEnrollmentFormSubmissions = (
       localStorage.setItem(LAST_ENROLLMENT_CLIENT_ID, JSON.stringify(getValues('clientId')));
 
       if (isLastStep) {
+        localStorage.removeItem(LAST_ENROLLMENT_CLIENT_ID);
+        localStorage.removeItem(LAST_ENROLLMENT_STEP);
         router.refresh();
         router.push('/dashboard');
 
