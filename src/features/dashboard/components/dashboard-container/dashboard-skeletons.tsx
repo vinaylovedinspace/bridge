@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export function AppointmentsWidgetSkeleton() {
+export function LicenceWorkWidgetSkeleton() {
   return (
     <Card className="relative">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
