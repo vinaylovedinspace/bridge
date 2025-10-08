@@ -32,6 +32,7 @@ export function OrgSelector() {
           elements: {
             organizationSwitcherTrigger: {
               width: '216px',
+              justifyContent: 'left',
             },
             organizationSwitcherPopoverActionButton__createOrganization: {
               display: 'none',

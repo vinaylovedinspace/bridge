@@ -3,38 +3,39 @@ import Link from 'next/link';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { type InstructorStatusCount } from '@/server/db/staff';
 
-interface InstructorStatusCardProps {
-  statusCount: InstructorStatusCount;
-}
+const CustomTooltip = ({
+  active: tooltipActive,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ name: string; value: number }>;
+}) => {
+  if (tooltipActive && payload && payload.length) {
+    const data = payload[0];
+    return (
+      <div className="bg-white p-2 shadow-lg rounded border text-sm">
+        <p className="font-medium">{data.name}</p>
+        <p className="text-gray-600">{data.value} instructors</p>
+      </div>
+    );
+  }
+  return null;
+};
 
-export const InstructorStatusCard = ({ statusCount }: InstructorStatusCardProps) => {
-  const { active, inactive, total } = statusCount;
-
+export function InstructorStatusCard({
+  active,
+  inactive,
+  total,
+}: {
+  active: number;
+  inactive: number;
+  total: number;
+}) {
   const data = [
     { name: 'Active', value: active, color: '#3b82f6' },
     { name: 'Inactive', value: inactive, color: '#e5e7eb' },
   ];
-
-  const CustomTooltip = ({
-    active: tooltipActive,
-    payload,
-  }: {
-    active?: boolean;
-    payload?: Array<{ name: string; value: number }>;
-  }) => {
-    if (tooltipActive && payload && payload.length) {
-      const data = payload[0];
-      return (
-        <div className="bg-white p-2 shadow-lg rounded border text-sm">
-          <p className="font-medium">{data.name}</p>
-          <p className="text-gray-600">{data.value} instructors</p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <Card className="w-full max-w-md h-full">
@@ -98,4 +99,4 @@ export const InstructorStatusCard = ({ statusCount }: InstructorStatusCardProps)
       </CardContent>
     </Card>
   );
-};
+}

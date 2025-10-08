@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalendarIcon } from 'lucide-react';
-import { getAppointmentStatsAction } from '../actions/appointment-stats';
 import Link from 'next/link';
+import { LicenceWorkCount } from '../../server/actions';
 
 type AppointmentType = {
   id: string;
@@ -11,9 +11,7 @@ type AppointmentType = {
   link: string;
 };
 
-export async function AppointmentsWidget() {
-  const stats = await getAppointmentStatsAction();
-
+export async function LicenceWorkWidgetCard(stats: LicenceWorkCount) {
   const appointments: AppointmentType[] = [
     {
       id: '1',

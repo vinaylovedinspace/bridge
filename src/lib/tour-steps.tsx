@@ -66,7 +66,7 @@ export const tourSteps: NextStepProps['steps'] = [
         side: 'left',
         selector: '#settings-page',
         showControls: true,
-        nextRoute: '/enrollment',
+        nextRoute: '/dashboard',
       },
       {
         icon: '🎉',

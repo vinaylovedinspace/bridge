@@ -11,12 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { type AdmissionStatistics } from '@/server/db/client';
-
-type AdmissionOverviewProps = {
-  initialData: AdmissionStatistics;
-  initialMonths: number;
-};
+import { AdmissionStatistics } from '../../server/actions';
 
 // Empty state component for when there's insufficient data
 function InsufficientDataState() {
@@ -34,7 +29,12 @@ function InsufficientDataState() {
   );
 }
 
-export default function AdmissionOverview({ initialData, initialMonths }: AdmissionOverviewProps) {
+type AdmissionOverviewProps = {
+  initialData: AdmissionStatistics;
+  initialMonths: number;
+};
+
+export function AdmissionOverviewCard({ initialData, initialMonths }: AdmissionOverviewProps) {
   const [admissionData, setAdmissionData] = useState<AdmissionStatistics>(initialData);
   const [selectedMonths, setSelectedMonths] = useState(initialMonths);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,10 +43,8 @@ export default function AdmissionOverview({ initialData, initialMonths }: Admiss
   const fetchData = async (months: number) => {
     setIsLoading(true);
     try {
-      const { getAdmissionStatsAction } = await import(
-        '@/features/dashboard/actions/admission-stats'
-      );
-      const newData = await getAdmissionStatsAction(months);
+      const { getAdmissionStatistics } = await import('../../server/actions');
+      const newData = await getAdmissionStatistics(months);
       setAdmissionData(newData);
     } catch (error) {
       console.error('Failed to fetch admission data:', error);

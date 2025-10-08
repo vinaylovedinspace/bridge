@@ -1,14 +1,7 @@
 import { db } from '@/db';
-import {
-  ClientTable,
-  PaymentTable,
-  TransactionTable,
-  PlanTable,
-  FullPaymentTable,
-} from '@/db/schema';
+import { ClientTable, PaymentTable, TransactionTable, FullPaymentTable } from '@/db/schema';
 import { eq, and, desc, max, or, ilike } from 'drizzle-orm';
 import { getBranchConfig } from './branch';
-import { isPaymentOverdue } from '@/lib/payment/is-payment-overdue';
 
 const _getPayments = async (branchId: string, name?: string, paymentStatus?: string) => {
   const conditions = [eq(ClientTable.branchId, branchId)];
@@ -108,64 +101,6 @@ export const getPayments = async (name?: string, paymentStatus?: string) => {
   const { id: branchId } = await getBranchConfig();
 
   return await _getPayments(branchId, name, paymentStatus);
-};
-
-const _getOverduePaymentsCount = async (branchId: string) => {
-  const conditions = [eq(PlanTable.branchId, branchId)];
-
-  const clients = await db.query.ClientTable.findMany({
-    where: and(...conditions),
-    with: {
-      plan: {
-        with: {
-          payment: {
-            with: {
-              installmentPayments: true,
-              fullPayment: true,
-            },
-          },
-        },
-      },
-      rtoServices: {
-        with: {
-          payment: {
-            with: {
-              fullPayment: true,
-            },
-          },
-        },
-      },
-    },
-  });
-
-  let overdueCount = 0;
-
-  clients.forEach((client) => {
-    client.plan.forEach((plan) => {
-      if (!plan.payment) {
-        overdueCount++;
-      }
-      if (isPaymentOverdue(plan.payment, plan)) {
-        overdueCount++;
-      }
-    });
-    client.rtoServices.forEach((rtoService) => {
-      if (!rtoService.payment) {
-        overdueCount++;
-      }
-      if (rtoService.payment && rtoService.payment.paymentStatus !== 'FULLY_PAID') {
-        overdueCount++;
-      }
-    });
-  });
-
-  return overdueCount;
-};
-
-export const getOverduePaymentsCount = async () => {
-  const { id: branchId } = await getBranchConfig();
-
-  return await _getOverduePaymentsCount(branchId);
 };
 
 export type Payment = Awaited<ReturnType<typeof getPayments>>[0];
