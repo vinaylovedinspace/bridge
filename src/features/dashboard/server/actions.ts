@@ -1,3 +1,5 @@
+'use server';
+
 import { getBranchConfig } from '@/server/db/branch';
 import {
   getAdmissionStatistics as getAdmissionStatisticsFromDB,

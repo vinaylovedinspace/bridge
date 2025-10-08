@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AdmissionStatistics } from '../../server/actions';
+import { useGetAdmissionStats } from '../../hooks/use-get-admission-stats';
 
 // Empty state component for when there's insufficient data
 function InsufficientDataState() {
@@ -35,29 +36,14 @@ type AdmissionOverviewProps = {
 };
 
 export function AdmissionOverviewCard({ initialData, initialMonths }: AdmissionOverviewProps) {
-  const [admissionData, setAdmissionData] = useState<AdmissionStatistics>(initialData);
   const [selectedMonths, setSelectedMonths] = useState(initialMonths);
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Function to fetch new data when months change
-  const fetchData = async (months: number) => {
-    setIsLoading(true);
-    try {
-      const { getAdmissionStatistics } = await import('../../server/actions');
-      const newData = await getAdmissionStatistics(months);
-      setAdmissionData(newData);
-    } catch (error) {
-      console.error('Failed to fetch admission data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { data: admissionData, isLoading } = useGetAdmissionStats(initialMonths, initialData);
 
   // Handle dropdown change
   const handleMonthsChange = (value: string) => {
     const months = parseInt(value.replace('months', ''));
     setSelectedMonths(months);
-    fetchData(months);
   };
 
   // Check if we have meaningful data (at least 1 admission in the period)

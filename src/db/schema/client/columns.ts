@@ -1,4 +1,13 @@
-import { pgEnum, pgTable, text, timestamp, uuid, boolean, unique } from 'drizzle-orm/pg-core';
+import {
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  boolean,
+  unique,
+  index,
+} from 'drizzle-orm/pg-core';
 
 export const BloodGroupEnum = pgEnum('blood_group', [
   'A+',
@@ -99,5 +108,7 @@ export const ClientTable = pgTable(
       table.aadhaarNumber,
       table.tenantId
     ),
+    // Dashboard performance index
+    branchCreatedAtIdx: index('idx_clients_branch_created').on(table.branchId, table.createdAt),
   })
 );
