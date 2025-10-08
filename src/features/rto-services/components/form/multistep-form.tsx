@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import React from 'react';
@@ -29,6 +29,7 @@ type RTOServiceMultistepFormProps = {
 export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const methods = useForm<RTOServiceFormValues>({
     resolver: zodResolver(rtoServicesFormSchema),
@@ -131,6 +132,7 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
     const isStepValid = await trigger(fieldsToValidate);
 
     if (!isStepValid) {
+      scrollRef.current?.scrollTo({ top: 0 });
       return;
     }
 
@@ -154,6 +156,7 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
           className={cn('h-[calc(100vh-17.8rem)]', {
             'h-[calc(100vh-20.5rem)]': rtoService?.id,
           })}
+          ref={scrollRef}
         >
           <form className="space-y-8 pr-4">{stepComponents[currentStep]?.component}</form>
         </ScrollArea>
