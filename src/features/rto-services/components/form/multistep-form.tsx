@@ -132,7 +132,7 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
     const isStepValid = await trigger(fieldsToValidate);
 
     if (!isStepValid) {
-      scrollRef.current?.scrollTo({ top: 0 });
+      scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -153,7 +153,7 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
 
         {/* Form content - scrollable area */}
         <ScrollArea
-          className={cn('h-[calc(100vh-17.8rem)]', {
+          className={cn('h-[calc(100vh-22rem)]', {
             'h-[calc(100vh-20.5rem)]': rtoService?.id,
           })}
           ref={scrollRef}
