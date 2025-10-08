@@ -129,16 +129,6 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
             {errors.workingDays && (
               <p className="text-sm text-destructive mt-2">{errors.workingDays.message}</p>
             )}
-            <div className="mt-4 p-4 bg-muted rounded-lg">
-              <p className="text-sm">
-                <strong>Selected days:</strong>{' '}
-                {!workingDays || workingDays.length === 0
-                  ? 'No working days selected'
-                  : workingDays
-                      .map((id) => DAYS_OF_WEEK.find((d) => d.id === id)?.label)
-                      .join(', ')}
-              </p>
-            </div>
           </CardContent>
         </Card>
 
@@ -177,13 +167,6 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
                   <p className="text-sm text-destructive">{errors.operatingHours.end.message}</p>
                 )}
               </div>
-            </div>
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm">
-                <strong>Current hours:</strong>{' '}
-                {operatingHours?.start || DEFAULT_OPERATING_HOURS.start} -{' '}
-                {operatingHours?.end || DEFAULT_OPERATING_HOURS.end}
-              </p>
             </div>
           </CardContent>
         </Card>

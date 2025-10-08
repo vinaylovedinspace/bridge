@@ -119,7 +119,7 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
           }}
         />
 
-        <ScrollArea className="h-[calc(100vh-20.5rem)] pr-10">
+        <ScrollArea className="h-[calc(100vh-22rem)] pr-10">
           <form className="space-y-8 pr-4">
             <EditFormSteps currentStep={currentStep as StepKey} enrollment={enrollment} />
           </form>

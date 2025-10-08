@@ -14,16 +14,15 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   }
 
   return (
-    <div className="container mx-auto">
-      <div className="flex gap-4 items-center pb-4">
-        <Link href="/enrollments">
+    <div className="space-y-10">
+      <div className="flex gap-4 items-center">
+        <Link href="/dashboard">
           <ArrowLeft className="size-5 text-gray-700" />
         </Link>
         <TypographyH4>
           {enrollment.client.firstName} {enrollment.client.middleName} {enrollment.client.lastName}
         </TypographyH4>
       </div>
-
       <EditAdmissionForm enrollment={enrollment} />
     </div>
   );

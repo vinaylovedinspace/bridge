@@ -165,7 +165,7 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
         <ProgressBar interactive={false} currentStep={currentStep} onStepChange={goToStep} />
 
         {/* Form content - scrollable area */}
-        <ScrollArea className="h-[calc(100vh-17.8rem)] pr-10">
+        <ScrollArea className="h-[calc(100vh-22rem)] pr-10">
           <form className="pr-1" data-testid="admission-multistep-form">
             {stepComponents[currentStep as keyof typeof stepComponents]?.component}
           </form>

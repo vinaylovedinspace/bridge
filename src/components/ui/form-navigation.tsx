@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 type FormNavigationProps = {
   isFirstStep: boolean;
@@ -53,11 +54,14 @@ export function FormNavigation({
         disabled={previousDisabled}
         aria-label="Go to previous step"
         aria-disabled={previousDisabled}
+        className={cn({
+          invisible: isFirstStep,
+        })}
       >
         Previous
       </Button>
 
-      <div className="flex gap-3">
+      <div className="flex gap-4">
         {discardVisible && (
           <Button
             type="button"
