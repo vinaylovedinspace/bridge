@@ -42,15 +42,13 @@ export async function LicenceWorkWidgetCard(stats: LicenceWorkCount) {
           <div className="bg-pink-50 rounded-full w-8 h-8 flex items-center justify-center">
             <CalendarIcon className="h-5 w-5 text-muted-foreground" />
           </div>
-          <CardTitle className="text-base font-medium">
-            Upcoming Appointments & Test Schedules
-          </CardTitle>
+          <CardTitle className="text-base font-medium">Pending Schedules</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-6 bg-gray-50 py-4 px-6">
           {appointments.map((appointment) => (
-            <div key={appointment.id} className="space-y-4 border-r-1 last:border-r-0">
+            <div key={appointment.id} className="space-y-4 border-r-1 last:border-r-0 h-28">
               <h3 className="text-sm font-medium text-muted-foreground">{appointment.title}</h3>
               <div className="text-4xl font-bold text-foreground">{appointment.count}</div>
               <Link

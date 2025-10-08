@@ -11,7 +11,7 @@ export function LicenceWorkWidgetSkeleton() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-3 gap-6 bg-gray-50 py-4 px-6">
+        <div className="grid grid-cols-3 gap-6 bg-gray-50 py-5 px-6">
           {[1, 2, 3].map((i) => (
             <div key={i} className="space-y-4">
               <Skeleton className="h-4 w-24" />
@@ -84,9 +84,9 @@ export function AdmissionOverviewSkeleton() {
         </div>
       </CardHeader>
       <CardContent className="flex flex-col h-full">
-        <div className="min-h-[250px] w-full flex items-center justify-center">
+        <div className="h-60 w-full flex items-center justify-center">
           <div className="space-y-4 w-full">
-            <div className="flex items-end justify-around h-[200px] px-8">
+            <div className="flex items-end justify-around h-[250px] px-8">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Skeleton
                   key={i}
