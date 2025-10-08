@@ -19,3 +19,6 @@ export const DAYS_OF_WEEK = [
 
 export const DEFAULT_SESSION_DAYS = 21;
 export const DEFAULT_SESSION_MINUTES = 30;
+
+export const LAST_ENROLLMENT_CLIENT_ID = 'last-enrollment-clientId';
+export const LAST_ENROLLMENT_STEP = 'last-enrollment-step';

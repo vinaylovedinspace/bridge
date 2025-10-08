@@ -33,7 +33,7 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
   const { trigger, getValues, watch, setValue } = methods;
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
-    useStepNavigation(false);
+    useStepNavigation(true);
 
   // Watch all form values to detect changes
   const watchedValues = watch();

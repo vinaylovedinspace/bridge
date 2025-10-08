@@ -4,6 +4,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { LAST_ENROLLMENT_STEP, LAST_ENROLLMENT_CLIENT_ID } from '@/lib/constants/business';
 
 export type Client = {
   id: string;
@@ -114,8 +115,16 @@ export const columns: ColumnDef<Client>[] = [
       const { plan, id } = row.original;
 
       if (!plan || plan.length === 0) {
+        const lastStep = localStorage.getItem(LAST_ENROLLMENT_STEP);
+        const clientIdforLastStep = JSON.parse(
+          JSON.stringify(localStorage.getItem(LAST_ENROLLMENT_CLIENT_ID))
+        );
+        const isLastStepOfTheSameClientId = clientIdforLastStep === id;
         return (
-          <Link href={`/enrollment?clientId=${id}`} onClick={(e) => e.stopPropagation()}>
+          <Link
+            href={`/enrollment?clientId=${id}&${isLastStepOfTheSameClientId ? `step=${lastStep}` : ''}`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <Button size="xs" variant="outline">
               Complete Enrollment
             </Button>

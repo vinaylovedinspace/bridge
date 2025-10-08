@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useQueryState, parseAsStringLiteral } from 'nuqs';
 import { ProgressBar as BaseProgressBar, type StepConfig } from '@/components/ui/progress-bar';
 import { type AdmissionFormStepKey } from '@/features/enrollment/types';
+import { LAST_ENROLLMENT_STEP } from '@/lib/constants/business';
 
 export type { AdmissionFormStepKey };
 
@@ -60,6 +61,7 @@ export const useStepNavigation = (interactive = true) => {
     const nextIndex = currentIndex + 1;
     if (nextIndex < ADMISSION_STEPS.length) {
       const nextStep = ADMISSION_STEPS[nextIndex].key;
+      localStorage.setItem(LAST_ENROLLMENT_STEP, nextStep);
       goToStep(nextStep);
     }
   }, [currentIndex, goToStep]);
