@@ -25,7 +25,7 @@ export default function RTOServicesTableLayout({ children }: { children: React.R
           </Suspense>
         </div>
         <Link href="/rto-services/add">
-          <Button>
+          <Button variant="outline">
             <Plus className="h-4 w-4" />
             Add RTO Service
           </Button>
