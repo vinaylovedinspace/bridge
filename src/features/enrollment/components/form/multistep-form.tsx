@@ -175,10 +175,9 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
           isFirstStep={isFirstStep}
           isLastStep={isLastStep}
           isSubmitting={isSubmitting}
-          hasCurrentStepChanges={hasCurrentStepChanges()}
+          onCancel={() => router.back()}
           onPrevious={goToPrevious}
           onNext={handleNext}
-          showDiscardChangesButton={false}
         />
       </div>
     </FormProvider>

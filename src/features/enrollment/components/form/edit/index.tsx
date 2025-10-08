@@ -40,7 +40,6 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
     showUnsavedChangesDialog,
     setShowUnsavedChangesDialog,
     hasCurrentStepChanges,
-    handleDiscardChanges,
     handleStepNavigation,
     handleConfirmNavigation,
     handleCancelNavigation,
@@ -129,10 +128,9 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
           isFirstStep={isFirstStep}
           isLastStep={isLastStep}
           isSubmitting={isSubmitting}
-          hasCurrentStepChanges={hasCurrentStepChanges()}
+          onCancel={() => router.back()}
           onPrevious={goToPrevious}
           onNext={handleNext}
-          onDiscardChanges={handleDiscardChanges}
         />
       </div>
 

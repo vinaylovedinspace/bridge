@@ -3,46 +3,41 @@
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { ChevronLeft } from 'lucide-react';
 
 type FormNavigationProps = {
   isFirstStep: boolean;
   isLastStep: boolean;
   isSubmitting: boolean;
-  hasCurrentStepChanges: boolean;
   disableNext?: boolean;
   nextButtonText?: string;
-  showDiscardChangesButton?: boolean;
   className?: string;
 
   // functions
   onPrevious: () => void;
   onNext: () => void;
-  onDiscardChanges?: () => void;
+  onCancel: () => void;
 };
 
 export function FormNavigation({
   isFirstStep,
   isLastStep,
   isSubmitting,
-  hasCurrentStepChanges,
   disableNext = false,
   nextButtonText,
   onPrevious,
   onNext,
-  onDiscardChanges,
-  showDiscardChangesButton = true,
+  onCancel,
   className = '',
 }: FormNavigationProps) {
   const computedNextText = useMemo(() => {
     if (nextButtonText) return nextButtonText;
     if (isSubmitting) return 'Saving...';
     if (isLastStep) return 'Done';
-    return 'Save & Next';
+    return 'Save & Continue';
   }, [nextButtonText, isSubmitting, isLastStep]);
 
   const previousDisabled = isFirstStep || isSubmitting;
-  const discardVisible = showDiscardChangesButton && !isLastStep;
-  const discardDisabled = isSubmitting || !hasCurrentStepChanges;
   const nextDisabled = isSubmitting || disableNext;
 
   return (
@@ -50,30 +45,27 @@ export function FormNavigation({
       <Button
         type="button"
         variant="outline"
-        onClick={onPrevious}
-        disabled={previousDisabled}
-        aria-label="Go to previous step"
-        aria-disabled={previousDisabled}
-        className={cn({
-          invisible: isFirstStep,
-        })}
+        onClick={onCancel}
+        aria-label="Discard changes for this step"
       >
-        Previous
+        Cancel
       </Button>
 
       <div className="flex gap-4">
-        {discardVisible && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onDiscardChanges?.()}
-            disabled={discardDisabled}
-            aria-label="Discard changes for this step"
-            aria-disabled={discardDisabled}
-          >
-            Discard Changes
-          </Button>
-        )}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onPrevious}
+          disabled={previousDisabled}
+          aria-label="Go to previous step"
+          aria-disabled={previousDisabled}
+          className={cn('', {
+            invisible: isFirstStep,
+          })}
+        >
+          <ChevronLeft className="size-4" />
+          Previous
+        </Button>
 
         <Button
           type="button"

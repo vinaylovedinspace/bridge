@@ -45,8 +45,6 @@ export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
   const {
     showUnsavedChangesDialog,
     setShowUnsavedChangesDialog,
-    hasCurrentStepChanges,
-    handleDiscardChanges,
 
     handleConfirmNavigation,
     handleCancelNavigation,
@@ -127,10 +125,9 @@ export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
           isFirstStep={isFirstStep}
           isLastStep={isLastStep}
           isSubmitting={isSubmitting}
-          hasCurrentStepChanges={hasCurrentStepChanges()}
           onPrevious={goToPrevious}
           onNext={handleNext}
-          onDiscardChanges={handleDiscardChanges}
+          onCancel={() => router.back()}
         />
 
         <UnsavedChangesDialog

@@ -162,10 +162,9 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
           isFirstStep={isFirstStep}
           isLastStep={isLastStep}
           isSubmitting={isSubmitting}
-          hasCurrentStepChanges={true}
           onPrevious={goToPrevious}
           onNext={handleNext}
-          showDiscardChangesButton={false}
+          onCancel={() => router.back()}
         />
       </div>
     </FormProvider>
