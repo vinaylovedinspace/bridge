@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UseFormSetValue } from 'react-hook-form';
+import { UseFormClearErrors, UseFormSetValue } from 'react-hook-form';
 
 import {
   mapClientToPersonalInfo,
@@ -16,7 +16,10 @@ type ExistingClient = {
   data: Awaited<ReturnType<typeof checkPhoneNumberDuplicate>>['client'];
 };
 
-export const useDuplicateClientCheck = (setValue: UseFormSetValue<AdmissionFormValues>) => {
+export const useDuplicateClientCheck = (
+  setValue: UseFormSetValue<AdmissionFormValues>,
+  clearErrors: UseFormClearErrors<AdmissionFormValues>
+) => {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [existingClient, setExistingClient] = useState<ExistingClient | null>(null);
 
@@ -58,6 +61,7 @@ export const useDuplicateClientCheck = (setValue: UseFormSetValue<AdmissionFormV
         matchedField: 'aadhaar',
         data: result.client,
       });
+
       setShowDuplicateModal(true);
     }
   };
@@ -80,6 +84,7 @@ export const useDuplicateClientCheck = (setValue: UseFormSetValue<AdmissionFormV
         setValue('drivingLicense', drivingLicense);
       }
     }
+    clearErrors();
     setShowDuplicateModal(false);
   };
 

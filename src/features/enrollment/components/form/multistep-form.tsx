@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { FormProvider } from 'react-hook-form';
 import React from 'react';
 import { useRouter } from 'next/navigation';
@@ -26,6 +26,7 @@ type MultistepFormProps = {
 export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const methods = useAddAdmissionForm(existingClient);
 
@@ -128,6 +129,9 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
     const isStepValid = await trigger(fieldsToValidate);
 
     if (!isStepValid) {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       return;
     }
 
@@ -165,7 +169,7 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
         <ProgressBar interactive={false} currentStep={currentStep} onStepChange={goToStep} />
 
         {/* Form content - scrollable area */}
-        <ScrollArea className="h-[calc(100vh-22rem)] pr-10">
+        <ScrollArea className="h-[calc(100vh-22rem)] pr-10" ref={scrollRef}>
           <form className="pr-1" data-testid="admission-multistep-form">
             {stepComponents[currentStep as keyof typeof stepComponents]?.component}
           </form>

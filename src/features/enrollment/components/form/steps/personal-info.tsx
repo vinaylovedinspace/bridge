@@ -48,7 +48,7 @@ export const PersonalInfoStep = () => {
     handleAadhaarNumberBlur,
     handleUseExisting,
     handleContinueWithNew,
-  } = useDuplicateClientCheck(setValue);
+  } = useDuplicateClientCheck(setValue, clearErrors);
 
   // Watch for changes in the checkbox and address fields
   const isSameAddress = useWatch({

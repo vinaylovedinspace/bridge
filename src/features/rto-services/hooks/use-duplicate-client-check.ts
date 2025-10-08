@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UseFormSetValue } from 'react-hook-form';
+import { UseFormClearErrors, UseFormSetValue } from 'react-hook-form';
 
 import { mapClientToPersonalInfo, mapDrivingLicense } from '@/features/enrollment/lib/utils';
 import { checkPhoneNumberDuplicate, checkAadhaarNumberDuplicate } from '@/server/actions/clients';
@@ -12,7 +12,10 @@ type ExistingClient = {
   data: Awaited<ReturnType<typeof checkPhoneNumberDuplicate>>['client'];
 };
 
-export const useDuplicateClientCheck = (setValue: UseFormSetValue<RTOServiceFormValues>) => {
+export const useDuplicateClientCheck = (
+  setValue: UseFormSetValue<RTOServiceFormValues>,
+  clearErrors: UseFormClearErrors<RTOServiceFormValues>
+) => {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [existingClient, setExistingClient] = useState<ExistingClient | null>(null);
 
@@ -77,6 +80,7 @@ export const useDuplicateClientCheck = (setValue: UseFormSetValue<RTOServiceForm
         setValue('service.license.expiryDate', drivingLicense.expiryDate);
       }
     }
+    clearErrors();
     setShowDuplicateModal(false);
   };
 
