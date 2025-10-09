@@ -18,11 +18,11 @@ export const personalInfoSchema = createInsertSchema(ClientTable, {
   lastName: z.string().min(1, 'Last name is required'),
   phoneNumber: z
     .string()
-    .min(10, 'Phone number is required')
-    .max(12, 'Phone number is not valid')
+    .min(10, 'Phone number must be at least 10 digits')
+    .max(12, 'Phone number must not exceed 12 digits')
     .regex(
-      /^(\+91|91)?[6-9]\d{9,11}$/,
-      'Invalid phone number format. Use 10-digit Indian number or include country code'
+      /^(\+?91)?[6-9]\d{9}$/,
+      'Invalid phone number format. Use 10-digit number (e.g., 9876543210) or with country code (e.g., 919876543210)'
     ),
   email: z.string().email('Invalid email address').or(z.literal('')).optional().nullable(),
 

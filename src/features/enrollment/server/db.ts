@@ -242,7 +242,7 @@ export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert, 
           ...data,
           updatedAt: new Date(),
         })
-        .where(eq(PaymentTable.id, existingPayment.id))
+        .where(eq(PaymentTable.id, existingPayment.payment.id))
         .returning();
 
       payment = updated;

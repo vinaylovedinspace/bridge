@@ -23,7 +23,8 @@ export const usePhoneNumberValidation = (setValue: UseFormSetValue<AdmissionForm
   const [existingClient, setExistingClient] = useState<ExistingClient | null>(null);
 
   const handlePhoneNumberBlur = async (phoneNumber: string) => {
-    if (!phoneNumber || phoneNumber.length < 10) return;
+    // Accept 10 digits (9876543210) or 12 digits (919876543210)
+    if (!phoneNumber || phoneNumber.length < 10 || phoneNumber.length > 12) return;
 
     const result = await checkPhoneNumberExists(phoneNumber);
 

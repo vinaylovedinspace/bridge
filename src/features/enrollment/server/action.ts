@@ -281,6 +281,7 @@ export const createPayment = async (
     // 3. Validate payment data
     const { success, data, error } = paymentSchema.safeParse({
       ...unsafeData,
+      planId,
       originalAmount,
       finalAmount,
     });
@@ -310,7 +311,7 @@ export const createPayment = async (
         console.log('📱 [Enrollment] Sending WhatsApp for CASH/QR payment');
         const whatsappResult = await sendOnboardingMessageAfterPayment({
           clientId: plan.clientId,
-          planId: unsafeData.planId,
+          planId: planId,
           paymentMode: data.paymentMode,
           amount: finalAmount,
           transactionReference: `TXN-${Date.now()}`,
@@ -336,7 +337,7 @@ export const createPayment = async (
             amount: finalAmount,
             customerPhone: client.phoneNumber,
             customerName: `${client.firstName} ${client.lastName}`,
-            planId: unsafeData.planId,
+            planId: planId,
             sendSms: true,
           });
 
@@ -347,7 +348,7 @@ export const createPayment = async (
             console.log('📱 [Enrollment] Sending WhatsApp for PAYMENT_LINK');
             const whatsappResult = await sendOnboardingMessageAfterPayment({
               clientId: plan.clientId,
-              planId: unsafeData.planId,
+              planId: planId,
               paymentMode: data.paymentMode,
               amount: finalAmount,
               transactionReference: paymentLinkResult.data.paymentUrl,
@@ -397,6 +398,41 @@ export async function createPaymentLinkAction(
     return result;
   } catch (error) {
     console.error('Failed to create payment link:', error);
+    return {
+      success: false,
+      error: 'Failed to create payment link. Please try again.',
+    };
+  }
+}
+
+export async function createPaymentLinkAndSendWhatsApp(
+  request: CreatePaymentLinkRequest & { clientId: string }
+): Promise<PaymentLinkResult> {
+  try {
+    // 1. Create the payment link
+    const paymentLinkResult = await createPaymentLink(request);
+
+    if (!paymentLinkResult.success || !paymentLinkResult.data) {
+      return paymentLinkResult;
+    }
+
+    // 2. Send WhatsApp message with the payment link
+    try {
+      await sendOnboardingMessageAfterPayment({
+        clientId: request.clientId,
+        planId: request.planId,
+        paymentMode: 'PAYMENT_LINK',
+        amount: request.amount,
+        transactionReference: paymentLinkResult.data.paymentUrl,
+      });
+    } catch (whatsappError) {
+      console.error('Failed to send WhatsApp message:', whatsappError);
+      // Don't fail the whole operation if WhatsApp fails
+    }
+
+    return paymentLinkResult;
+  } catch (error) {
+    console.error('❌ [Create Payment Link & WhatsApp] Error:', error);
     return {
       success: false,
       error: 'Failed to create payment link. Please try again.',
