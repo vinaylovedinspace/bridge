@@ -5,7 +5,7 @@ import { FormProvider } from 'react-hook-form';
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  useStepNavigation,
+  useAdmissionStepNavigation,
   ProgressBar,
 } from '@/features/enrollment/components/progress-bar/progress-bar';
 import { getMultistepAdmissionStepValidationFields } from '@/features/enrollment/lib/utils';
@@ -33,7 +33,7 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
   const { trigger, getValues } = methods;
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
-    useStepNavigation(true);
+    useAdmissionStepNavigation();
   const { submitStep } = useEditFormSubmissions(enrollment);
 
   const {

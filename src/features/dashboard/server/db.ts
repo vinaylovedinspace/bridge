@@ -136,12 +136,12 @@ const _getAdmissionStatistics = async (
   }
 };
 
-export const getAdmissionStatistics = async (branchId: string) => {
+export const getAdmissionStatistics = async (branchId: string, months: number) => {
   // const cacheFn = dbCache(_getAdmissionStatistics, {
   //   tags: [getIdTag(branchId, CACHE_TAGS.dashboard_admissionOverview)],
   // });
 
-  return _getAdmissionStatistics(branchId);
+  return _getAdmissionStatistics(branchId, months);
 };
 
 type LicenceWorkCount = {

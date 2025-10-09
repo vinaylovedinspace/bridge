@@ -116,7 +116,7 @@ async function updateScheduledSessionsForWorkingDays(branchId: string, newWorkin
     for (const session of sessionsToReschedule) {
       const newSessionDate = findNextAvailableWorkingDay(startFromDate, newWorkingDays, usedDates);
 
-      const updateResult = await db
+      await db
         .update(SessionTable)
         .set({
           sessionDate: newSessionDate,

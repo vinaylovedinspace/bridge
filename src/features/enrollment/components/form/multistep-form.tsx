@@ -10,7 +10,7 @@ import { PersonalInfoStep } from './steps/personal-info';
 import { LicenseStep } from './steps/license';
 import { PlanStep } from './steps/plan';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useStepNavigation, ProgressBar } from '../progress-bar/progress-bar';
+import { useAdmissionStepNavigation, ProgressBar } from '../progress-bar/progress-bar';
 import { PaymentContainer } from './steps/payment';
 import { getMultistepAdmissionStepValidationFields } from '../../lib/utils';
 import { useEnrollmentFormSubmissions } from '../../hooks/use-enrollment-form-submissions';
@@ -33,7 +33,7 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
   const { trigger, getValues, watch, setValue } = methods;
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
-    useStepNavigation(true);
+    useAdmissionStepNavigation();
 
   // Watch all form values to detect changes
   const watchedValues = watch();
