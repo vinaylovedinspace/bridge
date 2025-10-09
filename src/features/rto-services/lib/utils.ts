@@ -102,6 +102,7 @@ export const getDefaultValuesForRTOServiceForm = (
             licenseServiceFee: rtoService.payment.licenseServiceFee,
             totalAmount: rtoService.payment.totalAmount,
             clientId: rtoService.payment.clientId,
+            branchId: rtoService.payment.branchId,
             paymentMode: 'PAYMENT_LINK' as const,
             applyDiscount: rtoService.payment.discount > 0,
           }
@@ -112,6 +113,7 @@ export const getDefaultValuesForRTOServiceForm = (
             licenseServiceFee: 0,
             totalAmount: 0,
             clientId: rtoService.clientId,
+            branchId: rtoService.branchId,
             paymentMode: 'PAYMENT_LINK' as const,
             applyDiscount: false,
           },

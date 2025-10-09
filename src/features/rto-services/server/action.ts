@@ -170,7 +170,7 @@ export const createPayment = async (
     }
 
     // 2. Get branch config for service charge
-    const { licenseServiceCharge: branchServiceCharge } = await getBranchConfig();
+    const { licenseServiceCharge: branchServiceCharge, id: branchId } = await getBranchConfig();
 
     // 3. Calculate payment amounts using shared function (ensures consistency with frontend)
     const paymentBreakdown = calculateRTOPaymentBreakdown({
@@ -183,6 +183,7 @@ export const createPayment = async (
     // 4. Validate payment data with calculated amounts
     const { success, data, error } = paymentSchema.safeParse({
       ...unsafeData,
+      branchId,
       clientId: rtoService.clientId,
       totalAmount: paymentBreakdown.totalAmountAfterDiscount,
       licenseServiceFee: paymentBreakdown.branchServiceCharge,

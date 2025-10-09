@@ -284,6 +284,7 @@ export const createPayment = async (
     }
 
     const { plan, vehicle } = planResult;
+    const { id: branchId } = await getBranchConfig();
 
     // 2. Calculate payment breakdown
     const paymentBreakdown = calculateEnrollmentPaymentBreakdown({
@@ -298,6 +299,7 @@ export const createPayment = async (
     // 3. Validate payment data with calculated total
     const validationResult = paymentSchema.safeParse({
       ...unsafeData,
+      branchId,
       totalAmount: paymentBreakdown.totalAmountAfterDiscount,
     });
 

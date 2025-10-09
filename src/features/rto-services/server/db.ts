@@ -38,7 +38,11 @@ export const getRTOService = async (id: string) => {
             drivingLicense: true,
           },
         },
-        payment: true,
+        payment: {
+          with: {
+            fullPayment: true,
+          },
+        },
       },
       orderBy: (RTOServicesTable, { desc }) => [desc(RTOServicesTable.createdAt)],
     });

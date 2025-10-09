@@ -108,9 +108,14 @@ export const PaymentOverview = ({ existingPayment, isEditMode = false }: Payment
           {paymentType === 'FULL_PAYMENT' && (
             <>
               <Separator className="my-6" />
-              <div className="flex justify-between">
-                <TypographyMuted>
-                  {isFirstInstallmentPaid ? 'Remaining Due' : 'Total Due'}
+              <div className="flex justify-between mt-2">
+                <TypographyMuted className="flex items-center gap-2">
+                  Total Due
+                  {existingPayment?.fullPayment.paymentMode && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                      Received via {existingPayment?.fullPayment.paymentMode}
+                    </span>
+                  )}
                 </TypographyMuted>
                 <TypographyMuted className="font-semibold">{formatted.amountDue}</TypographyMuted>
               </div>

@@ -17,12 +17,14 @@ export const PaymentStatusEnum = pgEnum('payment_status', [
 ]);
 
 export const PaymentTypeEnum = pgEnum('payment_type', ['FULL_PAYMENT', 'INSTALLMENTS']);
+export type PaymentStatus = (typeof PaymentStatusEnum.enumValues)[number];
 
 export const PaymentTable = pgTable(
   'payments',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     clientId: uuid('client_id').notNull(),
+    branchId: uuid('branch_id').notNull(),
 
     discount: integer('discount').notNull().default(0),
     totalAmount: integer('total_amount').notNull(),

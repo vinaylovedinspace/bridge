@@ -4,10 +4,16 @@ import { PaymentDataTable } from './data-table';
 import { getPayments } from '@/server/db/payments';
 import { PaymentFilters } from '../filters';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PaymentStatus } from '@/db/schema';
 
-export async function Payments({ name, paymentStatus }: { name?: string; paymentStatus?: string }) {
+export async function Payments({
+  name,
+  paymentStatus,
+}: {
+  name?: string;
+  paymentStatus?: PaymentStatus;
+}) {
   const data = await getPayments(name, paymentStatus);
-
   return (
     <div className="space-y-6">
       <div>

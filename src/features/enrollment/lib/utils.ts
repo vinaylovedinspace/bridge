@@ -186,7 +186,6 @@ export const getDefaultValuesForEditEnrollmentForm = (
   enrollment: NonNullable<Enrollment>
 ): AdmissionFormValues => {
   const { client, payment } = enrollment;
-  console.log('clientId', client.id);
   return {
     serviceType: enrollment.serviceType,
     personalInfo: mapClientToPersonalInfo(client),
@@ -212,6 +211,7 @@ export const getDefaultValuesForEditEnrollmentForm = (
           licenseServiceFee: payment.licenseServiceFee,
           totalAmount: payment.totalAmount,
           clientId: payment.clientId,
+          branchId: payment.branchId,
           paymentMode: 'PAYMENT_LINK' as const,
           applyDiscount: payment.discount > 0,
         }
@@ -222,6 +222,7 @@ export const getDefaultValuesForEditEnrollmentForm = (
           licenseServiceFee: 0,
           totalAmount: 0,
           clientId: client.id,
+          branchId: client.branchId,
           paymentMode: 'PAYMENT_LINK' as const,
           applyDiscount: false,
         },
