@@ -110,7 +110,7 @@ const getDateMonthsAgo = (months: number): Date => {
   return date;
 };
 
-export const getAdmissionStatistics = async (
+const _getAdmissionStatistics = async (
   branchId: string,
   months: number = DEFAULT_MONTHS_RANGE
 ): Promise<MonthStatistic[]> => {
@@ -136,13 +136,21 @@ export const getAdmissionStatistics = async (
   }
 };
 
+export const getAdmissionStatistics = async (branchId: string) => {
+  // const cacheFn = dbCache(_getAdmissionStatistics, {
+  //   tags: [getIdTag(branchId, CACHE_TAGS.dashboard_admissionOverview)],
+  // });
+
+  return _getAdmissionStatistics(branchId);
+};
+
 type LicenceWorkCount = {
   learningTestCount: number;
   finalTestCount: number;
   rtoWorkCount: number;
 };
 
-export const getLicenceWorkCount = async (branchId: string): Promise<LicenceWorkCount> => {
+const _getLicenceWorkCount = async (branchId: string): Promise<LicenceWorkCount> => {
   try {
     // Execute all three queries in parallel for maximum performance
     const [learningTestCountResult, finalTestCountResult, rtoWorkCountResult] = await Promise.all([
@@ -201,7 +209,15 @@ export const getLicenceWorkCount = async (branchId: string): Promise<LicenceWork
   }
 };
 
-export const getOverduePaymentsCount = async (branchId: string): Promise<number> => {
+export const getLicenceWorkCount = async (branchId: string) => {
+  // const cacheFn = dbCache(_getLicenceWorkCount, {
+  //   tags: [getIdTag(branchId, CACHE_TAGS.dashboard_licenceWorkCount)],
+  // });
+
+  return _getLicenceWorkCount(branchId);
+};
+
+const _getOverduePaymentsCount = async (branchId: string): Promise<number> => {
   try {
     // Execute both counts in parallel
     const [planOverdueResult, rtoOverdueResult] = await Promise.all([
@@ -280,6 +296,14 @@ export const getOverduePaymentsCount = async (branchId: string): Promise<number>
     console.error('Error fetching overdue payments count:', error);
     throw new Error('Failed to retrieve overdue payments count');
   }
+};
+
+export const getOverduePaymentsCount = async (branchId: string) => {
+  // const cacheFn = dbCache(_getOverduePaymentsCount, {
+  //   tags: [getIdTag(branchId, CACHE_TAGS.dashboard_pendingPayments)],
+  // });
+
+  return _getOverduePaymentsCount(branchId);
 };
 
 const getTodayString = (): string => {

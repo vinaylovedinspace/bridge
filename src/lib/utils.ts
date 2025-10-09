@@ -34,3 +34,11 @@ export const generateFieldPaths = <T>({
     .filter((field) => !excludeFields.includes(field))
     .map((field) => `${String(prefix)}.${field}` as Path<T>);
 };
+
+const compactNumberFormatter = new Intl.NumberFormat(undefined, {
+  notation: 'compact',
+});
+
+export function formatCompactNumber(number: number) {
+  return compactNumberFormatter.format(number);
+}

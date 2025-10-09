@@ -49,9 +49,7 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
     formState: { errors },
   } = form;
   const workingDays = watch('workingDays');
-  const operatingHours = watch('operatingHours');
   const defaultRtoOffice = watch('defaultRtoOffice');
-  const licenseServiceCharge = watch('licenseServiceCharge');
 
   const handleWorkingDayToggle = (dayId: number) => {
     const currentDays = workingDays || [];

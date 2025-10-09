@@ -1,10 +1,9 @@
 import { db } from '@/db';
+import { CACHE_TAGS, dbCache, getIdTag } from '@/lib/cache';
 import { auth } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
 
-export const getBranchConfig = async () => {
-  const { orgId } = await auth();
-
+const _getBranchConfig = async (orgId: string) => {
   const branch = await db.query.BranchTable.findFirst({
     where: (table) => eq(table.orgId, orgId!),
     columns: {
@@ -18,6 +17,16 @@ export const getBranchConfig = async () => {
   });
 
   return branch!;
+};
+
+export const getBranchConfig = async () => {
+  const { orgId } = await auth();
+
+  const cacheFn = dbCache(_getBranchConfig, {
+    tags: [getIdTag(orgId!, CACHE_TAGS.branch)],
+  });
+
+  return cacheFn(orgId!);
 };
 
 export const getBranchConfigWithTenant = async () => {

@@ -5,11 +5,11 @@ import { db } from '@/db';
 import { BranchTable, SessionTable } from '@/db/schema';
 import { eq, and, gte } from 'drizzle-orm';
 import { branchSettingsSchema, type BranchSettings } from '../types';
+import { CACHE_TAGS, revalidateDbCache } from '@/lib/cache';
+import { auth } from '@clerk/nextjs/server';
 
 async function updateScheduledSessionsForWorkingDays(branchId: string, newWorkingDays: number[]) {
   try {
-    console.log('Updating sessions for working days:', newWorkingDays);
-
     // Get today's date in YYYY-MM-DD format
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
@@ -25,8 +25,6 @@ async function updateScheduledSessionsForWorkingDays(branchId: string, newWorkin
           gte(SessionTable.sessionDate, todayStr)
         )
       );
-
-    console.log(`Found ${futureScheduledSessions.length} future scheduled sessions`);
 
     if (futureScheduledSessions.length === 0) {
       return { updated: 0 };
@@ -57,11 +55,8 @@ async function updateScheduledSessionsForWorkingDays(branchId: string, newWorkin
     });
 
     if (sessionsToReschedule.length === 0) {
-      console.log('No sessions need rescheduling');
       return { updated: 0 };
     }
-
-    console.log(`Found ${sessionsToReschedule.length} sessions that need rescheduling`);
 
     // Sort sessions by date to reschedule in chronological order
     sessionsToReschedule.sort((a, b) => a.sessionDate.localeCompare(b.sessionDate));
@@ -69,8 +64,6 @@ async function updateScheduledSessionsForWorkingDays(branchId: string, newWorkin
     // Find the latest session date among all existing sessions to reschedule after it
     const allSessionDates = futureScheduledSessions.map((s) => s.sessionDate).sort();
     const latestSessionDate = allSessionDates[allSessionDates.length - 1];
-
-    console.log(`Latest existing session date: ${latestSessionDate}`);
 
     // Helper function to find next available working day after a given date
     function findNextAvailableWorkingDay(
@@ -123,10 +116,6 @@ async function updateScheduledSessionsForWorkingDays(branchId: string, newWorkin
     for (const session of sessionsToReschedule) {
       const newSessionDate = findNextAvailableWorkingDay(startFromDate, newWorkingDays, usedDates);
 
-      console.log(
-        `Rescheduling session ${session.id} from ${session.sessionDate} to ${newSessionDate}`
-      );
-
       const updateResult = await db
         .update(SessionTable)
         .set({
@@ -142,14 +131,10 @@ async function updateScheduledSessionsForWorkingDays(branchId: string, newWorkin
           status: SessionTable.status,
         });
 
-      console.log(`Database update result for session ${session.id}:`, updateResult);
-
       // Add the new date to used dates and update start point for next session
       usedDates.add(newSessionDate);
       startFromDate = newSessionDate;
     }
-
-    console.log(`Rescheduled ${sessionsToReschedule.length} sessions due to working days change`);
 
     return { updated: sessionsToReschedule.length };
   } catch (error) {
@@ -159,6 +144,8 @@ async function updateScheduledSessionsForWorkingDays(branchId: string, newWorkin
 }
 
 export async function updateBranchSettings(branchId: string, settings: BranchSettings) {
+  const { orgId } = await auth();
+
   try {
     // Validate the settings
     const validatedSettings = branchSettingsSchema.parse(settings);
@@ -207,6 +194,11 @@ export async function updateBranchSettings(branchId: string, settings: BranchSet
         // Don't fail the entire operation if session updates fail
       }
     }
+
+    revalidateDbCache({
+      tag: CACHE_TAGS.branch,
+      id: orgId!,
+    });
 
     const message =
       sessionUpdateResult.updated > 0
