@@ -32,6 +32,9 @@ import {
   handleFullPayment,
   handleInstallmentPayment,
 } from '../lib/payment-helpers';
+import { paymentSchema } from '@/types/zod/payment';
+import { calculateEnrollmentPaymentBreakdown } from '@/lib/payment/calculate';
+import { IMMEDIATE_PAYMENT_MODES } from '@/lib/constants/payment';
 import { sendOnboardingMessageAfterPayment } from '@/server/actions/whatsapp';
 
 export const createClient = async (
@@ -308,25 +311,23 @@ export const createPayment = async (
     const { paymentId, isExistingPayment } = await upsertPaymentInDB(validationResult.data, planId);
 
     // 5. Handle payment transactions (CASH or QR)
-    if (data.paymentMode === 'CASH' || data.paymentMode === 'QR') {
-      if (data.paymentType === 'FULL_PAYMENT') {
-        await handleFullPayment(paymentId, data.paymentMode);
-      } else if (data.paymentType === 'INSTALLMENTS') {
-        await handleInstallmentPayment(
-          paymentId,
-          data.paymentMode,
-          firstInstallmentAmount,
-          secondInstallmentAmount
-        );
-      }
+    const paymentMode = validationResult.data.paymentMode;
+    if (IMMEDIATE_PAYMENT_MODES.includes(paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])) {
+      await processPaymentTransaction(
+        paymentId,
+        paymentMode as 'CASH' | 'QR',
+        validationResult.data.paymentType,
+        paymentBreakdown.firstInstallmentAmount,
+        paymentBreakdown.secondInstallmentAmount
+      );
       // Send WhatsApp onboarding message immediately for CASH/QR payments
       try {
         console.log('📱 [Enrollment] Sending WhatsApp for CASH/QR payment');
         const whatsappResult = await sendOnboardingMessageAfterPayment({
           clientId: plan.clientId,
           planId: planId,
-          paymentMode: data.paymentMode,
-          amount: finalAmount,
+          paymentMode: paymentMode,
+          amount: paymentBreakdown.totalAmountAfterDiscount,
           transactionReference: `TXN-${Date.now()}`,
         });
         console.log('📱 [Enrollment] WhatsApp result:', whatsappResult);
@@ -336,18 +337,19 @@ export const createPayment = async (
     }
 
     // 6. Handle payment link generation if payment mode is PAYMENT_LINK
-    if (data.paymentMode === 'PAYMENT_LINK') {
+    if (paymentMode === 'PAYMENT_LINK') {
       try {
-        console.log('💳 [Enrollment] Creating payment link for amount:', finalAmount);
+        console.log(
+          '💳 [Enrollment] Creating payment link for amount:',
+          paymentBreakdown.totalAmountAfterDiscount
+        );
 
         // Get client details for payment link
-        const client = await db.query.ClientTable.findFirst({
-          where: eq(ClientTable.id, plan.clientId),
-        });
+        const client = await getClientByIdFromDB(plan.clientId);
 
         if (client) {
           const paymentLinkResult = await createPaymentLink({
-            amount: finalAmount,
+            amount: paymentBreakdown.totalAmountAfterDiscount,
             customerPhone: client.phoneNumber,
             customerName: `${client.firstName} ${client.lastName}`,
             planId: planId,
@@ -362,8 +364,8 @@ export const createPayment = async (
             const whatsappResult = await sendOnboardingMessageAfterPayment({
               clientId: plan.clientId,
               planId: planId,
-              paymentMode: data.paymentMode,
-              amount: finalAmount,
+              paymentMode: paymentMode,
+              amount: paymentBreakdown.totalAmountAfterDiscount,
               transactionReference: paymentLinkResult.data.paymentUrl,
             });
             console.log('📱 [Enrollment] WhatsApp result:', whatsappResult);

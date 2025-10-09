@@ -11,7 +11,6 @@ import { AdmissionFormValues } from '@/features/enrollment/types';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle, MessageSquare, Phone } from 'lucide-react';
 import {
-  createPaymentLinkAction,
   createPayment,
   createPaymentLinkAndSendWhatsApp,
 } from '@/features/enrollment/server/action';
