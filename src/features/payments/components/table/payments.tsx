@@ -3,6 +3,7 @@ import { columns } from './columns';
 import { PaymentDataTable } from './data-table';
 import { getPayments } from '@/server/db/payments';
 import { PaymentFilters } from '../filters';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export async function Payments({ name, paymentStatus }: { name?: string; paymentStatus?: string }) {
   const data = await getPayments(name, paymentStatus);
@@ -13,7 +14,7 @@ export async function Payments({ name, paymentStatus }: { name?: string; payment
         <h1 className="text-2xl font-semibold text-white">Payment table with all columns</h1>
       </div>
       <PaymentFilters />
-      <Suspense fallback={<div>Loading payments...</div>}>
+      <Suspense fallback={<Skeleton className="h-96 w-full" />}>
         <PaymentDataTable columns={columns} data={data} />
       </Suspense>
     </div>

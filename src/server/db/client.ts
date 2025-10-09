@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { ClientTable, SessionTable } from '@/db/schema';
 import { auth } from '@clerk/nextjs/server';
-import { eq, ilike, and, desc, or, count, gte, sql } from 'drizzle-orm';
+import { eq, ilike, and, desc, or } from 'drizzle-orm';
 import { getBranchConfig } from './branch';
 
 const _getClients = async (
@@ -165,78 +165,56 @@ export const getClientsWithUnassignedSessions = async () => {
   return await _getClientsWithUnassignedSessions(branchId);
 };
 
-const _getAdmissionStatistics = async (branchId: string, months: number = 6) => {
-  // Calculate the date from `months` ago
-  const fromDate = new Date();
-  fromDate.setMonth(fromDate.getMonth() - months);
+export const checkPhoneNumberExistsInDB = async (phoneNumber: string) => {
+  const { tenantId } = await getBranchConfig();
 
-  const result = await db
-    .select({
-      month: sql<string>`TO_CHAR(${ClientTable.createdAt}, 'YYYY-MM')`.as('month'),
-      count: count(ClientTable.id).as('count'),
-    })
-    .from(ClientTable)
-    .where(and(eq(ClientTable.branchId, branchId), gte(ClientTable.createdAt, fromDate)))
-    .groupBy(sql`TO_CHAR(${ClientTable.createdAt}, 'YYYY-MM')`)
-    .orderBy(sql`TO_CHAR(${ClientTable.createdAt}, 'YYYY-MM')`);
-
-  // Transform the result to include month names and ensure we have data for all months
-  const monthsData: { month: string; users: number; fullMonth: string }[] = [];
-
-  // Create array of last N months
-  for (let i = months - 1; i >= 0; i--) {
-    const date = new Date();
-    date.setMonth(date.getMonth() - i);
-    const monthKey = date.toISOString().slice(0, 7); // YYYY-MM format
-    const monthNames = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    const fullMonthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-
-    const monthAbbr = monthNames[date.getMonth()];
-    const fullMonth = fullMonthNames[date.getMonth()];
-
-    // Find matching data from database
-    const dbData = result.find((r) => r.month === monthKey);
-
-    monthsData.push({
-      month: monthAbbr,
-      users: dbData ? Number(dbData.count) : 0,
-      fullMonth: fullMonth,
+  try {
+    const client = await db.query.ClientTable.findFirst({
+      where: and(eq(ClientTable.phoneNumber, phoneNumber), eq(ClientTable.tenantId, tenantId)),
+      with: {
+        learningLicense: true,
+        drivingLicense: true,
+      },
     });
-  }
 
-  return monthsData;
+    if (client) {
+      return {
+        exists: true,
+        client,
+      };
+    }
+
+    return { exists: false };
+  } catch (error) {
+    console.error('Error checking phone number:', error);
+    return { exists: false };
+  }
 };
 
-export const getAdmissionStatistics = async (months: number = 6) => {
-  const { id: branchId } = await getBranchConfig();
+export const checkAadhaarNumberExistsInDB = async (aadhaarNumber: string) => {
+  const { tenantId } = await getBranchConfig();
 
-  return await _getAdmissionStatistics(branchId, months);
+  try {
+    const client = await db.query.ClientTable.findFirst({
+      where: and(eq(ClientTable.aadhaarNumber, aadhaarNumber), eq(ClientTable.tenantId, tenantId)),
+      with: {
+        learningLicense: true,
+        drivingLicense: true,
+      },
+    });
+
+    if (client) {
+      return {
+        exists: true,
+        client,
+      };
+    }
+
+    return { exists: false };
+  } catch (error) {
+    console.error('Error checking Aadhaar number:', error);
+    return { exists: false };
+  }
 };
 
 export type Client = Awaited<ReturnType<typeof getClient>>;
@@ -244,4 +222,3 @@ export type ClientDetail = Awaited<ReturnType<typeof getClients>>;
 export type ClientWithUnassignedSessions = Awaited<
   ReturnType<typeof getClientsWithUnassignedSessions>
 >[0];
-export type AdmissionStatistics = Awaited<ReturnType<typeof getAdmissionStatistics>>;

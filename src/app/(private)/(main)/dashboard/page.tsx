@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { DashboardContainer } from '@/features/dashboard/components/dashboard-container';
+import { DashboardContainer } from '@/features/dashboard/components/dashboard-container/dashboard-container';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { PlusIcon } from 'lucide-react';
 import Link from 'next/link';

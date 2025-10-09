@@ -80,3 +80,9 @@ export function isValidDateString(dateString: string): boolean {
   const date = stringToDate(dateString);
   return dateToString(date) === dateString; // Round-trip validation
 }
+
+// Helper function to convert date string to Date object
+export const parseDateStringToDateObject = (dateString: string | null): Date | null => {
+  if (!dateString) return null;
+  return new Date(dateString);
+};

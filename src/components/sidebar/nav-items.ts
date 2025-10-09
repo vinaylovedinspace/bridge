@@ -7,5 +7,6 @@ export const navItems = [
   { label: 'Forms', href: '/forms' },
   { label: 'Vehicles', href: '/vehicles' },
   { label: 'Staff', href: '/staff' },
+  { label: 'Expenses', href: '/expenses' },
   { label: 'Settings', href: '/settings' },
 ] as const;

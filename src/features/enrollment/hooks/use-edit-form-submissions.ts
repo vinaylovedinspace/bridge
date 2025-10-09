@@ -118,15 +118,6 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
 
   const handlePaymentStep = useCallback(
     async (data: PaymentValues): ActionReturnType => {
-      // If payment already exists, no need to create a new one
-      if (enrollment.payment) {
-        return {
-          error: false,
-          message: 'Success',
-        };
-      }
-
-      // Create payment if it doesn't exist
       try {
         const paymentData = {
           ...data,
@@ -137,18 +128,20 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
         if (result.error) {
           return {
             error: true,
-            message: result.message || 'Failed to create payment',
+            message: result.message || 'Failed to save payment',
           };
         }
 
         return {
           error: false,
-          message: 'Payment created successfully',
+          message: enrollment.payment
+            ? 'Payment updated successfully'
+            : 'Payment created successfully',
         };
       } catch {
         return {
           error: true,
-          message: 'Unable to create payment. Please try again.',
+          message: 'Unable to save payment. Please try again.',
         };
       }
     },

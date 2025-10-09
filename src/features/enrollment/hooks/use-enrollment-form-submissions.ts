@@ -13,10 +13,12 @@ import {
   createLearningLicense,
   createDrivingLicense,
   createPlan,
+  createPayment,
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
 import { UseFormGetValues, UseFormSetValue } from 'react-hook-form';
 import { getSessions } from '@/server/actions/sessions';
+import { LAST_ENROLLMENT_CLIENT_ID, LAST_ENROLLMENT_STEP } from '@/lib/constants/business';
 
 /**
  * Validate that an object has meaningful data (not just empty object)
@@ -253,12 +255,21 @@ export const useEnrollmentFormSubmissions = (
   );
 
   const handlePaymentStep = useCallback(async (): ActionReturnType => {
-    // Payment step is handled separately by payment form
-    return {
-      error: false,
-      message: 'Payment step completed',
+    const formValues = getValues();
+
+    if (!formValues.clientId || !formValues.planId)
+      return {
+        error: true,
+        message: 'Payment information was not saved. Please try again later',
+      };
+
+    const paymentInput = {
+      ...formValues.payment,
+      clientId: formValues.clientId,
     };
-  }, []);
+
+    return await createPayment(paymentInput, formValues.planId);
+  }, [getValues]);
 
   const submitStep = async (
     stepKey: string,
@@ -276,21 +287,9 @@ export const useEnrollmentFormSubmissions = (
     const stepHandlers: Record<string, () => Promise<{ error: boolean; message: string }>> = {
       service: () => handleServiceTypeStep(),
       personal: () => {
-        if (!stepData || typeof stepData !== 'object') {
-          return Promise.resolve({
-            error: true,
-            message: 'Invalid personal information data',
-          });
-        }
         return handlePersonalStep(stepData as PersonalInfoValues);
       },
       license: () => {
-        if (!stepData || typeof stepData !== 'object') {
-          return Promise.resolve({
-            error: true,
-            message: 'Invalid license data',
-          });
-        }
         return handleLicenseStep(
           stepData as {
             learningLicense?: LearningLicenseValues;
@@ -299,24 +298,12 @@ export const useEnrollmentFormSubmissions = (
         );
       },
       plan: () => {
-        if (!stepData || typeof stepData !== 'object') {
-          return Promise.resolve({
-            error: true,
-            message: 'Invalid plan data',
-          });
-        }
         return handlePlanStep(stepData as PlanValues);
       },
       payment: () => handlePaymentStep(),
     };
 
     const handler = stepHandlers[stepKey];
-
-    if (!handler) {
-      console.error(`Unknown step key: ${stepKey}`);
-      toast.error(`Invalid step: ${stepKey}`);
-      return false;
-    }
 
     try {
       const result = await handler();
@@ -331,13 +318,21 @@ export const useEnrollmentFormSubmissions = (
         return false;
       }
 
-      toast.success(result?.message || 'Information saved successfully', {
-        position: 'top-right',
-      });
+      // toast.success(result?.message || 'Information saved successfully', {
+      //   position: 'top-right',
+      // });
+
+      localStorage.setItem(LAST_ENROLLMENT_CLIENT_ID, JSON.stringify(getValues('clientId')));
 
       if (isLastStep) {
+        localStorage.removeItem(LAST_ENROLLMENT_CLIENT_ID);
+        localStorage.removeItem(LAST_ENROLLMENT_STEP);
         router.refresh();
         router.push('/dashboard');
+
+        toast.success(result?.message || 'Information saved successfully', {
+          position: 'top-right',
+        });
       }
 
       return true;

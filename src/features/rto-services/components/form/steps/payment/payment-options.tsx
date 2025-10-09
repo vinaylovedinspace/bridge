@@ -2,59 +2,33 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
-import { AdmissionFormValues } from '@/features/enrollment/types';
+import { RTOServiceFormValues } from '@/features/rto-services/types';
 import { useFormContext } from 'react-hook-form';
-import { Dispatch, SetStateAction } from 'react';
-import { Enrollment } from '@/server/db/plan';
-import { PaymentInfoState } from './types';
+import { getRTOService } from '@/features/rto-services/server/db';
 
-type PaymentCheckboxProps = {
-  paymentCheckboxes: PaymentInfoState;
-  setPaymentCheckboxes: Dispatch<SetStateAction<PaymentInfoState>>;
-  existingPayment: NonNullable<Enrollment>['payment'];
+type PaymentOptionsProps = {
+  existingPayment?: NonNullable<Awaited<ReturnType<typeof getRTOService>>>['payment'];
 };
-export const PaymentOptions = ({
-  paymentCheckboxes,
-  setPaymentCheckboxes,
-  existingPayment,
-}: PaymentCheckboxProps) => {
-  const { control } = useFormContext<AdmissionFormValues>();
+
+export const PaymentOptions = ({ existingPayment }: PaymentOptionsProps) => {
+  const { control, setValue, watch } = useFormContext<RTOServiceFormValues>();
+
+  const discount = watch('payment.discount');
+  const applyDiscount = watch('payment.applyDiscount');
 
   const hasExistingDiscount = Boolean(existingPayment && existingPayment.discount > 0);
 
-  const handleCheckboxChange = (
-    info: keyof typeof paymentCheckboxes,
-    checked: boolean | 'indeterminate'
-  ) => {
-    setPaymentCheckboxes((prev) => {
-      return {
-        ...prev,
-        [info]: {
-          ...prev[info],
-          isChecked: checked === true,
-        },
-      };
-    });
-  };
+  // Derive checkbox state from form values
+  const isDiscountChecked = applyDiscount || discount > 0;
 
-  const handleDiscountChange = (value: string) => {
-    setPaymentCheckboxes((prev) => ({
-      ...prev,
-      discount: {
-        ...prev.discount,
-        value,
-      },
-    }));
-  };
-
-  const clearDiscount = () => {
-    setPaymentCheckboxes((prev) => ({
-      ...prev,
-      discount: {
-        ...prev.discount,
-        value: '',
-      },
-    }));
+  const handleDiscountCheckboxChange = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+      setValue('payment.applyDiscount', true, { shouldDirty: true });
+    } else {
+      // When unchecking, reset both checkbox and discount value
+      setValue('payment.applyDiscount', false, { shouldDirty: true });
+      setValue('payment.discount', 0, { shouldDirty: true });
+    }
   };
 
   return (
@@ -64,20 +38,20 @@ export const PaymentOptions = ({
         <FormItem className="flex items-center gap-3">
           <FormControl>
             <Checkbox
-              checked={paymentCheckboxes.discount.isChecked}
-              onCheckedChange={(checked) => handleCheckboxChange('discount', checked)}
+              checked={isDiscountChecked}
+              onCheckedChange={handleDiscountCheckboxChange}
               disabled={hasExistingDiscount}
             />
           </FormControl>
           <FormLabel
             className={hasExistingDiscount ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
           >
-            {paymentCheckboxes.discount.label}
+            Apply Discount
           </FormLabel>
         </FormItem>
       </div>
 
-      {paymentCheckboxes.discount.isChecked && (
+      {isDiscountChecked && (
         <div className="col-span-5 col-start-4 pt-5">
           <FormField
             control={control}
@@ -94,9 +68,8 @@ export const PaymentOptions = ({
                         const value = e.target.value;
                         const numValue = value === '' ? 0 : Number(value);
                         field.onChange(isNaN(numValue) ? 0 : numValue);
-                        handleDiscountChange(e.target.value);
                       }}
-                      className="h-12 pr-10" // Added right padding for the X icon
+                      className="h-12 pr-10"
                       disabled={hasExistingDiscount}
                     />
                   </FormControl>
@@ -106,7 +79,6 @@ export const PaymentOptions = ({
                       type="button"
                       onClick={() => {
                         field.onChange(0);
-                        clearDiscount();
                       }}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
                       aria-label="Clear discount"

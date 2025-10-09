@@ -22,15 +22,17 @@ export const useRTOServiceStepNavigation = () => {
 type RTOServiceProgressBarProps = {
   currentStep: RTOServiceStepKey;
   onStepChange: (stepKey: RTOServiceStepKey) => void;
+  interactive?: boolean;
 };
 
 export const RTOServiceProgressBar = ({
   currentStep,
   onStepChange,
+  interactive = false,
 }: RTOServiceProgressBarProps) => {
   return (
     <ProgressBar
-      interactive={true}
+      interactive={interactive}
       currentStep={currentStep}
       onStepChange={onStepChange}
       steps={RTO_SERVICE_STEPS}

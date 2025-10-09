@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { getSessionsByClientId } from '@/server/actions/sessions';
 import { isTimeWithinOperatingHours } from '@/lib/utils/date-utils';
-import { BranchConfig } from '@/server/db/branch';
+import { useAtomValue } from 'jotai';
+import { branchOperatingHoursAtom } from '@/lib/atoms/branch-config';
 
-export const useSessionValidation = (
-  branchConfig: BranchConfig,
-  currentClientId?: string,
-  selectedDateTime?: Date
-) => {
+export const useSessionValidation = (currentClientId?: string, selectedDateTime?: Date) => {
+  const branchOperatingHours = useAtomValue(branchOperatingHoursAtom);
+
   const [hasCompletedSessions, setHasCompletedSessions] = useState(false);
 
   const isTimeOutsideOperatingHours = Boolean(
@@ -15,7 +14,7 @@ export const useSessionValidation = (
       !isTimeWithinOperatingHours(
         selectedDateTime.getHours(),
         selectedDateTime.getMinutes(),
-        branchConfig.operatingHours!
+        branchOperatingHours
       )
   );
 

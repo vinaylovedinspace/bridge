@@ -4,39 +4,36 @@ import { useFormContext } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { DatePicker } from '@/components/ui/date-picker';
-import { TypographyH5 } from '@/components/ui/typography';
+import { TypographyH5, TypographyMuted } from '@/components/ui/typography';
 import { AdmissionFormValues } from '@/features/enrollment/types';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { calculateLicenseFees } from '@/lib/constants/rto-fees';
 import { LICENSE_CLASS_OPTIONS } from '@/lib/constants/license-classes';
+import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
+import { useAtomValue } from 'jotai';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type LicenseStepProps = {
-  branchServiceCharge?: number;
   isEditMode?: boolean;
 };
 
-export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: LicenseStepProps) => {
-  const { control, watch } = useFormContext<AdmissionFormValues>();
+export const LicenseStep = ({}: LicenseStepProps) => {
+  const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
+  const { control, watch, getValues } = useFormContext<AdmissionFormValues>();
 
   // Watch service type to conditionally show/hide fields
   const serviceType = watch('serviceType');
 
-  // Watch selected license classes and existing license info for fee calculation
+  // Watch selected license classes and checkbox for fee calculation
   const selectedLicenseClasses = watch('learningLicense.class') || [];
-  const existingLearningLicenseNumber = watch('learningLicense.licenseNumber') || '';
+  const excludeLearningLicenseFee = watch('learningLicense.excludeLearningLicenseFee') ?? false;
 
-  // Check if student already has a learners license
-  const hasExistingLearners = existingLearningLicenseNumber.trim().length > 0;
-
-  // In edit mode, don't apply the existing learners discount since it was already applied during creation
-  const shouldApplyExistingLearnersDiscount = hasExistingLearners && !isEditMode;
-
-  // Calculate fees based on scenario
-  const feeCalculation = calculateLicenseFees(
-    selectedLicenseClasses,
-    shouldApplyExistingLearnersDiscount,
-    branchServiceCharge
-  );
+  // Calculate fees breakdown for display (only if not excluded)
+  const feeCalculation = calculateLicenseFees({
+    licenseClasses: selectedLicenseClasses,
+    excludeLearningLicenseFee,
+    serviceCharge: branchServiceCharge,
+  });
 
   return (
     <div className="space-y-10">
@@ -63,6 +60,27 @@ export const LicenseStep = ({ branchServiceCharge = 0, isEditMode = false }: Lic
               </FormItem>
             )}
           />
+
+          {serviceType == 'FULL_SERVICE' && (
+            <FormField
+              control={control}
+              name="learningLicense.excludeLearningLicenseFee"
+              render={({ field }) => (
+                <FormItem className="flex space-y-0 pt-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={getValues('payment.paymentStatus') === 'FULLY_PAID'}
+                    />
+                  </FormControl>
+                  <TypographyMuted className="text-xs">
+                    Student already has Learning Licence (exclude LL fees)
+                  </TypographyMuted>
+                </FormItem>
+              )}
+            />
+          )}
         </div>
         <div className="col-span-5 h-full">
           {selectedLicenseClasses.length > 0 && serviceType !== 'DRIVING_ONLY' && (

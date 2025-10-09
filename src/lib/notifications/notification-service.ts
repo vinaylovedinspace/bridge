@@ -124,7 +124,7 @@ export class NotificationService {
       userId: '',
       type: NOTIFICATION_TYPES.PAY_LATER_REMINDER,
       title: isOverdue ? 'Payment Overdue' : 'Payment Reminder',
-      message: `${client.firstName} ${client.lastName} has a payment of ₹${payment.finalAmount} ${isOverdue ? 'overdue' : 'due'}`,
+      message: `${client.firstName} ${client.lastName} has a payment of ₹${payment.totalAmount} ${isOverdue ? 'overdue' : 'due'}`,
       entityType: ENTITY_TYPES.PAYMENT,
       entityId: parseInt(paymentId),
       isRead: false,

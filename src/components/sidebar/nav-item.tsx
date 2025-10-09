@@ -15,7 +15,7 @@ export function NavItem({ item }: { item: (typeof navItems)[number] }) {
       <Button
         variant="ghost"
         className={cn(
-          'w-full h-full min-h-[40px] py-4 px-2 cursor-pointer justify-start',
+          'w-full h-full min-h-[28px] py-4 px-3 cursor-pointer justify-start',
           isActive && 'bg-gray-100 text-primary'
         )}
       >

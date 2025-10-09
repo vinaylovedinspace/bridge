@@ -1,51 +1,14 @@
-import { PlanTable, VehicleTable, PaymentTypeEnum } from '@/db/schema';
 import { dateToString } from '@/lib/date-utils';
-import { calculatePaymentBreakdown } from '@/lib/payment/calculate';
 import { generateSessionsFromPlan } from '@/lib/sessions';
 import { getBranchConfig } from '@/server/db/branch';
 import { createSessions, getSessionsByClientId } from '@/server/actions/sessions';
 import {
-  createFullPaymentInDB,
   createInstallmentPaymentsInDB,
   getExistingInstallmentsInDB,
   getPlanForSessionsInDB,
   getClientForSessionsInDB,
 } from '../server/db';
-
-/**
- * Calculate payment amounts based on plan and vehicle
- */
-export const calculatePaymentAmounts = (
-  plan: typeof PlanTable.$inferSelect,
-  vehicle: typeof VehicleTable.$inferSelect,
-  discount: number,
-  paymentType: (typeof PaymentTypeEnum.enumValues)[number]
-) => {
-  // Validate inputs
-  if (plan.numberOfSessions <= 0) {
-    throw new Error('Number of sessions must be greater than 0');
-  }
-
-  if (plan.sessionDurationInMinutes <= 0) {
-    throw new Error('Session duration must be greater than 0');
-  }
-
-  if (vehicle.rent < 0) {
-    throw new Error('Vehicle rent cannot be negative');
-  }
-
-  if (discount < 0) {
-    throw new Error('Discount cannot be negative');
-  }
-
-  return calculatePaymentBreakdown({
-    sessions: plan.numberOfSessions,
-    duration: plan.sessionDurationInMinutes,
-    rate: vehicle.rent,
-    discount,
-    paymentType,
-  });
-};
+import { upsertFullPaymentInDB } from '@/server/db/payments';
 
 /**
  * Handle full payment creation
@@ -56,7 +19,7 @@ export const handleFullPayment = async (
 ): Promise<void> => {
   const currentDate = dateToString(new Date());
 
-  await createFullPaymentInDB({
+  await upsertFullPaymentInDB({
     paymentId,
     paymentMode,
     paymentDate: currentDate,
@@ -73,15 +36,6 @@ export const handleInstallmentPayment = async (
   firstInstallmentAmount: number,
   secondInstallmentAmount: number
 ): Promise<void> => {
-  // Validate installment amounts
-  if (firstInstallmentAmount <= 0) {
-    throw new Error('First installment amount must be greater than 0');
-  }
-
-  if (secondInstallmentAmount <= 0) {
-    throw new Error('Second installment amount must be greater than 0');
-  }
-
   const currentDate = dateToString(new Date());
 
   // Check if first installment already exists
@@ -126,32 +80,33 @@ export const handleInstallmentPayment = async (
 
 /**
  * Create fallback sessions if they don't exist
- * This is a safety net in case createPlan didn't create sessions
+ * Safety net in case createPlan didn't create sessions
  */
 export const createFallbackSessions = async (planId: string): Promise<void> => {
+  // 1. Fetch plan data
   const plan = await getPlanForSessionsInDB(planId);
-
-  if (!plan) return;
-
-  // Check if sessions already exist
-  const existingSessions = await getSessionsByClientId(plan.clientId);
-
-  if (existingSessions.length > 0) {
-    console.log(
-      `Sessions already exist for client (${existingSessions.length} sessions), skipping creation in payment step`
-    );
+  if (!plan) {
+    console.warn('[createFallbackSessions] Plan not found:', planId);
     return;
   }
 
-  // Get client details
-  const client = await getClientForSessionsInDB(plan.clientId);
+  // 2. Check for existing sessions
+  const existingSessions = await getSessionsByClientId(plan.clientId);
+  if (existingSessions.length > 0) {
+    return;
+  }
 
-  if (!client) return;
+  // 3. Fetch client and branch config in parallel
+  const [client, branchConfig] = await Promise.all([
+    getClientForSessionsInDB(plan.clientId),
+    getBranchConfig(),
+  ]);
 
-  // Get branch config
-  const branchConfig = await getBranchConfig();
+  if (!client) {
+    return;
+  }
 
-  // Generate and create sessions
+  // 4. Generate sessions from plan
   const sessions = generateSessionsFromPlan(
     {
       joiningDate: plan.joiningDate,
@@ -168,11 +123,10 @@ export const createFallbackSessions = async (planId: string): Promise<void> => {
     branchConfig
   );
 
-  const sessionsResult = await createSessions(sessions);
+  // 5. Persist sessions to database
+  const result = await createSessions(sessions);
 
-  if (sessionsResult.error) {
-    console.error('Failed to create sessions:', sessionsResult.message);
-  } else {
-    console.log('Successfully created sessions as fallback:', sessionsResult.message);
+  if (result.error) {
+    console.error('[createFallbackSessions] Failed to create sessions:', result.message);
   }
 };

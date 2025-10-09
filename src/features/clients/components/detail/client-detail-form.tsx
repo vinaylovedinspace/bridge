@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { BranchConfig } from '@/server/db/branch';
 import { Client } from '@/server/db/client';
 import { ClientDetailProgressBar, useClientDetailStepNavigation } from './progress-bar';
 import { ClientDetailSteps } from './client-detail-steps';
@@ -19,14 +18,19 @@ import {
   updateClientDrivingLicense,
 } from '../../server/action';
 import { toast } from 'sonner';
+import { useAtomValue } from 'jotai';
+import { branchConfigAtom } from '@/lib/atoms/branch-config';
+import { useRouter } from 'next/navigation';
 
 type ClientDetailFormProps = {
   client: NonNullable<Client>;
-  branchConfig: BranchConfig;
 };
 
-export const ClientDetailForm = ({ client, branchConfig }: ClientDetailFormProps) => {
+export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
+  const branchConfig = useAtomValue(branchConfigAtom)!;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const defaultValues = transformClientToFormData(client);
   const methods = useForm<ClientDetailFormValues>({
@@ -42,77 +46,66 @@ export const ClientDetailForm = ({ client, branchConfig }: ClientDetailFormProps
   const {
     showUnsavedChangesDialog,
     setShowUnsavedChangesDialog,
-    hasCurrentStepChanges,
-    handleDiscardChanges,
 
     handleConfirmNavigation,
     handleCancelNavigation,
   } = useUnsavedChanges(methods, currentStep, defaultValues);
 
+  const saveLicenseStep = async (formValues: ClientDetailFormValues) => {
+    if (formValues.learningLicense) {
+      const learningResult = await updateClientLearningLicense(
+        client.id,
+        formValues.learningLicense
+      );
+      if (learningResult.error) {
+        return learningResult;
+      }
+    }
+
+    if (formValues.drivingLicense) {
+      const drivingResult = await updateClientDrivingLicense(client.id, formValues.drivingLicense);
+      if (drivingResult.error) {
+        return drivingResult;
+      }
+    }
+
+    return { error: false, message: 'Licence information updated successfully' };
+  };
+
   const handleNext = async () => {
+    const isValid = await trigger();
+    if (!isValid) {
+      scrollRef.current?.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
+
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-
-      // Validate current step
-      const isValid = await trigger();
-      if (!isValid) {
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Save data to server based on current step
       const formValues = getValues();
-      let result: { error: boolean; message: string } | null = null;
 
-      if (currentStep === 'personal') {
-        result = await updateClientPersonalInfo(client.id, formValues.personalInfo);
-      } else if (currentStep === 'license') {
-        // Update both learning and driving licenses if they have data
-        if (formValues.learningLicense) {
-          const learningResult = await updateClientLearningLicense(
-            client.id,
-            formValues.learningLicense
-          );
-          if (learningResult.error) {
-            result = learningResult;
-          }
-        }
+      const result =
+        currentStep === 'personal'
+          ? await updateClientPersonalInfo(client.id, formValues.personalInfo)
+          : await saveLicenseStep(formValues);
 
-        if (!result?.error && formValues.drivingLicense) {
-          const drivingResult = await updateClientDrivingLicense(
-            client.id,
-            formValues.drivingLicense
-          );
-          if (drivingResult.error) {
-            result = drivingResult;
-          }
-        }
-
-        if (!result) {
-          result = { error: false, message: 'Licence information updated successfully' };
-        }
-      }
-
-      // Show error if save failed
-      if (result?.error) {
+      if (result.error) {
         toast.error(result.message);
-        setIsSubmitting(false);
         return;
       }
 
-      // Show success message if we saved data
-      if (result) {
-        toast.success(result.message);
-      }
+      toast.success(result.message);
 
       if (isLastStep) {
-        // Navigate back to clients list
-        window.location.href = '/clients';
+        router.push('/clients');
       } else {
         goToNext();
       }
     } catch (error) {
-      console.error('Error saving client data:', error);
+      console.error(`Error saving ${currentStep} step:`, error);
       toast.error('Failed to save changes');
     } finally {
       setIsSubmitting(false);
@@ -121,11 +114,11 @@ export const ClientDetailForm = ({ client, branchConfig }: ClientDetailFormProps
 
   return (
     <FormProvider {...methods}>
-      <div className="h-full flex flex-col py-2 gap-4">
+      <div className="h-full flex flex-col gap-10">
         <ClientDetailProgressBar currentStep={currentStep} onStepChange={goToStep} />
 
-        <ScrollArea className="h-[calc(100vh-20rem)] pr-10">
-          <form className="space-y-8 pb-24">
+        <ScrollArea className="h-[calc(100vh-20.5rem)] pr-10" ref={scrollRef}>
+          <form className="space-y-8 pr-4">
             <ClientDetailSteps
               currentStep={currentStep}
               client={client}
@@ -138,19 +131,18 @@ export const ClientDetailForm = ({ client, branchConfig }: ClientDetailFormProps
           isFirstStep={isFirstStep}
           isLastStep={isLastStep}
           isSubmitting={isSubmitting}
-          hasCurrentStepChanges={hasCurrentStepChanges()}
           onPrevious={goToPrevious}
           onNext={handleNext}
-          onDiscardChanges={handleDiscardChanges}
+          onCancel={() => router.back()}
+        />
+
+        <UnsavedChangesDialog
+          open={showUnsavedChangesDialog}
+          onOpenChange={setShowUnsavedChangesDialog}
+          onConfirm={() => handleConfirmNavigation(goToStep)}
+          onCancel={handleCancelNavigation}
         />
       </div>
-
-      <UnsavedChangesDialog
-        open={showUnsavedChangesDialog}
-        onOpenChange={setShowUnsavedChangesDialog}
-        onConfirm={() => handleConfirmNavigation(goToStep)}
-        onCancel={handleCancelNavigation}
-      />
     </FormProvider>
   );
 };

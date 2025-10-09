@@ -1,13 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import {
-  LearningLicenseValues,
-  DrivingLicenseValues,
-  PlanValues,
-  planSchema,
-  paymentSchema,
-} from '../types';
+import { LearningLicenseValues, DrivingLicenseValues, PlanValues, planSchema } from '../types';
 import { getBranchConfig } from '@/server/db/branch';
 import { ActionReturnType } from '@/types/actions';
 import {
@@ -19,9 +13,6 @@ import {
   getPlanAndVehicleInDB,
   upsertPaymentInDB,
 } from './db';
-import { db } from '@/db';
-import { eq, and } from 'drizzle-orm';
-import { ClientTable } from '@/db/schema/client/columns';
 import { dateToString } from '@/lib/date-utils';
 import {
   createPaymentLink,
@@ -37,7 +28,6 @@ import {
   handleSessionGeneration,
 } from '../lib/plan-helpers';
 import {
-  calculatePaymentAmounts,
   createFallbackSessions,
   handleFullPayment,
   handleInstallmentPayment,
@@ -64,6 +54,7 @@ export const createClient = async (
 
     const { isExistingClient, clientId } = await upsertClientInDB({
       ...unsafeData,
+      id: unsafeData.id, // Pass the client ID if editing
       branchId,
       tenantId,
       birthDate: birthDateString, // Convert to YYYY-MM-DD string
@@ -260,39 +251,61 @@ export const createPlan = async (
   }
 };
 
+async function processPaymentTransaction(
+  paymentId: string,
+  paymentMode: 'CASH' | 'QR',
+  paymentType: string,
+  firstInstallmentAmount: number,
+  secondInstallmentAmount: number
+): Promise<void> {
+  if (paymentType === 'FULL_PAYMENT') {
+    await handleFullPayment(paymentId, paymentMode);
+  } else if (paymentType === 'INSTALLMENTS') {
+    await handleInstallmentPayment(
+      paymentId,
+      paymentMode,
+      firstInstallmentAmount,
+      secondInstallmentAmount
+    );
+  }
+}
+
 export const createPayment = async (
   unsafeData: z.infer<typeof paymentSchema>,
   planId: string
 ): Promise<{ error: boolean; message: string; paymentId?: string }> => {
   try {
-    // 1. Get plan and vehicle for payment calculation
-    const result = await getPlanAndVehicleInDB(planId);
-
-    if (!result) {
+    // 1. Fetch plan and vehicle data
+    const planResult = await getPlanAndVehicleInDB(planId);
+    if (!planResult) {
       return { error: true, message: 'Plan or vehicle not found' };
     }
 
-    const { plan, vehicle } = result;
+    const { plan, vehicle } = planResult;
 
-    // 2. Calculate payment amounts
-    const { originalAmount, finalAmount, firstInstallmentAmount, secondInstallmentAmount } =
-      calculatePaymentAmounts(plan, vehicle, unsafeData.discount, unsafeData.paymentType);
-
-    // 3. Validate payment data
-    const { success, data, error } = paymentSchema.safeParse({
-      ...unsafeData,
-      planId,
-      originalAmount,
-      finalAmount,
+    // 2. Calculate payment breakdown
+    const paymentBreakdown = calculateEnrollmentPaymentBreakdown({
+      sessions: plan.numberOfSessions,
+      duration: plan.sessionDurationInMinutes,
+      rate: vehicle.rent,
+      discount: unsafeData.discount,
+      paymentType: unsafeData.paymentType,
+      licenseServiceFee: unsafeData.licenseServiceFee,
     });
 
-    if (!success) {
-      console.error('Payment validation error:', error);
+    // 3. Validate payment data with calculated total
+    const validationResult = paymentSchema.safeParse({
+      ...unsafeData,
+      totalAmount: paymentBreakdown.totalAmountAfterDiscount,
+    });
+
+    if (!validationResult.success) {
+      console.error('[createPayment] Validation failed:', validationResult.error.format());
       return { error: true, message: 'Invalid payment data' };
     }
 
-    // 4. Upsert payment
-    const { paymentId, isExistingPayment } = await upsertPaymentInDB(data, planId);
+    // 4. Persist payment to database
+    const { paymentId, isExistingPayment } = await upsertPaymentInDB(validationResult.data, planId);
 
     // 5. Handle payment transactions (CASH or QR)
     if (data.paymentMode === 'CASH' || data.paymentMode === 'QR') {
@@ -370,12 +383,7 @@ export const createPayment = async (
 
     // 7. Create fallback sessions if needed (for new payments only)
     if (!isExistingPayment) {
-      try {
-        await createFallbackSessions(planId);
-      } catch (sessionError) {
-        console.error('Error creating fallback sessions:', sessionError);
-        // Don't fail the payment if session creation fails
-      }
+      createFallbackSessions(planId);
     }
 
     return {
@@ -464,56 +472,4 @@ export const updateDrivingLicense = async (
 
 export const updatePlan = async (_planId: string, data: PlanValues): ActionReturnType => {
   return createPlan(data);
-};
-
-export const checkPhoneNumberExists = async (phoneNumber: string) => {
-  const { tenantId } = await getBranchConfig();
-
-  try {
-    const client = await db.query.ClientTable.findFirst({
-      where: and(eq(ClientTable.phoneNumber, phoneNumber), eq(ClientTable.tenantId, tenantId)),
-      with: {
-        learningLicense: true,
-        drivingLicense: true,
-      },
-    });
-
-    if (client) {
-      return {
-        exists: true,
-        client,
-      };
-    }
-
-    return { exists: false };
-  } catch (error) {
-    console.error('Error checking phone number:', error);
-    return { exists: false };
-  }
-};
-
-export const checkAadhaarNumberExists = async (aadhaarNumber: string) => {
-  const { tenantId } = await getBranchConfig();
-
-  try {
-    const client = await db.query.ClientTable.findFirst({
-      where: and(eq(ClientTable.aadhaarNumber, aadhaarNumber), eq(ClientTable.tenantId, tenantId)),
-      with: {
-        learningLicense: true,
-        drivingLicense: true,
-      },
-    });
-
-    if (client) {
-      return {
-        exists: true,
-        client,
-      };
-    }
-
-    return { exists: false };
-  } catch (error) {
-    console.error('Error checking Aadhaar number:', error);
-    return { exists: false };
-  }
 };

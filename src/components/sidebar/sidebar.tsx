@@ -7,12 +7,12 @@ import { OrgSelector } from '@/components/organization/org-selector';
 
 export function Sidebar() {
   return (
-    <div className="w-72 flex flex-col sticky top-0 max-h-screen transition-all duration-300 px-2 py-10 bg-white rounded-xl">
+    <div className="w-60 flex flex-col sticky top-0 max-h-screen transition-all duration-300 px-3 py-10 bg-white rounded-xl">
       <div className="flex flex-col flex-1 space-y-10">
         <div className="min-h-8">
           <OrgSelector />
         </div>
-        <div className="flex-1 flex flex-col gap-4">
+        <div className="flex-1 flex flex-col gap-2">
           {navItems.map((item) => (
             <NavItem key={item.href} item={item} />
           ))}

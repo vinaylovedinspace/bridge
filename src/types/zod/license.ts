@@ -12,8 +12,8 @@ export const learningLicenseSchema = createInsertSchema(LearningLicenseTable, {
   expiryDate: z.date().min(new Date('1900-01-01'), 'Invalid expiry date').optional().nullable(),
   applicationNumber: z.string().optional().nullable(),
   clientId: z.string().optional(), // Make clientId optional since it's added by the server action
+  excludeLearningLicenseFee: z.boolean().optional().default(false),
 });
-
 export const drivingLicenseSchema = createInsertSchema(DrivingLicenseTable, {
   class: z
     .array(z.enum(LicenseClassEnum.enumValues))

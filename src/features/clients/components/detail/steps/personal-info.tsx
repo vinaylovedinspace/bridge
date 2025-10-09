@@ -185,7 +185,7 @@ export const PersonalInfoStep = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Gender</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select gender" />
@@ -229,7 +229,7 @@ export const PersonalInfoStep = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Blood Group</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select blood group" />
@@ -253,7 +253,7 @@ export const PersonalInfoStep = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Educational Qualification</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
+                <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select qualification" />
@@ -318,7 +318,7 @@ export const PersonalInfoStep = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Guardian Relationship</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select relationship" />
@@ -667,7 +667,7 @@ export const PersonalInfoStep = () => {
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
-                    defaultValue={field.value || 'BIRTH'}
+                    value={field.value || 'BIRTH'}
                     className="flex space-y-1"
                   >
                     {CitizenStatusEnum.enumValues.map((status) => (

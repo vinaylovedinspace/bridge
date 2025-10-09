@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { FormItem, FormLabel } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
@@ -7,20 +7,18 @@ import { TypographyMuted } from '@/components/ui/typography';
 import { Separator } from '@/components/ui/separator';
 import { PaymentModeEnum } from '@/db/schema/transactions/columns';
 import { useFormContext } from 'react-hook-form';
-import { AdmissionFormValues } from '@/features/enrollment/types';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle, MessageSquare, Phone } from 'lucide-react';
-import { createPaymentLinkAction, createPayment } from '@/features/enrollment/server/action';
+import { createPaymentLinkAction } from '@/features/enrollment/server/action';
 import { useRouter } from 'next/navigation';
-import { Enrollment } from '@/server/db/plan';
+import { RTOServiceFormValues } from '@/features/rto-services/types';
+import { createPayment } from '@/features/rto-services/server/action';
+import { useRTOPaymentCalculations } from '@/features/rto-services/hooks/use-rto-payment-calculations';
 
-type PaymentModeSelectorProps = {
-  existingPayment: NonNullable<Enrollment>['payment'];
-};
-
-export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProps) => {
-  const { getValues, setValue } = useFormContext<AdmissionFormValues>();
+export const PaymentModeSelector = () => {
+  const { getValues, setValue } = useFormContext<RTOServiceFormValues>();
   const router = useRouter();
+  const { totalAmountAfterDiscount } = useRTOPaymentCalculations();
 
   const [paymentMode, setPaymentMode] =
     useState<(typeof PaymentModeEnum.enumValues)[number]>('PAYMENT_LINK');
@@ -30,23 +28,8 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
   const [smsSent, setSmsSent] = useState(false);
   const [isAcceptingPayment, setIsAcceptingPayment] = useState(false);
 
-  // Check if this is installment payment and if 1st installment is paid
-  const isFirstInstallmentPaid = useMemo(() => {
-    if (!existingPayment || existingPayment.paymentType !== 'INSTALLMENTS') {
-      return false;
-    }
-    const firstInstallment = existingPayment.installmentPayments?.find(
-      (inst) => inst.installmentNumber === 1
-    );
-    return firstInstallment?.isPaid ?? false;
-  }, [existingPayment]);
-
-  const buttonText = useMemo(() => {
-    if (isFirstInstallmentPaid) {
-      return 'Accept 2nd Installment';
-    }
-    return 'Accept Payment';
-  }, [isFirstInstallmentPaid]);
+  // RTO services always use FULL_PAYMENT, no installments
+  const buttonText = 'Accept Payment';
 
   const handleAcceptPayment = async () => {
     setIsAcceptingPayment(true);
@@ -55,24 +38,30 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
       const formValues = getValues();
       const payment = formValues.payment;
       const clientId = formValues.clientId;
-      const planId = formValues.planId;
+      const rtoServiceId = formValues.serviceId;
 
       if (!clientId) {
         toast.error('Client ID not found. Please complete the personal information step first.');
         return;
       }
 
-      if (!planId) {
-        toast.error('Plan ID not found. Please complete the plan step first.');
+      if (!rtoServiceId) {
+        toast.error('RTO Service ID not found. Please complete the service step first.');
         return;
+      }
+
+      // If payment is empty, initialize with calculated values
+      if (!payment || !payment.totalAmount) {
+        setValue('payment.totalAmount', totalAmountAfterDiscount);
       }
 
       const result = await createPayment(
         {
           ...payment,
           clientId,
+          totalAmount: totalAmountAfterDiscount,
         },
-        planId
+        rtoServiceId
       );
 
       if (!result.error) {
@@ -101,7 +90,7 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
 
     try {
       const formValues = getValues();
-      const formPlanId = formValues.planId;
+      const formPlanId = formValues.serviceId;
       const customerName =
         `${formValues.personalInfo?.firstName || ''} ${formValues.personalInfo?.lastName || ''}`.trim();
 
@@ -110,13 +99,7 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
         return;
       }
 
-      const payment = formValues.payment;
-
-      // Calculate amount based on payment type
-      let amount = 0;
-
-      // TODO: Reimplement amount calculation with new schema
-      amount = payment?.finalAmount || 0;
+      const amount = totalAmountAfterDiscount;
 
       if (amount <= 0) {
         toast.error('Invalid payment amount');
@@ -252,7 +235,7 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
         )}
 
         {(paymentMode === 'CASH' || paymentMode === 'QR') && (
-          <div className="mt-6">
+          <div className="mt-8">
             <Button
               onClick={handleAcceptPayment}
               type="button"

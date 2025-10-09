@@ -4,7 +4,7 @@ import { BranchTable } from '../branches/columns';
 import { PaymentTable } from '../payment/columns';
 import { ClientTable } from '../client/columns';
 
-export const RTOServicesRelations = relations(RTOServicesTable, ({ one, many }) => ({
+export const RTOServicesRelations = relations(RTOServicesTable, ({ one }) => ({
   client: one(ClientTable, {
     fields: [RTOServicesTable.clientId],
     references: [ClientTable.id],
@@ -14,5 +14,8 @@ export const RTOServicesRelations = relations(RTOServicesTable, ({ one, many }) 
     references: [BranchTable.id],
   }),
 
-  payments: many(PaymentTable),
+  payment: one(PaymentTable, {
+    fields: [RTOServicesTable.paymentId],
+    references: [PaymentTable.id],
+  }),
 }));

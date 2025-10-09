@@ -1,11 +1,8 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { useState } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useRef, useState } from 'react';
+import { FormProvider } from 'react-hook-form';
 import React from 'react';
-import { admissionFormSchema, AdmissionFormValues } from '../../types';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ServiceTypeStep } from './steps/service-type';
@@ -13,79 +10,30 @@ import { PersonalInfoStep } from './steps/personal-info';
 import { LicenseStep } from './steps/license';
 import { PlanStep } from './steps/plan';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useStepNavigation, ProgressBar } from '../progress-bar/progress-bar';
+import { useAdmissionStepNavigation, ProgressBar } from '../progress-bar/progress-bar';
 import { PaymentContainer } from './steps/payment';
-import { DEFAULT_STATE } from '@/lib/constants/business';
-import {
-  getMultistepAdmissionStepValidationFields,
-  mapClientToPersonalInfo,
-  mapLearningLicense,
-  mapDrivingLicense,
-} from '../../lib/utils';
-import { BranchConfig } from '@/server/db/branch';
+import { getMultistepAdmissionStepValidationFields } from '../../lib/utils';
 import { useEnrollmentFormSubmissions } from '../../hooks/use-enrollment-form-submissions';
 import { getClientById } from '../../server/action';
+import { useAddAdmissionForm } from '../../hooks/use-admission-form';
+import { AdmissionFormValues } from '../../types';
+import { FormNavigation } from '@/components/ui/form-navigation';
 
 type MultistepFormProps = {
-  branchConfig: BranchConfig;
   existingClient?: Awaited<ReturnType<typeof getClientById>>['data'];
 };
 
-export const MultistepForm = ({ branchConfig, existingClient }: MultistepFormProps) => {
+export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const getDefaultValues = (): AdmissionFormValues => {
-    const baseDefaults = {
-      serviceType: 'FULL_SERVICE' as const,
-      plan: {
-        vehicleId: '',
-        numberOfSessions: 21,
-        sessionDurationInMinutes: 30,
-        joiningDate: new Date(),
-        joiningTime: '12:00',
-        serviceType: 'FULL_SERVICE' as const,
-      },
-      payment: {
-        discount: 0,
-        paymentMode: 'PAYMENT_LINK' as const,
-      },
-    };
-
-    if (existingClient) {
-      return {
-        ...baseDefaults,
-        personalInfo: mapClientToPersonalInfo(existingClient),
-        learningLicense: mapLearningLicense(existingClient.learningLicense),
-        drivingLicense: mapDrivingLicense(existingClient.drivingLicense),
-        clientId: existingClient.id,
-      } as AdmissionFormValues;
-    }
-
-    return {
-      ...baseDefaults,
-      personalInfo: {
-        educationalQualification: 'GRADUATE',
-        citizenStatus: 'BIRTH',
-        isCurrentAddressSameAsPermanentAddress: false,
-        state: DEFAULT_STATE,
-        permanentState: DEFAULT_STATE,
-      },
-      learningLicense: {},
-      drivingLicense: {},
-    } as AdmissionFormValues;
-  };
-
-  const methods = useForm<AdmissionFormValues>({
-    resolver: zodResolver(admissionFormSchema),
-    defaultValues: getDefaultValues(),
-    mode: 'onChange',
-  });
+  const methods = useAddAdmissionForm(existingClient);
 
   const { trigger, getValues, watch, setValue } = methods;
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
-    useStepNavigation(false);
+    useAdmissionStepNavigation();
 
   // Watch all form values to detect changes
   const watchedValues = watch();
@@ -106,7 +54,7 @@ export const MultistepForm = ({ branchConfig, existingClient }: MultistepFormPro
         getData: () => getValues('personalInfo'),
       },
       license: {
-        component: <LicenseStep branchServiceCharge={branchConfig.licenseServiceCharge ?? 0} />,
+        component: <LicenseStep />,
 
         getData: () => ({
           learningLicense: getValues('learningLicense'),
@@ -114,7 +62,7 @@ export const MultistepForm = ({ branchConfig, existingClient }: MultistepFormPro
         }),
       },
       plan: {
-        component: <PlanStep branchConfig={branchConfig} currentClientId={clientId} />,
+        component: <PlanStep currentClientId={clientId} />,
         getData: () => getValues('plan'),
       },
       payment: {
@@ -122,16 +70,11 @@ export const MultistepForm = ({ branchConfig, existingClient }: MultistepFormPro
         getData: () => getValues('payment'),
       },
     };
-  }, [branchConfig, clientId, getValues]);
-
-  // Get initial default values for comparison (reuse form's defaultValues)
-  const getInitialValues = (): AdmissionFormValues => {
-    return methods.formState.defaultValues as AdmissionFormValues;
-  };
+  }, [clientId, getValues]);
 
   // Check if current step has any changes compared to initial values
   const hasCurrentStepChanges = (): boolean => {
-    const initialValues = getInitialValues();
+    const initialValues = methods.formState.defaultValues as AdmissionFormValues;
     const currentStepKey = currentStep;
 
     const getCurrentStepValues = () => {
@@ -182,89 +125,64 @@ export const MultistepForm = ({ branchConfig, existingClient }: MultistepFormPro
   };
 
   const handleNext = async () => {
+    const fieldsToValidate = getMultistepAdmissionStepValidationFields(currentStep, getValues);
+    const isStepValid = await trigger(fieldsToValidate);
+
+    if (!isStepValid) {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
+    }
+
+    // If no changes, just navigate
+    if (!hasCurrentStepChanges()) {
+      if (isLastStep) {
+        router.refresh();
+        router.push('/dashboard');
+      } else {
+        goToNext();
+      }
+      return;
+    }
+
+    // Submit changes
+    setIsSubmitting(true);
     try {
-      const currentStepKey = currentStep;
+      const stepData = stepComponents[currentStep].getData();
+      const success = await submitStep(currentStep, stepData, isLastStep);
 
-      const fieldsToValidate = getMultistepAdmissionStepValidationFields(currentStepKey, getValues);
-
-      const isStepValid = await trigger(fieldsToValidate);
-
-      if (!isStepValid) {
-        return;
-      }
-
-      const hasChanges = hasCurrentStepChanges();
-
-      if (!hasChanges) {
-        if (isLastStep) {
-          router.refresh();
-          router.push('/dashboard'); // Redirect to dashboard or another appropriate page
-        } else {
-          goToNext();
-        }
-        return;
-      }
-
-      // Step 2: Execute the step-specific action only if there are changes
-      setIsSubmitting(true);
-      try {
-        const stepData = stepComponents[currentStepKey].getData();
-
-        const success = await submitStep(currentStepKey, stepData, isLastStep);
-
-        if (success && !isLastStep) {
-          goToNext();
-        }
-      } catch (error) {
-        console.error('Error in step submission:', error);
-        toast.error('An unexpected error occurred');
-      } finally {
-        setIsSubmitting(false);
+      if (success && !isLastStep) {
+        goToNext();
       }
     } catch (error) {
-      // Handle any unexpected errors
-      console.error(`Error in step ${currentStep}:`, error);
-      toast.error('An error occurred while processing your information');
+      console.error(`Error submitting step ${currentStep}:`, error);
+      toast.error('Failed to save your information. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <FormProvider {...methods}>
-      <div
-        className="h-full flex flex-col py-4 gap-10"
-        data-testid={`admission-step-${currentStep}`}
-      >
+      <div className="h-full flex flex-col gap-10" data-testid={`admission-step-${currentStep}`}>
         <ProgressBar interactive={false} currentStep={currentStep} onStepChange={goToStep} />
 
         {/* Form content - scrollable area */}
-        <ScrollArea className="h-[calc(100vh-316px)] pr-10">
-          <form className="space-y-8 pb-24" data-testid="admission-multistep-form">
+        <ScrollArea className="h-[calc(100vh-22rem)] pr-10" ref={scrollRef}>
+          <form className="pr-1" data-testid="admission-multistep-form">
             {stepComponents[currentStep as keyof typeof stepComponents]?.component}
           </form>
         </ScrollArea>
 
-        {/* Navigation buttons - fixed at the bottom */}
-        <div className="bg-white py-4 px-6 border-t flex justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={goToPrevious}
-            disabled={isFirstStep || isSubmitting}
-            data-testid="admission-previous-button"
-          >
-            Previous
-          </Button>
-
-          <Button
-            type="button"
-            onClick={handleNext}
-            disabled={isSubmitting}
-            isLoading={isSubmitting}
-            data-testid={isLastStep ? 'admission-submit-button' : 'admission-next-button'}
-          >
-            {isLastStep ? 'Submit' : 'Next'}
-          </Button>
-        </div>
+        <FormNavigation
+          isFirstStep={isFirstStep}
+          isLastStep={isLastStep}
+          isSubmitting={isSubmitting}
+          onCancel={() => router.back()}
+          onPrevious={goToPrevious}
+          onNext={handleNext}
+        />
       </div>
     </FormProvider>
   );

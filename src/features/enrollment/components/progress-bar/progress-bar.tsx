@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
-import { useQueryState, parseAsStringLiteral } from 'nuqs';
-import { ProgressBar as BaseProgressBar, type StepConfig } from '@/components/ui/progress-bar';
+import {
+  ProgressBar as BaseProgressBar,
+  useStepNavigation,
+  type StepConfig,
+} from '@/components/ui/progress-bar';
 import { type AdmissionFormStepKey } from '@/features/enrollment/types';
 
 export type { AdmissionFormStepKey };
@@ -18,69 +20,11 @@ export const ADMISSION_STEPS: StepConfig<AdmissionFormStepKey>[] = [
 
 const FIRST_STEP: AdmissionFormStepKey = 'service';
 
-export const useCurrentStep = (interactive = true) => {
-  const [internalStep, setInternalStep] = useState<AdmissionFormStepKey>(FIRST_STEP);
-  const [externalStep, setExternalStep] = useQueryState<AdmissionFormStepKey>(
-    'step',
-    parseAsStringLiteral(ADMISSION_STEPS.map((step) => step.key))
-      .withDefault(FIRST_STEP)
-      .withOptions({ shallow: !interactive })
-  );
-
-  // For interactive mode, use external step as source of truth
-  // For non-interactive mode, use internal step
-  const currentStep = interactive ? externalStep : internalStep;
-  const setStep = interactive ? setExternalStep : setInternalStep;
-
-  return useMemo(
-    () => ({
-      currentStep,
-      setStep,
-      setExternalStep,
-    }),
-    [currentStep, setStep, setExternalStep]
-  );
-};
-
-export const useStepNavigation = (interactive = true) => {
-  const { currentStep, setStep } = useCurrentStep(interactive);
-
-  const currentIndex = useMemo(() => {
-    return ADMISSION_STEPS.findIndex((step) => step.key === currentStep);
-  }, [currentStep]);
-
-  const goToStep = useCallback(
-    (stepKey: AdmissionFormStepKey) => {
-      setStep(stepKey);
-    },
-    [setStep]
-  );
-
-  const goToNext = useCallback(() => {
-    const nextIndex = currentIndex + 1;
-    if (nextIndex < ADMISSION_STEPS.length) {
-      const nextStep = ADMISSION_STEPS[nextIndex].key;
-      goToStep(nextStep);
-    }
-  }, [currentIndex, goToStep]);
-
-  const goToPrevious = useCallback(() => {
-    const prevIndex = currentIndex - 1;
-    if (prevIndex >= 0) {
-      const prevStep = ADMISSION_STEPS[prevIndex].key;
-      goToStep(prevStep);
-    }
-  }, [currentIndex, goToStep]);
-
-  return {
-    currentStep,
-    currentIndex,
-    goToStep,
-    goToNext,
-    goToPrevious,
-    isFirstStep: currentIndex === 0,
-    isLastStep: currentIndex === ADMISSION_STEPS.length - 1,
-  };
+export const useAdmissionStepNavigation = () => {
+  return useStepNavigation({
+    steps: ADMISSION_STEPS,
+    firstStep: FIRST_STEP,
+  });
 };
 
 export type ProgressBarProps = {

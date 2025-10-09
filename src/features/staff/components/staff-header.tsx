@@ -6,13 +6,14 @@ import { TypographyH4 } from '@/components/ui/typography';
 import { Plus } from 'lucide-react';
 import { Suspense } from 'react';
 import { StaffSearchBar } from './search-bar';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function StaffHeader() {
   return (
     <div className="space-y-10">
       <TypographyH4>Staff</TypographyH4>
       <div className="flex justify-between items-center">
-        <Suspense fallback={<div>Loading search...</div>}>
+        <Suspense fallback={<Skeleton className="h-10 w-64" />}>
           <StaffSearchBar />
         </Suspense>
         <Link href="/staff/add">

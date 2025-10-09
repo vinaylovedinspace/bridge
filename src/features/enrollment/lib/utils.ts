@@ -1,25 +1,14 @@
 import { Path } from 'react-hook-form';
 import { AdmissionFormValues } from '../types';
 import { Enrollment } from '@/server/db/plan';
-
-// Helper function to generate field paths from type
-const generateFieldPaths = ({
-  prefix,
-  excludeFields = [],
-  getValues,
-}: {
-  prefix: keyof AdmissionFormValues;
-  excludeFields?: string[];
-  getValues: (key: string) => unknown;
-}): Path<AdmissionFormValues>[] => {
-  // Get the value for the specified prefix and safely handle undefined
-  const value = getValues(prefix);
-  const fields = value ? Object.keys(value) : [];
-
-  return fields
-    .filter((field) => !excludeFields.includes(field))
-    .map((field) => `${String(prefix)}.${field}` as Path<AdmissionFormValues>);
-};
+import { generateFieldPaths } from '@/lib/utils';
+import { getClientById } from '../server/action';
+import {
+  DEFAULT_SESSION_DAYS,
+  DEFAULT_SESSION_MINUTES,
+  DEFAULT_STATE,
+} from '@/lib/constants/business';
+import { parseDateStringToDateObject } from '@/lib/date-utils';
 
 // Function to get validation fields for a specific step
 export const getMultistepAdmissionStepValidationFields = (
@@ -30,40 +19,34 @@ export const getMultistepAdmissionStepValidationFields = (
     case 'service':
       return ['serviceType'];
     case 'personal':
-      return generateFieldPaths({
+      return generateFieldPaths<AdmissionFormValues>({
         prefix: 'personalInfo',
         getValues,
       });
     case 'license':
       return [
-        ...generateFieldPaths({
+        ...generateFieldPaths<AdmissionFormValues>({
           prefix: 'learningLicense',
           getValues,
         }),
-        ...generateFieldPaths({
+        ...generateFieldPaths<AdmissionFormValues>({
           prefix: 'learningLicense',
           getValues,
         }),
       ];
     case 'plan':
-      return generateFieldPaths({
+      return generateFieldPaths<AdmissionFormValues>({
         prefix: 'plan',
         getValues,
       });
     case 'payment':
-      return generateFieldPaths({
+      return generateFieldPaths<AdmissionFormValues>({
         prefix: 'payment',
         getValues,
       });
     default:
       return [];
   }
-};
-
-// Helper function to convert date string to Date object
-const parseDate = (dateString: string | null): Date | null => {
-  if (!dateString) return null;
-  return new Date(dateString);
 };
 
 // Helper function to combine date and time strings into a single Date object
@@ -79,6 +62,8 @@ export const mapClientToPersonalInfo = (
   client: NonNullable<Enrollment>['client']
 ): AdmissionFormValues['personalInfo'] => {
   return {
+    id: client.id, // Include the client ID for edit mode
+    clientCode: client.clientCode,
     firstName: client.firstName,
     lastName: client.lastName,
     aadhaarNumber: client.aadhaarNumber,
@@ -122,11 +107,12 @@ export const mapLearningLicense = (
 
   return {
     class: learningLicense.class || [],
-    testConductedOn: parseDate(learningLicense.testConductedOn),
+    testConductedOn: parseDateStringToDateObject(learningLicense.testConductedOn),
     licenseNumber: learningLicense.licenseNumber,
-    issueDate: parseDate(learningLicense.issueDate),
-    expiryDate: parseDate(learningLicense.expiryDate),
+    issueDate: parseDateStringToDateObject(learningLicense.issueDate),
+    expiryDate: parseDateStringToDateObject(learningLicense.expiryDate),
     applicationNumber: learningLicense.applicationNumber,
+    excludeLearningLicenseFee: learningLicense.excludeLearningLicenseFee ?? false,
   };
 };
 
@@ -138,10 +124,10 @@ export const mapDrivingLicense = (
 
   return {
     class: drivingLicense.class || [],
-    appointmentDate: parseDate(drivingLicense.appointmentDate),
+    appointmentDate: parseDateStringToDateObject(drivingLicense.appointmentDate),
     licenseNumber: drivingLicense.licenseNumber,
-    issueDate: parseDate(drivingLicense.issueDate),
-    expiryDate: parseDate(drivingLicense.expiryDate),
+    issueDate: parseDateStringToDateObject(drivingLicense.issueDate),
+    expiryDate: parseDateStringToDateObject(drivingLicense.expiryDate),
     applicationNumber: drivingLicense.applicationNumber,
     testConductedBy: drivingLicense.testConductedBy,
     imv: drivingLicense.imv,
@@ -150,16 +136,65 @@ export const mapDrivingLicense = (
   };
 };
 
-export const getDefaultValuesForEnrollmentForm = (
+const DEFAULT_PLAN_VALUES = {
+  vehicleId: '',
+  numberOfSessions: DEFAULT_SESSION_DAYS,
+  sessionDurationInMinutes: DEFAULT_SESSION_MINUTES,
+  joiningDate: new Date(),
+  joiningTime: '12:00',
+  serviceType: 'FULL_SERVICE' as const,
+};
+
+const DEFAULT_PAYMENT_VALUES = {
+  discount: 0,
+  paymentMode: 'PAYMENT_LINK' as const,
+  applyDiscount: false,
+};
+
+export const getDefaultValuesForAddEnrollmentForm = (
+  existingClient?: Awaited<ReturnType<typeof getClientById>>['data']
+): AdmissionFormValues => {
+  if (existingClient) {
+    return {
+      serviceType: 'FULL_SERVICE' as const,
+      personalInfo: mapClientToPersonalInfo(existingClient),
+      learningLicense: mapLearningLicense(existingClient.learningLicense),
+      drivingLicense: mapDrivingLicense(existingClient.drivingLicense),
+      plan: DEFAULT_PLAN_VALUES,
+      payment: DEFAULT_PAYMENT_VALUES,
+      clientId: existingClient.id,
+    } as AdmissionFormValues;
+  }
+
+  return {
+    serviceType: 'FULL_SERVICE' as const,
+    personalInfo: {
+      educationalQualification: 'GRADUATE',
+      citizenStatus: 'BIRTH',
+      isCurrentAddressSameAsPermanentAddress: false,
+      state: DEFAULT_STATE,
+      permanentState: DEFAULT_STATE,
+    },
+    learningLicense: {},
+    drivingLicense: {},
+    plan: DEFAULT_PLAN_VALUES,
+    payment: DEFAULT_PAYMENT_VALUES,
+  } as AdmissionFormValues;
+};
+
+export const getDefaultValuesForEditEnrollmentForm = (
   enrollment: NonNullable<Enrollment>
 ): AdmissionFormValues => {
   const { client, payment } = enrollment;
-
+  console.log('clientId', client.id);
   return {
     serviceType: enrollment.serviceType,
     personalInfo: mapClientToPersonalInfo(client),
     learningLicense: mapLearningLicense(client?.learningLicense),
     drivingLicense: mapDrivingLicense(client?.drivingLicense),
+    clientId: client.id,
+    planId: enrollment.id,
+    paymentId: payment?.id,
     plan: {
       vehicleId: enrollment.vehicleId,
       numberOfSessions: enrollment.numberOfSessions,
@@ -175,26 +210,20 @@ export const getDefaultValuesForEnrollmentForm = (
           paymentType: payment.paymentType || 'FULL_PAYMENT',
           paymentStatus: payment.paymentStatus || 'PENDING',
           licenseServiceFee: payment.licenseServiceFee,
-          originalAmount: payment.originalAmount,
-          finalAmount: payment.finalAmount,
+          totalAmount: payment.totalAmount,
           clientId: payment.clientId,
           paymentMode: 'PAYMENT_LINK' as const,
+          applyDiscount: payment.discount > 0,
         }
       : {
           discount: 0,
           paymentType: 'FULL_PAYMENT' as const,
           paymentStatus: 'PENDING' as const,
           licenseServiceFee: 0,
-          originalAmount: 0,
-          finalAmount: 0,
+          totalAmount: 0,
           clientId: client.id,
           paymentMode: 'PAYMENT_LINK' as const,
+          applyDiscount: false,
         },
-    clientId: client.id,
-    planId: enrollment.id,
-    paymentId: payment?.id,
   };
 };
-
-// Re-export payment utilities from centralized location
-export { calculateOutstandingAmount, calculatePaymentBreakdown } from '@/lib/payment/calculate';

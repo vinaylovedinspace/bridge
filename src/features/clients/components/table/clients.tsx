@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { ClientDataTable } from './data-table';
 import { columns } from './columns';
 import { getClients } from '@/server/db/client';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export async function Clients({
   search,
@@ -15,7 +16,7 @@ export async function Clients({
   const data = await getClients(search, needsLearningTest, needsDrivingTest);
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<Skeleton className="h-96 w-full" />}>
       <ClientDataTable columns={columns} data={data} />
     </Suspense>
   );

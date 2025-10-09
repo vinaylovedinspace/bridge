@@ -56,6 +56,32 @@ Key relationships: Clients belong to Branches, have Learning/Driving Licenses, a
 
 Uses **@tanstack/react-form** with Zod validation. Multi-step forms managed through URL state with **nuqs**.
 
+### State Management
+
+**Jotai** is used for global state management to avoid prop drilling:
+
+- **Atoms**: Define global state in `src/lib/atoms/`
+- **Provider Pattern**: Hydrate atoms at layout level using `BranchConfigProvider`
+- **Usage**: Access atoms with `useAtomValue()` hook in components
+
+Example pattern:
+
+```tsx
+// Define atom
+export const branchConfigAtom = atom<BranchConfig | null>(null);
+
+// Hydrate in layout
+<BranchConfigProvider branchConfig={serverFetchedConfig}>{children}</BranchConfigProvider>;
+
+// Use in component
+const branchConfig = useAtomValue(branchConfigAtom);
+```
+
+Current atoms:
+
+- `branchConfigAtom` - Branch configuration (working hours, fees, etc.)
+- `branchServiceChargeAtom` - Derived atom for license service charge
+
 ### Authentication & Authorization
 
 Clerk organizations map to tenant branches. User access controlled by organization membership.

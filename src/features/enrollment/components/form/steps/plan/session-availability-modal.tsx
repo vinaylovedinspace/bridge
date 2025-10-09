@@ -7,15 +7,15 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, X } from 'lucide-react';
 import { getSessions } from '@/server/actions/sessions';
 import type { Session } from '@/server/db/sessions';
-import { BranchConfig } from '@/server/db/branch';
 import { generateTimeSlots } from '@/lib/sessions';
+import { branchOperatingHoursAtom, branchWorkingDaysAtom } from '@/lib/atoms/branch-config';
+import { useAtomValue } from 'jotai';
 
 type SessionAvailabilityModalProps = {
   isOpen: boolean;
   onClose: () => void;
   vehicleId: string;
   selectedDate: Date;
-  branchConfig: BranchConfig;
   onTimeSelect?: (time: string) => void;
   currentClientId?: string; // To highlight current client's sessions
   numberOfSessions?: number; // Number of sessions to check availability for
@@ -26,15 +26,17 @@ export const SessionAvailabilityModal = ({
   onClose,
   vehicleId,
   selectedDate,
-  branchConfig,
   onTimeSelect,
   currentClientId,
   numberOfSessions = 1,
 }: SessionAvailabilityModalProps) => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
+  const branchOperatingHours = useAtomValue(branchOperatingHoursAtom);
+  const branchWorkingDays = useAtomValue(branchWorkingDaysAtom);
 
-  const timeSlots = generateTimeSlots(branchConfig.operatingHours!);
+  const timeSlots = generateTimeSlots(branchOperatingHours);
+
   const selectedDateStr = format(selectedDate ?? new Date(), 'yyyy-MM-dd');
 
   // Get session details for each time slot on the selected date
@@ -72,7 +74,7 @@ export const SessionAvailabilityModal = ({
       while (sessionsScheduled < numberOfSessions && currentDate <= addDays(selectedDate, 365)) {
         const dayOfWeek = currentDate.getDay();
 
-        if (branchConfig.workingDays?.includes(dayOfWeek)) {
+        if (branchWorkingDays.includes(dayOfWeek)) {
           sessionDates.push(new Date(currentDate));
           sessionsScheduled++;
         }
@@ -88,7 +90,11 @@ export const SessionAvailabilityModal = ({
         const conflictingSession = sessions.find((session) => {
           const sessionDateStr = session.sessionDate; // Already in YYYY-MM-DD format
           const sessionTime = session.startTime.substring(0, 5);
-          return sessionDateStr === dateStr && sessionTime === timeSlot;
+          return (
+            sessionDateStr === dateStr &&
+            sessionTime === timeSlot &&
+            session.clientId !== currentClientId
+          );
         });
 
         if (conflictingSession) {
@@ -107,7 +113,14 @@ export const SessionAvailabilityModal = ({
         conflictingSession: firstConflictingSession || sessionsByTimeSlot[timeSlot],
       };
     },
-    [sessions, selectedDate, numberOfSessions, branchConfig.workingDays, sessionsByTimeSlot]
+    [
+      numberOfSessions,
+      selectedDate,
+      sessionsByTimeSlot,
+      branchWorkingDays,
+      sessions,
+      currentClientId,
+    ]
   );
 
   const loadSessions = useCallback(async () => {
@@ -162,7 +175,7 @@ export const SessionAvailabilityModal = ({
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>
-            Session Availability - {format(selectedDate, 'PPP')}
+            Session Availability - {selectedDate && format(selectedDate, 'PPP')}
             {numberOfSessions > 1 && (
               <span className="text-sm font-normal text-gray-600 ml-2">
                 ({numberOfSessions} sessions)
@@ -174,8 +187,7 @@ export const SessionAvailabilityModal = ({
         <div className="space-y-4">
           <div className="text-sm text-gray-600 space-y-1">
             <div>
-              Operating Hours: {branchConfig.operatingHours?.start} -{' '}
-              {branchConfig.operatingHours?.end}
+              Operating Hours: {branchOperatingHours.start} - {branchOperatingHours.end}
             </div>
             {numberOfSessions > 1 && selectedDate && (
               <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
@@ -292,8 +304,7 @@ export const SessionAvailabilityModal = ({
                 <div className="text-center py-8 text-gray-500">
                   <p>No time slots available for the current operating hours.</p>
                   <p className="text-sm mt-2">
-                    Operating Hours: {branchConfig.operatingHours?.start} -{' '}
-                    {branchConfig.operatingHours?.end}
+                    Operating Hours: {branchOperatingHours.start} - {branchOperatingHours.end}
                   </p>
                 </div>
               )}

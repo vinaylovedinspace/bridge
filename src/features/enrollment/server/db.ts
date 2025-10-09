@@ -3,7 +3,6 @@ import {
   ClientTable,
   PaymentTable,
   PlanTable,
-  FullPaymentTable,
   InstallmentPaymentTable,
   VehicleTable,
 } from '@/db/schema';
@@ -14,8 +13,25 @@ import { getNextClientCode } from '@/db/utils/client-code';
 import { getNextPlanCode } from '@/db/utils/plan-code';
 
 export const upsertClientInDB = async (
-  data: Omit<typeof ClientTable.$inferInsert, 'clientCode'> & { clientCode?: string }
+  data: Omit<typeof ClientTable.$inferInsert, 'clientCode'> & { clientCode?: string; id?: string }
 ) => {
+  // If client ID is provided (edit mode), update the existing client by ID
+  if (data.id) {
+    const [client] = await db
+      .update(ClientTable)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(ClientTable.id, data.id))
+      .returning();
+
+    return {
+      isExistingClient: true,
+      clientId: client.id,
+    };
+  }
+
   // Create a variable to track if this was an update operation
   let isExistingClient = false;
 
@@ -212,63 +228,44 @@ export const updatePlanInDB = async (
 };
 
 export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert, planId: string) => {
-  // Validate payment amounts
-  if (data.finalAmount < 0) {
-    throw new Error('Final amount cannot be negative');
-  }
-
-  if (data.discount && data.discount > data.originalAmount) {
-    throw new Error('Discount cannot exceed original amount');
-  }
-
-  const response = await db.transaction(async (tx) => {
-    // Check if payment already exists for this plan
-    const existingPayment = await tx.query.PlanTable.findFirst({
+  return await db.transaction(async (tx) => {
+    // Fetch plan with associated payment
+    const planWithPayment = await tx.query.PlanTable.findFirst({
       where: eq(PlanTable.id, planId),
-      with: {
-        payment: true,
-      },
+      with: { payment: true },
     });
 
-    let isExistingPayment = false;
-    let payment;
+    const existingPayment = planWithPayment?.payment;
 
-    if (existingPayment?.payment) {
-      // Update existing payment
-      isExistingPayment = true;
+    // Update existing payment
+    if (existingPayment) {
       const [updated] = await tx
         .update(PaymentTable)
-        .set({
-          ...data,
-          updatedAt: new Date(),
-        })
-        .where(eq(PaymentTable.id, existingPayment.payment.id))
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(PaymentTable.id, existingPayment.id))
         .returning();
 
-      payment = updated;
-    } else {
-      // Create new payment
-      const [created] = await tx.insert(PaymentTable).values(data).returning();
-      payment = created;
-
-      // Link payment to plan
-      await tx
-        .update(PlanTable)
-        .set({
-          paymentId: payment.id,
-          updatedAt: new Date(),
-        })
-        .where(eq(PlanTable.id, planId));
+      return {
+        payment: updated,
+        isExistingPayment: true,
+        paymentId: updated.id,
+      };
     }
+
+    // Create new payment and link to plan
+    const [payment] = await tx.insert(PaymentTable).values(data).returning();
+
+    await tx
+      .update(PlanTable)
+      .set({ paymentId: payment.id, updatedAt: new Date() })
+      .where(eq(PlanTable.id, planId));
 
     return {
       payment,
-      isExistingPayment,
+      isExistingPayment: false,
       paymentId: payment.id,
     };
   });
-
-  return response;
 };
 
 export const getClientById = async (clientId: string) => {
@@ -284,51 +281,17 @@ export const getClientById = async (clientId: string) => {
   return client;
 };
 
-export const createFullPaymentInDB = async (data: typeof FullPaymentTable.$inferInsert) => {
-  const response = await db.transaction(async (tx) => {
-    // Check if full payment already exists to prevent duplicates
-    const existingFullPayment = await tx.query.FullPaymentTable.findFirst({
-      where: eq(FullPaymentTable.paymentId, data.paymentId),
-    });
-
-    if (existingFullPayment) {
-      // Update existing record instead of creating duplicate
-      const [updatedPayment] = await tx
-        .update(FullPaymentTable)
-        .set({
-          paymentMode: data.paymentMode,
-          paymentDate: data.paymentDate,
-          isPaid: data.isPaid,
-        })
-        .where(eq(FullPaymentTable.paymentId, data.paymentId))
-        .returning();
-
-      return updatedPayment;
-    }
-
-    // Create new full payment record
-    const [fullPayment] = await tx.insert(FullPaymentTable).values(data).returning();
-
-    // Update payment status
-    await tx
-      .update(PaymentTable)
-      .set({
-        paymentStatus: 'FULLY_PAID',
-        updatedAt: new Date(),
-      })
-      .where(eq(PaymentTable.id, data.paymentId));
-
-    return fullPayment;
-  });
-
-  return response;
+const calculatePaymentStatus = (paidCount: number): 'PENDING' | 'PARTIALLY_PAID' | 'FULLY_PAID' => {
+  if (paidCount === 0) return 'PENDING';
+  if (paidCount === 1) return 'PARTIALLY_PAID';
+  return 'FULLY_PAID';
 };
 
 export const createInstallmentPaymentsInDB = async (
   data: typeof InstallmentPaymentTable.$inferInsert
 ) => {
-  const response = await db.transaction(async (tx) => {
-    // Check if this specific installment already exists
+  return await db.transaction(async (tx) => {
+    // Check if installment already exists
     const existingInstallment = await tx.query.InstallmentPaymentTable.findFirst({
       where: and(
         eq(InstallmentPaymentTable.paymentId, data.paymentId),
@@ -336,10 +299,8 @@ export const createInstallmentPaymentsInDB = async (
       ),
     });
 
-    let installmentPayment;
-
+    // Update existing installment
     if (existingInstallment) {
-      // Update existing installment instead of creating duplicate
       const [updated] = await tx
         .update(InstallmentPaymentTable)
         .set({
@@ -351,39 +312,43 @@ export const createInstallmentPaymentsInDB = async (
         .where(eq(InstallmentPaymentTable.id, existingInstallment.id))
         .returning();
 
-      installmentPayment = updated;
-    } else {
-      // Create new installment
-      const [created] = await tx.insert(InstallmentPaymentTable).values(data).returning();
-      installmentPayment = created;
+      // Recalculate payment status
+      const allInstallments = await tx.query.InstallmentPaymentTable.findMany({
+        where: eq(InstallmentPaymentTable.paymentId, data.paymentId),
+      });
+
+      const paidCount = allInstallments.filter((inst) => inst.isPaid).length;
+
+      await tx
+        .update(PaymentTable)
+        .set({
+          paymentStatus: calculatePaymentStatus(paidCount),
+          updatedAt: new Date(),
+        })
+        .where(eq(PaymentTable.id, data.paymentId));
+
+      return updated;
     }
 
-    // Get all installments to determine payment status
+    // Create new installment and update status
+    const [created] = await tx.insert(InstallmentPaymentTable).values(data).returning();
+
     const allInstallments = await tx.query.InstallmentPaymentTable.findMany({
       where: eq(InstallmentPaymentTable.paymentId, data.paymentId),
     });
 
-    const paidInstallments = allInstallments.filter((inst) => inst.isPaid);
-    const paymentStatus =
-      paidInstallments.length === 0
-        ? 'PENDING'
-        : paidInstallments.length === 1
-          ? 'PARTIALLY_PAID'
-          : 'FULLY_PAID';
+    const paidCount = allInstallments.filter((inst) => inst.isPaid).length;
 
-    // Update payment status based on actual installments
     await tx
       .update(PaymentTable)
       .set({
-        paymentStatus,
+        paymentStatus: calculatePaymentStatus(paidCount),
         updatedAt: new Date(),
       })
       .where(eq(PaymentTable.id, data.paymentId));
 
-    return installmentPayment;
+    return created;
   });
-
-  return response;
 };
 
 // ============================================================================

@@ -4,21 +4,18 @@ import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
 import { AdmissionFormValues } from '@/features/enrollment/types';
 import { useFormContext } from 'react-hook-form';
-import { Dispatch, SetStateAction, useEffect } from 'react';
 import { Enrollment } from '@/server/db/plan';
-import { PaymentInfoState } from './types';
 
 type PaymentCheckboxProps = {
-  paymentCheckboxes: PaymentInfoState;
-  setPaymentCheckboxes: Dispatch<SetStateAction<PaymentInfoState>>;
   existingPayment: NonNullable<Enrollment>['payment'];
 };
-export const PaymentOptions = ({
-  paymentCheckboxes,
-  setPaymentCheckboxes,
-  existingPayment,
-}: PaymentCheckboxProps) => {
-  const { control, setValue } = useFormContext<AdmissionFormValues>();
+
+export const PaymentOptions = ({ existingPayment }: PaymentCheckboxProps) => {
+  const { control, setValue, watch } = useFormContext<AdmissionFormValues>();
+
+  const discount = watch('payment.discount');
+  const paymentType = watch('payment.paymentType');
+  const applyDiscount = watch('payment.applyDiscount');
 
   const hasExistingDiscount = Boolean(existingPayment && existingPayment.discount > 0);
   const hasExistingInstallments = Boolean(
@@ -28,56 +25,30 @@ export const PaymentOptions = ({
       existingPayment.installmentPayments.length > 0
   );
 
-  // Update form value when payment checkboxes change
-  useEffect(() => {
-    if (paymentCheckboxes.installments.isChecked) {
-      setValue('payment.paymentType', 'INSTALLMENTS');
+  // Derive checkbox states from form values
+  const isDiscountChecked = applyDiscount || discount > 0;
+  const isInstallmentsChecked = paymentType === 'INSTALLMENTS';
+
+  const handleDiscountCheckboxChange = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+      setValue('payment.applyDiscount', true, { shouldDirty: true });
     } else {
-      setValue('payment.paymentType', 'FULL_PAYMENT');
+      // When unchecking, reset both checkbox and discount value
+      setValue('payment.applyDiscount', false, { shouldDirty: true });
+      setValue('payment.discount', 0, { shouldDirty: true });
     }
-  }, [paymentCheckboxes.installments.isChecked, setValue]);
-
-  const handleCheckboxChange = (
-    info: keyof typeof paymentCheckboxes,
-    checked: boolean | 'indeterminate'
-  ) => {
-    setPaymentCheckboxes((prev) => {
-      if (info === 'installments' && checked === true) {
-        return {
-          ...prev,
-          installments: { ...prev.installments, isChecked: true },
-        };
-      }
-
-      // For other checkboxes or unchecking
-      return {
-        ...prev,
-        [info]: {
-          ...prev[info],
-          isChecked: checked === true,
-        },
-      };
-    });
   };
 
-  const handleDiscountChange = (value: string) => {
-    setPaymentCheckboxes((prev) => ({
-      ...prev,
-      discount: {
-        ...prev.discount,
-        value,
-      },
-    }));
-  };
+  const handleInstallmentsCheckboxChange = (checked: boolean | 'indeterminate') => {
+    if (hasExistingInstallments) {
+      return; // Prevent changes if installments already exist
+    }
 
-  const clearDiscount = () => {
-    setPaymentCheckboxes((prev) => ({
-      ...prev,
-      discount: {
-        ...prev.discount,
-        value: '',
-      },
-    }));
+    if (checked === true) {
+      setValue('payment.paymentType', 'INSTALLMENTS', { shouldDirty: true });
+    } else {
+      setValue('payment.paymentType', 'FULL_PAYMENT', { shouldDirty: true });
+    }
   };
 
   return (
@@ -87,15 +58,15 @@ export const PaymentOptions = ({
         <FormItem className="flex items-center gap-3">
           <FormControl>
             <Checkbox
-              checked={paymentCheckboxes.discount.isChecked}
-              onCheckedChange={(checked) => handleCheckboxChange('discount', checked)}
+              checked={isDiscountChecked}
+              onCheckedChange={handleDiscountCheckboxChange}
               disabled={hasExistingDiscount}
             />
           </FormControl>
           <FormLabel
             className={hasExistingDiscount ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
           >
-            {paymentCheckboxes.discount.label}
+            Apply Discount
           </FormLabel>
         </FormItem>
 
@@ -103,20 +74,20 @@ export const PaymentOptions = ({
         <FormItem className="flex items-center gap-3">
           <FormControl>
             <Checkbox
-              checked={paymentCheckboxes.installments.isChecked}
-              onCheckedChange={(checked) => handleCheckboxChange('installments', checked)}
+              checked={isInstallmentsChecked}
+              onCheckedChange={handleInstallmentsCheckboxChange}
               disabled={hasExistingInstallments}
             />
           </FormControl>
           <FormLabel
             className={hasExistingInstallments ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
           >
-            {paymentCheckboxes.installments.label}
+            Pay in Installments
           </FormLabel>
         </FormItem>
       </div>
 
-      {paymentCheckboxes.discount.isChecked && (
+      {isDiscountChecked && (
         <div className="col-span-5 col-start-4 pt-5">
           <FormField
             control={control}
@@ -133,9 +104,8 @@ export const PaymentOptions = ({
                         const value = e.target.value;
                         const numValue = value === '' ? 0 : Number(value);
                         field.onChange(isNaN(numValue) ? 0 : numValue);
-                        handleDiscountChange(e.target.value);
                       }}
-                      className="h-12 pr-10" // Added right padding for the X icon
+                      className="h-12 pr-10"
                       disabled={hasExistingDiscount}
                     />
                   </FormControl>
@@ -145,7 +115,6 @@ export const PaymentOptions = ({
                       type="button"
                       onClick={() => {
                         field.onChange(0);
-                        clearDiscount();
                       }}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
                       aria-label="Clear discount"

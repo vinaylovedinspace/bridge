@@ -1,4 +1,5 @@
-import { BranchConfig } from '@/server/db/branch';
+import { branchOperatingHoursAtom } from '@/lib/atoms/branch-config';
+import { useAtomValue } from 'jotai';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 
 type SlotConflict = {
@@ -9,21 +10,20 @@ type SlotConflict = {
 type SlotStatusDisplayProps = {
   isTimeOutsideOperatingHours: boolean;
   slotConflict: SlotConflict;
-  branchConfig: BranchConfig;
 };
 
 export const SlotStatusDisplay = ({
   isTimeOutsideOperatingHours,
   slotConflict,
-  branchConfig,
 }: SlotStatusDisplayProps) => {
+  const branchOperatingHours = useAtomValue(branchOperatingHoursAtom);
   if (isTimeOutsideOperatingHours) {
     return (
       <div className="flex items-center gap-2 text-sm text-red-600">
         <AlertTriangle className="h-4 w-4" />
         <span>
-          Selected time must be within operating hours ({branchConfig.operatingHours?.start} -{' '}
-          {branchConfig.operatingHours?.end})
+          Selected time must be within operating hours ({branchOperatingHours?.start} -{' '}
+          {branchOperatingHours?.end})
         </span>
       </div>
     );

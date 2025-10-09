@@ -19,6 +19,8 @@ import {
   DAYS_OF_WEEK,
 } from '@/lib/constants/business';
 import { BranchConfig } from '@/server/db/branch';
+import { useSetAtom } from 'jotai';
+import { branchConfigAtom } from '@/lib/atoms/branch-config';
 
 interface SettingsFormProps {
   branchId: string;
@@ -27,6 +29,7 @@ interface SettingsFormProps {
 
 export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
   const [isPending, setIsPending] = useState(false);
+  const setBranchConfig = useSetAtom(branchConfigAtom);
 
   const form = useForm<BranchSettings>({
     resolver: zodResolver(branchSettingsSchema),
@@ -46,9 +49,7 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
     formState: { errors },
   } = form;
   const workingDays = watch('workingDays');
-  const operatingHours = watch('operatingHours');
   const defaultRtoOffice = watch('defaultRtoOffice');
-  const licenseServiceCharge = watch('licenseServiceCharge');
 
   const handleWorkingDayToggle = (dayId: number) => {
     const currentDays = workingDays || [];
@@ -63,6 +64,15 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
     try {
       const result = await updateBranchSettings(branchId, data);
       if (result.success) {
+        // Update the atom with new values
+        setBranchConfig((prev) => ({
+          ...prev!,
+          workingDays: data.workingDays,
+          operatingHours: data.operatingHours,
+          defaultRtoOffice: data.defaultRtoOffice || null,
+          licenseServiceCharge: data.licenseServiceCharge ?? 0,
+        }));
+
         toast.success(result.message);
 
         // If sessions were rescheduled, show additional info
@@ -117,16 +127,6 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
             {errors.workingDays && (
               <p className="text-sm text-destructive mt-2">{errors.workingDays.message}</p>
             )}
-            <div className="mt-4 p-4 bg-muted rounded-lg">
-              <p className="text-sm">
-                <strong>Selected days:</strong>{' '}
-                {!workingDays || workingDays.length === 0
-                  ? 'No working days selected'
-                  : workingDays
-                      .map((id) => DAYS_OF_WEEK.find((d) => d.id === id)?.label)
-                      .join(', ')}
-              </p>
-            </div>
           </CardContent>
         </Card>
 
@@ -166,13 +166,6 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
                 )}
               </div>
             </div>
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm">
-                <strong>Current hours:</strong>{' '}
-                {operatingHours?.start || DEFAULT_OPERATING_HOURS.start} -{' '}
-                {operatingHours?.end || DEFAULT_OPERATING_HOURS.end}
-              </p>
-            </div>
           </CardContent>
         </Card>
 
@@ -198,15 +191,6 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
               {errors.defaultRtoOffice && (
                 <p className="text-sm text-destructive">{errors.defaultRtoOffice.message}</p>
               )}
-            </div>
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm">
-                <strong>Current default:</strong>{' '}
-                {defaultRtoOffice ? defaultRtoOffice : 'No default RTO office set'}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                This will be pre-selected when creating new RTO service applications
-              </p>
             </div>
           </CardContent>
         </Card>
@@ -239,15 +223,6 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
               {errors.licenseServiceCharge && (
                 <p className="text-sm text-destructive">{errors.licenseServiceCharge.message}</p>
               )}
-            </div>
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm">
-                <strong>Current service fee:</strong> ₹{licenseServiceCharge || 500}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                This amount will be added to licence applications when the branch handles the
-                licence process
-              </p>
             </div>
           </CardContent>
         </Card>

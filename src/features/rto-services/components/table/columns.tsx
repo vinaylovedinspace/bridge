@@ -15,6 +15,7 @@ import {
 } from '../../types';
 import Link from 'next/link';
 import { getRTOServices } from '../../server/db';
+import { getPaymentStatusBadge } from '@/lib/payment/get-payment-status-badge';
 
 type RTOServiceWithClient = Awaited<ReturnType<typeof getRTOServices>>[number];
 
@@ -24,7 +25,7 @@ export const columns: ColumnDef<RTOServiceWithClient>[] = [
     header: 'Client Code',
     cell: ({ row }) => {
       const client = row.original.client;
-      return client?.clientCode ? <Badge variant="outline">RS-{client.clientCode}</Badge> : '-';
+      return client?.clientCode ? <Badge variant="outline">CL-{client.clientCode}</Badge> : '-';
     },
   },
   {
@@ -46,7 +47,7 @@ export const columns: ColumnDef<RTOServiceWithClient>[] = [
   },
   {
     accessorKey: 'status',
-    header: 'Status',
+    header: 'Service Status',
     cell: ({ row }) => {
       const status = row.original.status;
       const statusColors: Record<RTOServiceStatus, string> = {
@@ -64,11 +65,20 @@ export const columns: ColumnDef<RTOServiceWithClient>[] = [
     },
   },
   {
+    accessorKey: 'payment.paymentStatus',
+    header: 'Payment Status',
+    cell: ({ row }) => {
+      const status = row.original.payment?.paymentStatus ?? 'PENDING';
+
+      return getPaymentStatusBadge(status);
+    },
+  },
+  {
     accessorKey: 'totalAmount',
     header: 'Total Amount',
     cell: ({ row }) => {
-      const amount = row.original.totalAmount;
-      return `₹${amount.toLocaleString()}`;
+      const amount = row.original.payment?.totalAmount;
+      return amount ? `₹${amount.toLocaleString()}` : '-';
     },
   },
   {

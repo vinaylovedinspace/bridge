@@ -5,6 +5,7 @@ import {
   type FilterType,
 } from '@/server/db/forms';
 import { EligibleStudents } from '@/features/forms/components/eligible-students';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type FormsPageProps = {
   searchParams?: Promise<{
@@ -24,7 +25,7 @@ export default async function Forms({ searchParams }: FormsPageProps) {
       : await getEligibleStudentsForPermanentLicense(filter);
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<Skeleton className="h-96 w-full" />}>
       <EligibleStudents list={list} type={type} />
     </Suspense>
   );

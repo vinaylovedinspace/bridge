@@ -28,8 +28,8 @@ export const MultistepForm = () => {
     resolver: zodResolver(onboardingFormSchema),
     defaultValues: {
       schoolName: '',
-      branches: [{ name: '' }], // Start with one empty branch
       schoolWhatsappNumber: '',
+      branches: [{ name: '' }], // Start with one empty branch
     },
     mode: 'onSubmit',
   });

@@ -6,12 +6,18 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { TypographyH3, TypographyH4, TypographySmall } from '@/components/ui/typography';
 import { GraduationCap, Car } from 'lucide-react';
+import { ServiceTypeEnum } from '@/db/schema';
 
 type ServiceTypeStepProps = {
   disabled?: boolean;
 };
 
-const serviceTypeOptions = [
+const serviceTypeOptions: {
+  value: (typeof ServiceTypeEnum.enumValues)[number];
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
   {
     value: 'FULL_SERVICE' as const,
     label: 'Full Service Package',
@@ -30,7 +36,7 @@ export const ServiceTypeStep = ({ disabled = false }: ServiceTypeStepProps) => {
   const { control } = useFormContext<AdmissionFormValues>();
 
   return (
-    <div className="space-y-10 flex flex-col justify-center items-center pt-10">
+    <div className="space-y-10 flex flex-col items-center pt-20 h-full">
       <TypographyH4>{disabled ? 'Selected Service Type' : 'Choose Your Service Type'}</TypographyH4>
 
       <FormField

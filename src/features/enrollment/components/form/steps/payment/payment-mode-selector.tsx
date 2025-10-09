@@ -61,26 +61,14 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
 
     try {
       const formValues = getValues();
-      const payment = formValues.payment;
-      const clientId = formValues.clientId;
-      const planId = formValues.planId;
 
-      if (!clientId) {
-        toast.error('Client ID not found. Please complete the personal information step first.');
-        return;
-      }
+      if (!formValues.clientId || !formValues.planId) return;
 
-      if (!planId) {
-        toast.error('Plan ID not found. Please complete the plan step first.');
-        return;
-      }
-
-      const paymentWithClientId = {
-        ...payment,
-        clientId,
+      const paymentInput = {
+        ...formValues.payment,
+        clientId: formValues.clientId,
       };
-
-      const result = await createPayment(paymentWithClientId, planId);
+      const result = await createPayment(paymentInput, formValues.planId);
 
       if (!result.error) {
         toast.success(result.message || 'Payment processed successfully');

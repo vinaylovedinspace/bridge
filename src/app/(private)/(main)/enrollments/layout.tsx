@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { TypographyH4 } from '@/components/ui/typography';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,9 @@ export default function EnrollmentsLayout({ children }: { children: React.ReactN
           </Button>
         </Link>
       </div>
-      <ClientSearch />
+      <Suspense fallback={<div className="w-96 h-10 bg-muted animate-pulse rounded-md" />}>
+        <ClientSearch />
+      </Suspense>
       {children}
     </div>
   );

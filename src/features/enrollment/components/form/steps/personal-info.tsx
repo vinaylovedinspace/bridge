@@ -32,8 +32,8 @@ import { TypographyH5, TypographyP } from '@/components/ui/typography';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useEffect } from 'react';
 import { Info } from 'lucide-react';
-import { DuplicateClientModal } from './duplicate-client-modal';
-import { usePhoneNumberValidation } from '@/features/enrollment/hooks/use-phone-number-validation';
+import { DuplicateClientModal } from '@/components/duplicate-client-modal';
+import { useDuplicateClientCheck } from '@/features/enrollment/hooks/use-duplicate-client-check';
 
 export const PersonalInfoStep = () => {
   const methods = useFormContext<AdmissionFormValues>();
@@ -48,7 +48,7 @@ export const PersonalInfoStep = () => {
     handleAadhaarNumberBlur,
     handleUseExisting,
     handleContinueWithNew,
-  } = usePhoneNumberValidation(setValue);
+  } = useDuplicateClientCheck(setValue, clearErrors);
 
   // Watch for changes in the checkbox and address fields
   const isSameAddress = useWatch({
@@ -135,7 +135,7 @@ export const PersonalInfoStep = () => {
                   <FormLabel required>Aadhaar Number</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="123456789012"
+                      placeholder="xxxx xxxx xxxx"
                       value={field.value || ''}
                       onChange={(e) => {
                         const value = e.target.value.replace(/[^0-9\s]/g, '');

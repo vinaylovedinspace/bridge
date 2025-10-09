@@ -31,7 +31,7 @@ export const LicenseStep = () => {
                   <Combobox
                     options={serviceTypeOptions}
                     value={field.value}
-                    onValueChange={field.onChange}
+                    onValueChange={(value) => value && field.onChange(value)}
                     placeholder="Select service type"
                     searchPlaceholder="Search service types..."
                     emptyText="No service type found."

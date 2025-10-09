@@ -1,18 +1,10 @@
 import { z } from 'zod';
 import { createInsertSchema } from 'drizzle-zod';
-import { ServiceTypeEnum } from '@/db/schema/enums';
-import { PlanTable } from '@/db/schema/plan/columns';
-import {
-  PaymentModeEnum,
-  PaymentTable,
-  PaymentTypeEnum,
-  PaymentStatusEnum,
-  FullPaymentTable,
-  InstallmentPaymentTable,
-} from '@/db/schema';
+import { PlanTable, ServiceTypeEnum } from '@/db/schema/plan/columns';
 import { isTimeWithinOperatingHours } from '@/lib/utils/date-utils';
 import { personalInfoSchema } from '@/types/zod/client';
 import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
+import { paymentSchema } from '@/types/zod/payment';
 
 // Base plan schema without operating hours validation
 export const basePlanSchema = createInsertSchema(PlanTable, {
@@ -52,41 +44,6 @@ export const planSchema = basePlanSchema.omit({
   branchId: true,
   vehicleRentAmount: true,
 });
-
-export const paymentSchema = createInsertSchema(PaymentTable, {
-  discount: z.number().default(0),
-  paymentType: z
-    .enum(PaymentTypeEnum.enumValues, { required_error: 'Payment type is required' })
-    .default('FULL_PAYMENT'),
-  paymentStatus: z
-    .enum(PaymentStatusEnum.enumValues, { required_error: 'Payment status is required' })
-    .default('PENDING'),
-  licenseServiceFee: z.number().default(0),
-})
-  .omit({ createdAt: true, updatedAt: true })
-  .extend({
-    paymentMode: z
-      .enum(PaymentModeEnum.enumValues, { required_error: 'Payment mode is required' })
-      .default('PAYMENT_LINK'),
-  });
-
-export const fullPaymentSchema = createInsertSchema(FullPaymentTable, {
-  paymentDate: z.string().nullable().optional(),
-  paymentMode: z
-    .enum(PaymentModeEnum.enumValues, { required_error: 'Payment mode is required' })
-    .default('PAYMENT_LINK'),
-  isPaid: z.boolean().default(false),
-}).omit({ createdAt: true, updatedAt: true });
-
-export const installmentPaymentSchema = createInsertSchema(InstallmentPaymentTable, {
-  installmentNumber: z.number().min(1).max(2),
-  amount: z.number().min(0, 'Installment amount cannot be negative'),
-  paymentDate: z.string().nullable().optional(),
-  paymentMode: z
-    .enum(PaymentModeEnum.enumValues, { required_error: 'Payment mode is required' })
-    .default('PAYMENT_LINK'),
-  isPaid: z.boolean().default(false),
-}).omit({ createdAt: true, updatedAt: true });
 
 // Service type schema (separate from personal info for the first step)
 export const serviceTypeSchema = z.object({
