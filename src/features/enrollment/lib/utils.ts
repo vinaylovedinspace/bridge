@@ -20,7 +20,7 @@ export const getMultistepAdmissionStepValidationFields = (
       return ['serviceType'];
     case 'personal':
       return generateFieldPaths<AdmissionFormValues>({
-        prefix: 'personalInfo',
+        prefix: 'client',
         getValues,
       });
     case 'license':
@@ -60,7 +60,7 @@ const combineDateAndTime = (dateString: string, timeString: string): Date => {
 // Helper function to map client data to personal info form values
 export const mapClientToPersonalInfo = (
   client: NonNullable<Enrollment>['client']
-): AdmissionFormValues['personalInfo'] => {
+): AdmissionFormValues['client'] => {
   return {
     id: client.id, // Include the client ID for edit mode
     clientCode: client.clientCode,
@@ -157,18 +157,17 @@ export const getDefaultValuesForAddEnrollmentForm = (
   if (existingClient) {
     return {
       serviceType: 'FULL_SERVICE' as const,
-      personalInfo: mapClientToPersonalInfo(existingClient),
+      client: mapClientToPersonalInfo(existingClient),
       learningLicense: mapLearningLicense(existingClient.learningLicense),
       drivingLicense: mapDrivingLicense(existingClient.drivingLicense),
       plan: DEFAULT_PLAN_VALUES,
       payment: DEFAULT_PAYMENT_VALUES,
-      clientId: existingClient.id,
     } as AdmissionFormValues;
   }
 
   return {
     serviceType: 'FULL_SERVICE' as const,
-    personalInfo: {
+    client: {
       educationalQualification: 'GRADUATE',
       citizenStatus: 'BIRTH',
       isCurrentAddressSameAsPermanentAddress: false,
@@ -188,12 +187,9 @@ export const getDefaultValuesForEditEnrollmentForm = (
   const { client, payment } = enrollment;
   return {
     serviceType: enrollment.serviceType,
-    personalInfo: mapClientToPersonalInfo(client),
+    client: mapClientToPersonalInfo(client),
     learningLicense: mapLearningLicense(client?.learningLicense),
     drivingLicense: mapDrivingLicense(client?.drivingLicense),
-    clientId: client.id,
-    planId: enrollment.id,
-    paymentId: payment?.id,
     plan: {
       vehicleId: enrollment.vehicleId,
       numberOfSessions: enrollment.numberOfSessions,

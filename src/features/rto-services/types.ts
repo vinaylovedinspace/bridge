@@ -1,6 +1,6 @@
 import { RTOServiceTypeEnum, type RTOServicesTable } from '@/db/schema';
 import { RTO_OFFICES as _RTO_OFFICES } from '@/lib/constants/rto-offices';
-import { personalInfoSchema } from '@/types/zod/client';
+import { clientSchema } from '@/types/zod/client';
 import { drivingLicenseSchema } from '@/types/zod/license';
 import { paymentSchema } from '@/types/zod/payment';
 import { z } from 'zod';
@@ -38,7 +38,7 @@ export type RTOOffice = (typeof RTO_OFFICES)[number];
 export const rtoServicesFormSchema = z.object({
   clientId: z.string().optional(),
   serviceId: z.string().optional(),
-  personalInfo: personalInfoSchema.extend({
+  client: clientSchema.extend({
     branchId: z.string().optional(),
     tenantId: z.string().optional(),
   }),
@@ -57,7 +57,7 @@ export const rtoServicesFormSchema = z.object({
 });
 
 export const rtoServicesFormSchemaWithOptionalPayment = rtoServicesFormSchema.pick({
-  personalInfo: true,
+  client: true,
   service: true,
   serviceId: true,
   clientId: true,

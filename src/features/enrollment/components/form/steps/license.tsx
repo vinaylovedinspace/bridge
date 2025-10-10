@@ -12,6 +12,7 @@ import { LICENSE_CLASS_OPTIONS } from '@/lib/constants/license-classes';
 import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
 import { useAtomValue } from 'jotai';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useMemo } from 'react';
 
 type LicenseStepProps = {
   isEditMode?: boolean;
@@ -19,21 +20,26 @@ type LicenseStepProps = {
 
 export const LicenseStep = ({}: LicenseStepProps) => {
   const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
-  const { control, watch, getValues } = useFormContext<AdmissionFormValues>();
+  const { control, watch, getValues, setValue } = useFormContext<AdmissionFormValues>();
 
   // Watch service type to conditionally show/hide fields
   const serviceType = watch('serviceType');
 
   // Watch selected license classes and checkbox for fee calculation
-  const selectedLicenseClasses = watch('learningLicense.class') || [];
+  const selectedLicenseClasses = watch('learningLicense.class');
   const excludeLearningLicenseFee = watch('learningLicense.excludeLearningLicenseFee') ?? false;
 
   // Calculate fees breakdown for display (only if not excluded)
-  const feeCalculation = calculateLicenseFees({
-    licenseClasses: selectedLicenseClasses,
-    excludeLearningLicenseFee,
-    serviceCharge: branchServiceCharge,
-  });
+  const feeCalculation = useMemo(() => {
+    const fees = calculateLicenseFees({
+      licenseClasses: selectedLicenseClasses,
+      excludeLearningLicenseFee,
+      serviceCharge: branchServiceCharge,
+    });
+
+    setValue('payment.licenseServiceFee', fees.total);
+    return fees;
+  }, [branchServiceCharge, excludeLearningLicenseFee, selectedLicenseClasses, setValue]);
 
   return (
     <div className="space-y-10">

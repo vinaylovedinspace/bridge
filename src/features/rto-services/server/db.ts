@@ -251,3 +251,80 @@ export const upsertPaymentInDB = async (
     };
   });
 };
+
+export const saveRTOServiceAndPaymentInDB = async (
+  serviceId: string | undefined,
+  clientData: typeof ClientTable.$inferInsert,
+  serviceData: Omit<typeof RTOServicesTable.$inferInsert, 'id' | 'clientId'>,
+  paymentData: typeof PaymentTable.$inferInsert
+) => {
+  return await db.transaction(async (tx) => {
+    // 1. Upsert client
+    let client: { id: string };
+    if (clientData.id) {
+      [client] = await tx
+        .update(ClientTable)
+        .set(clientData)
+        .where(eq(ClientTable.id, clientData.id))
+        .returning({ id: ClientTable.id });
+    } else {
+      [client] = await tx.insert(ClientTable).values(clientData).returning({
+        id: ClientTable.id,
+      });
+    }
+
+    // 2. Upsert RTO service
+    let rtoService: typeof RTOServicesTable.$inferSelect;
+    let isExistingService = false;
+
+    if (serviceId) {
+      [rtoService] = await tx
+        .update(RTOServicesTable)
+        .set({ ...serviceData, updatedAt: new Date() })
+        .where(eq(RTOServicesTable.id, serviceId))
+        .returning();
+      isExistingService = true;
+    } else {
+      [rtoService] = await tx
+        .insert(RTOServicesTable)
+        .values({ ...serviceData, clientId: client.id })
+        .returning();
+    }
+
+    // 3. Fetch service with associated payment
+    const serviceWithPayment = await tx.query.RTOServicesTable.findFirst({
+      where: eq(RTOServicesTable.id, rtoService.id),
+      with: { payment: true },
+    });
+
+    const existingPayment = serviceWithPayment?.payment;
+
+    // 4. Upsert payment
+    let payment: typeof PaymentTable.$inferSelect;
+    let isExistingPayment = false;
+
+    if (existingPayment) {
+      [payment] = await tx
+        .update(PaymentTable)
+        .set({ ...paymentData, updatedAt: new Date() })
+        .where(eq(PaymentTable.id, existingPayment.id))
+        .returning();
+      isExistingPayment = true;
+    } else {
+      [payment] = await tx.insert(PaymentTable).values(paymentData).returning();
+
+      await tx
+        .update(RTOServicesTable)
+        .set({ paymentId: payment.id, updatedAt: new Date() })
+        .where(eq(RTOServicesTable.id, rtoService.id));
+    }
+
+    return {
+      clientId: client.id,
+      serviceId: rtoService.id,
+      isExistingService,
+      paymentId: payment.id,
+      isExistingPayment,
+    };
+  });
+};

@@ -50,7 +50,7 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
       case 'service':
         return { serviceType: getValues('serviceType') };
       case 'personal':
-        return getValues('personalInfo');
+        return getValues('client');
       case 'license':
         return {
           learningLicense: getValues('learningLicense'),

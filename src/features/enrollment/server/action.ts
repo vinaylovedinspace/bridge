@@ -1,7 +1,13 @@
 'use server';
 
 import { z } from 'zod';
-import { LearningLicenseValues, DrivingLicenseValues, PlanValues, planSchema } from '../types';
+import {
+  LearningLicenseValues,
+  DrivingLicenseValues,
+  PlanValues,
+  planSchema,
+  PaymentValues,
+} from '../types';
 import { getBranchConfig } from '@/server/db/branch';
 import { ActionReturnType } from '@/types/actions';
 import {
@@ -12,6 +18,8 @@ import {
   findExistingPlanInDB,
   getPlanAndVehicleInDB,
   upsertPaymentInDB,
+  upsertPlanAndPaymentInDB,
+  getVehicleRentAmount,
 } from './db';
 import { dateToString } from '@/lib/date-utils';
 import {
@@ -19,7 +27,7 @@ import {
   CreatePaymentLinkRequest,
   PaymentLinkResult,
 } from '@/lib/cashfree/payment-links';
-import { personalInfoSchema } from '@/types/zod/client';
+import { clientSchema } from '@/types/zod/client';
 import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
 import {
   extractTimeString,
@@ -35,9 +43,10 @@ import {
 import { paymentSchema } from '@/types/zod/payment';
 import { calculateEnrollmentPaymentBreakdown } from '@/lib/payment/calculate';
 import { IMMEDIATE_PAYMENT_MODES } from '@/lib/constants/payment';
+import { getNextPlanCode } from '@/db/utils/plan-code';
 
 export const createClient = async (
-  unsafeData: z.infer<typeof personalInfoSchema>
+  unsafeData: z.infer<typeof clientSchema>
 ): Promise<{ error: boolean; message: string } & { clientId?: string }> => {
   const { id: branchId, tenantId } = await getBranchConfig();
 
@@ -236,7 +245,6 @@ export const createPlan = async (
         numberOfSessions: data.numberOfSessions,
         vehicleId: data.vehicleId,
       },
-      isExistingPlan,
       planTimingChanged
     );
 
@@ -340,6 +348,110 @@ export const createPayment = async (
   }
 };
 
+export const createPlanWithPayment = async (
+  planData: PlanValues,
+  paymentData: PaymentValues
+): Promise<{ error: boolean; message: string; planId?: string; paymentId?: string }> => {
+  const { id: branchId } = await getBranchConfig();
+  try {
+    // 1. Extract and validate time
+    const timeString = extractTimeString(planData.joiningDate);
+    const parseResult = planSchema.safeParse({ ...planData, joiningTime: timeString });
+
+    if (!parseResult.success) {
+      return { error: true, message: 'Invalid plan data' };
+    }
+
+    // 2. Find existing plan (if any)
+    const existingPlan = await findExistingPlanInDB(planData.id, planData.clientId);
+    const planCode = existingPlan?.planCode || (await getNextPlanCode(branchId));
+
+    // 3. Check if plan has changed
+    const planTimingChanged = existingPlan
+      ? hasPlanChanged(existingPlan, planData.joiningDate, timeString, planData)
+      : false;
+
+    // 4. Get vehicle details for payment calculation
+    const vehicle = await getVehicleRentAmount(planData.vehicleId);
+
+    if (!vehicle) {
+      return { error: true, message: 'Vehicle not found' };
+    }
+
+    // 5. Calculate payment breakdown
+    const paymentBreakdown = calculateEnrollmentPaymentBreakdown({
+      sessions: planData.numberOfSessions,
+      duration: planData.sessionDurationInMinutes,
+      rate: vehicle.rent,
+      discount: paymentData.discount,
+      paymentType: paymentData.paymentType,
+      licenseServiceFee: paymentData.licenseServiceFee,
+    });
+
+    // 6. Validate payment data with calculated total
+    const validationResult = paymentSchema.safeParse({
+      ...paymentData,
+      branchId,
+      totalAmount: paymentBreakdown.totalAmountAfterDiscount,
+    });
+
+    if (!validationResult.success) {
+      console.error('[createPlanWithPayment] Validation failed:', validationResult.error.format());
+      return { error: true, message: 'Invalid payment data' };
+    }
+
+    // 7. Prepare plan data for database
+    const planDataForDB = {
+      ...parseResult.data,
+      joiningDate: dateToString(planData.joiningDate),
+      joiningTime: timeString,
+      branchId,
+      vehicleRentAmount: vehicle.rent,
+      planCode,
+    };
+
+    // 8. Persist plan and payment to database in a transaction
+    const { plan } = await upsertPlanAndPaymentInDB(planDataForDB, validationResult.data);
+
+    // 9. Process immediate payment transactions
+    const paymentMode = validationResult.data.paymentMode;
+    if (IMMEDIATE_PAYMENT_MODES.includes(paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])) {
+      await processPaymentTransaction(
+        plan.paymentId!,
+        paymentMode as 'CASH' | 'QR',
+        validationResult.data.paymentType,
+        paymentBreakdown.firstInstallmentAmount,
+        paymentBreakdown.secondInstallmentAmount
+      );
+    }
+
+    // 10. Handle session generation/update
+    const sessionMessage = await handleSessionGeneration(
+      planData.clientId,
+      plan.id,
+      {
+        joiningDate: planData.joiningDate,
+        joiningTime: timeString,
+        numberOfSessions: planData.numberOfSessions,
+        vehicleId: planData.vehicleId,
+      },
+      planTimingChanged
+    );
+
+    return {
+      error: false,
+      message: `Plan and payment acknowledged successfully${sessionMessage}`,
+      planId: plan.id,
+      paymentId: plan.paymentId!,
+    };
+  } catch (error) {
+    console.error('Error processing plan and payment data:', error);
+    const message =
+      error instanceof Error ? error.message : 'Failed to save plan and payment information';
+    return { error: true, message };
+  }
+};
+
 export async function createPaymentLinkAction(
   request: CreatePaymentLinkRequest
 ): Promise<PaymentLinkResult> {
@@ -358,7 +470,7 @@ export async function createPaymentLinkAction(
 // Update functions (aliases for the existing upsert functions)
 export const updateClient = async (
   _clientId: string,
-  data: z.infer<typeof personalInfoSchema>
+  data: z.infer<typeof clientSchema>
 ): ActionReturnType => {
   return createClient(data);
 };
@@ -376,7 +488,6 @@ export const updateDrivingLicense = async (
 ): ActionReturnType => {
   return createDrivingLicense(data);
 };
-
 export const updatePlan = async (_planId: string, data: PlanValues): ActionReturnType => {
   return createPlan(data);
 };

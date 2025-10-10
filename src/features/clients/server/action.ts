@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { personalInfoSchema } from '@/types/zod/client';
+import { clientSchema } from '@/types/zod/client';
 import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
 import { ActionReturnType } from '@/types/actions';
 import { dateToString } from '@/lib/date-utils';
@@ -13,7 +13,7 @@ import { eq } from 'drizzle-orm';
 
 export const updateClientPersonalInfo = async (
   clientId: string,
-  unsafeData: z.infer<typeof personalInfoSchema>
+  unsafeData: z.infer<typeof clientSchema>
 ): ActionReturnType => {
   try {
     if (!clientId) {
@@ -21,7 +21,7 @@ export const updateClientPersonalInfo = async (
     }
 
     // Validate the personal info data
-    const parseResult = personalInfoSchema.safeParse(unsafeData);
+    const parseResult = clientSchema.safeParse(unsafeData);
 
     if (!parseResult.success) {
       return { error: true, message: 'Invalid personal information data' };

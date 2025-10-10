@@ -12,13 +12,14 @@ import {
   createClient,
   createLearningLicense,
   createDrivingLicense,
-  createPlan,
+  createPlanWithPayment,
   createPayment,
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
 import { UseFormGetValues, UseFormSetValue } from 'react-hook-form';
 import { getSessions } from '@/server/actions/sessions';
 import { LAST_ENROLLMENT_CLIENT_ID, LAST_ENROLLMENT_STEP } from '@/lib/constants/business';
+import { getNextPlanCode } from '@/db/utils/plan-code';
 
 /**
  * Validate that an object has meaningful data (not just empty object)
@@ -30,7 +31,7 @@ const hasValidData = (obj: Record<string, unknown> | undefined): boolean => {
 
   // Check if at least one property has a truthy value (excluding clientId which is added later)
   return keys.some((key) => {
-    if (key === 'clientId') return false;
+    if (key === 'client.id') return false;
     const value = obj[key];
     // Allow false boolean values, but not undefined/null/empty string
     return value !== undefined && value !== null && value !== '';
@@ -51,19 +52,12 @@ const formatDateString = (date: Date): string => {
   return date.toISOString().split('T')[0];
 };
 
-export const useEnrollmentFormSubmissions = (
+export const useAddFormSubmissions = (
   getValues: UseFormGetValues<AdmissionFormValues>,
   setValue: UseFormSetValue<AdmissionFormValues>
 ) => {
   const router = useRouter();
   const abortControllerRef = useRef<AbortController | null>(null);
-
-  const handleServiceTypeStep = useCallback(async (): ActionReturnType => {
-    return Promise.resolve({
-      error: false,
-      message: 'Service type selected successfully',
-    });
-  }, []);
 
   const handlePersonalStep = useCallback(
     async (data: PersonalInfoValues): ActionReturnType => {
@@ -71,7 +65,7 @@ export const useEnrollmentFormSubmissions = (
 
       // If the client was created successfully, store the clientId for later steps
       if (!result.error && result.clientId) {
-        setValue('clientId', result.clientId);
+        setValue('client.id', result.clientId);
       } else if (result.error) {
         return {
           error: true,
@@ -89,7 +83,7 @@ export const useEnrollmentFormSubmissions = (
       learningLicense?: LearningLicenseValues;
       drivingLicense?: DrivingLicenseValues;
     }): ActionReturnType => {
-      const clientId = getValues('clientId');
+      const clientId = getValues('client.id');
 
       if (!clientId) {
         return {
@@ -177,7 +171,7 @@ export const useEnrollmentFormSubmissions = (
 
   const handlePlanStep = useCallback(
     async (data: PlanValues): ActionReturnType => {
-      const clientId = getValues('clientId');
+      const clientId = getValues('client.id');
       const serviceType = getValues('serviceType');
 
       // Validate client ID (not validated by Zod since it's added in the hook)
@@ -188,7 +182,7 @@ export const useEnrollmentFormSubmissions = (
         };
       }
 
-      // Check slot availability before creating the plan
+      // Check slot availability before proceeding
       try {
         const sessions = await getSessions(data.vehicleId);
 
@@ -220,36 +214,34 @@ export const useEnrollmentFormSubmissions = (
           message: `Unable to verify slot availability: ${errorMessage}`,
         };
       }
-
       // Get the existing plan ID if it exists (prefer plan.id over planId)
-      const existingPlanId = getValues('plan.id') || getValues('planId') || undefined;
+      const existingPlanId = getValues('plan.id') || getValues('plan.id') || undefined;
 
-      // Create or update the plan
-      try {
-        const result = await createPlan({
-          ...data,
-          id: existingPlanId,
-          serviceType: serviceType || data.serviceType,
-          clientId,
-        });
+      const planInput = {
+        ...data,
+        id: existingPlanId,
+        serviceType: serviceType || data.serviceType,
+        clientId,
+      };
 
-        // Update form state with plan ID if successful
-        if (!result.error && result.planId) {
-          setValue('planId', result.planId);
-          setValue('plan.id', result.planId); // Also store in plan.id for consistency
-        } else if (result.error) {
-          console.error('Failed to create/update plan:', result.message);
-        }
+      const paymentInput = getValues('payment');
 
-        return result;
-      } catch (error) {
-        console.error('Error creating/updating plan:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        return {
-          error: true,
-          message: `Failed to save plan: ${errorMessage}`,
-        };
+      const result = await createPlanWithPayment(planInput, paymentInput);
+
+      // Update form state with plan ID if successful
+      if (!result.error) {
+        setValue('plan.id', result.planId);
+        setValue('plan.id', result.planId); // Also store in plan.id for consistency
+        setValue('payment.id', result.paymentId);
+        setValue('payment.id', result.paymentId);
+      } else if (result.error) {
+        console.error('Failed to create/update plan:', result.message);
       }
+
+      return {
+        error: false,
+        message: 'Plan details validated successfully',
+      };
     },
     [getValues, setValue]
   );
@@ -257,7 +249,7 @@ export const useEnrollmentFormSubmissions = (
   const handlePaymentStep = useCallback(async (): ActionReturnType => {
     const formValues = getValues();
 
-    if (!formValues.clientId || !formValues.planId)
+    if (!formValues.client.id || !formValues.plan.id)
       return {
         error: true,
         message: 'Payment information was not saved. Please try again later',
@@ -265,10 +257,10 @@ export const useEnrollmentFormSubmissions = (
 
     const paymentInput = {
       ...formValues.payment,
-      clientId: formValues.clientId,
+      clientId: formValues.client.id,
     };
 
-    return await createPayment(paymentInput, formValues.planId);
+    return await createPayment(paymentInput, formValues.plan.id);
   }, [getValues]);
 
   const submitStep = async (
@@ -285,7 +277,6 @@ export const useEnrollmentFormSubmissions = (
     abortControllerRef.current = new AbortController();
 
     const stepHandlers: Record<string, () => Promise<{ error: boolean; message: string }>> = {
-      service: () => handleServiceTypeStep(),
       personal: () => {
         return handlePersonalStep(stepData as PersonalInfoValues);
       },
@@ -322,7 +313,7 @@ export const useEnrollmentFormSubmissions = (
       //   position: 'top-right',
       // });
 
-      localStorage.setItem(LAST_ENROLLMENT_CLIENT_ID, JSON.stringify(getValues('clientId')));
+      localStorage.setItem(LAST_ENROLLMENT_CLIENT_ID, JSON.stringify(getValues('client.id')));
 
       if (isLastStep) {
         localStorage.removeItem(LAST_ENROLLMENT_CLIENT_ID);
@@ -352,10 +343,5 @@ export const useEnrollmentFormSubmissions = (
 
   return {
     submitStep,
-    handleServiceTypeStep,
-    handlePersonalStep,
-    handleLicenseStep,
-    handlePlanStep,
-    handlePaymentStep,
   };
 };

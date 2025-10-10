@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { createInsertSchema } from 'drizzle-zod';
 import { PlanTable, ServiceTypeEnum } from '@/db/schema/plan/columns';
 import { isTimeWithinOperatingHours } from '@/lib/utils/date-utils';
-import { personalInfoSchema } from '@/types/zod/client';
+import { clientSchema } from '@/types/zod/client';
 import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
 import { paymentSchema } from '@/types/zod/payment';
 
@@ -55,7 +55,7 @@ export const serviceTypeSchema = z.object({
 // Function to create admission form schema with operating hours validation
 export const createAdmissionFormSchema = (operatingHours?: { start: string; end: string }) => {
   return z.object({
-    personalInfo: personalInfoSchema,
+    client: clientSchema,
     learningLicense: learningLicenseSchema.optional(),
     drivingLicense: drivingLicenseSchema.optional(),
     plan: createPlanSchema(operatingHours),
@@ -68,19 +68,15 @@ export const admissionFormSchema = z.object({
   serviceType: z.enum(ServiceTypeEnum.enumValues, {
     required_error: 'Service type is required',
   }),
-  personalInfo: personalInfoSchema,
+  client: clientSchema,
   learningLicense: learningLicenseSchema.optional(),
   drivingLicense: drivingLicenseSchema.optional(),
   plan: planSchema,
   payment: paymentSchema,
-  // Store generated IDs in form state for better state management
-  clientId: z.string().optional(),
-  planId: z.string().optional(),
-  paymentId: z.string().optional(),
 });
 
 export type ServiceTypeValues = z.infer<typeof serviceTypeSchema>;
-export type PersonalInfoValues = z.infer<typeof personalInfoSchema>;
+export type PersonalInfoValues = z.infer<typeof clientSchema>;
 export type LearningLicenseValues = z.infer<typeof learningLicenseSchema>;
 export type DrivingLicenseValues = z.infer<typeof drivingLicenseSchema>;
 export type LicenseStepValues = LearningLicenseValues | DrivingLicenseValues;

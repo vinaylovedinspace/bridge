@@ -12,7 +12,7 @@ export const getMultistepRTOServiceStepValidationFields = (
   switch (step) {
     case 'personal':
       return generateFieldPaths<RTOServiceFormValues>({
-        prefix: 'personalInfo',
+        prefix: 'client',
         getValues,
       });
     case 'license':
@@ -28,7 +28,7 @@ export const getMultistepRTOServiceStepValidationFields = (
 // Helper function to map client data to personal info form values
 export const mapClientToPersonalInfo = (
   client: NonNullable<NonNullable<Awaited<ReturnType<typeof getRTOService>>>['client']>
-): RTOServiceFormValues['personalInfo'] => {
+): RTOServiceFormValues['client'] => {
   return {
     clientCode: client.clientCode,
     firstName: client.firstName,
@@ -92,7 +92,7 @@ export const getDefaultValuesForRTOServiceForm = (
     return {
       clientId: rtoService.clientId,
       serviceId: rtoService.id,
-      personalInfo: mapClientToPersonalInfo(rtoService.client),
+      client: mapClientToPersonalInfo(rtoService.client),
       service: mapRTOServiceToServiceInfo(rtoService),
       payment: rtoService.payment
         ? {
@@ -121,7 +121,7 @@ export const getDefaultValuesForRTOServiceForm = (
   }
 
   return {
-    personalInfo: {
+    client: {
       educationalQualification: 'GRADUATE',
       citizenStatus: 'BIRTH',
       isCurrentAddressSameAsPermanentAddress: false,

@@ -53,57 +53,57 @@ export const PersonalInfoStep = () => {
   // Watch for changes in the checkbox and address fields
   const isSameAddress = useWatch({
     control,
-    name: 'personalInfo.isCurrentAddressSameAsPermanentAddress',
+    name: 'client.isCurrentAddressSameAsPermanentAddress',
   });
 
   const currentAddressLine1 = useWatch({
     control,
-    name: 'personalInfo.addressLine1',
+    name: 'client.addressLine1',
   });
 
   const currentAddressLine2 = useWatch({
     control,
-    name: 'personalInfo.addressLine2',
+    name: 'client.addressLine2',
   });
 
   const currentAddressLine3 = useWatch({
     control,
-    name: 'personalInfo.addressLine3',
+    name: 'client.addressLine3',
   });
 
   const currentCity = useWatch({
     control,
-    name: 'personalInfo.city',
+    name: 'client.city',
   });
 
   const currentState = useWatch({
     control,
-    name: 'personalInfo.state',
+    name: 'client.state',
   });
 
   const currentPincode = useWatch({
     control,
-    name: 'personalInfo.pincode',
+    name: 'client.pincode',
   });
 
   // Update permanent address fields when checkbox is checked or current address fields change
   useEffect(() => {
     if (isSameAddress) {
-      setValue('personalInfo.permanentAddressLine1', currentAddressLine1);
-      setValue('personalInfo.permanentAddressLine2', currentAddressLine2);
-      setValue('personalInfo.permanentAddressLine3', currentAddressLine3);
-      setValue('personalInfo.permanentCity', currentCity);
-      setValue('personalInfo.permanentState', currentState);
-      setValue('personalInfo.permanentPincode', currentPincode);
+      setValue('client.permanentAddressLine1', currentAddressLine1);
+      setValue('client.permanentAddressLine2', currentAddressLine2);
+      setValue('client.permanentAddressLine3', currentAddressLine3);
+      setValue('client.permanentCity', currentCity);
+      setValue('client.permanentState', currentState);
+      setValue('client.permanentPincode', currentPincode);
 
       // Clear any validation errors from permanent address fields
       clearErrors([
-        'personalInfo.permanentAddressLine1',
-        'personalInfo.permanentAddressLine2',
-        'personalInfo.permanentAddressLine3',
-        'personalInfo.permanentCity',
-        'personalInfo.permanentState',
-        'personalInfo.permanentPincode',
+        'client.permanentAddressLine1',
+        'client.permanentAddressLine2',
+        'client.permanentAddressLine3',
+        'client.permanentCity',
+        'client.permanentState',
+        'client.permanentPincode',
       ]);
     }
   }, [
@@ -128,7 +128,7 @@ export const PersonalInfoStep = () => {
           <div className="grid grid-cols-3 gap-6 col-span-3 items-top justify-between">
             <FormField
               control={control}
-              name="personalInfo.aadhaarNumber"
+              name="client.aadhaarNumber"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel required>Aadhaar Number</FormLabel>
@@ -154,7 +154,7 @@ export const PersonalInfoStep = () => {
           </div>
           <FormField
             control={control}
-            name="personalInfo.firstName"
+            name="client.firstName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Full Name</FormLabel>
@@ -172,7 +172,7 @@ export const PersonalInfoStep = () => {
           />
           <FormField
             control={control}
-            name="personalInfo.middleName"
+            name="client.middleName"
             render={({ field }) => (
               <FormItem>
                 <FormControl>
@@ -184,7 +184,7 @@ export const PersonalInfoStep = () => {
           />
           <FormField
             control={control}
-            name="personalInfo.lastName"
+            name="client.lastName"
             render={({ field }) => (
               <FormItem>
                 <FormControl>
@@ -201,7 +201,7 @@ export const PersonalInfoStep = () => {
           />
           <FormField
             control={control}
-            name="personalInfo.gender"
+            name="client.gender"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Gender</FormLabel>
@@ -226,13 +226,13 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.birthDate"
+            name="client.birthDate"
             render={() => (
               <FormItem>
                 <FormLabel required>Date of Birth</FormLabel>
                 <FormControl>
                   <DatePicker
-                    name="personalInfo.birthDate"
+                    name="client.birthDate"
                     control={control}
                     placeholderText="Select date of birth"
                     maxDate={new Date()}
@@ -245,7 +245,7 @@ export const PersonalInfoStep = () => {
           />
           <FormField
             control={control}
-            name="personalInfo.bloodGroup"
+            name="client.bloodGroup"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Blood Group</FormLabel>
@@ -269,7 +269,7 @@ export const PersonalInfoStep = () => {
           />
           <FormField
             control={control}
-            name="personalInfo.educationalQualification"
+            name="client.educationalQualification"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Educational Qualification</FormLabel>
@@ -297,7 +297,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.guardianFirstName"
+            name="client.guardianFirstName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Guardian Name</FormLabel>
@@ -310,7 +310,7 @@ export const PersonalInfoStep = () => {
           />
           <FormField
             control={control}
-            name="personalInfo.guardianMiddleName"
+            name="client.guardianMiddleName"
             render={({ field }) => (
               <FormItem>
                 <FormControl>
@@ -322,7 +322,7 @@ export const PersonalInfoStep = () => {
           />
           <FormField
             control={control}
-            name="personalInfo.guardianLastName"
+            name="client.guardianLastName"
             render={({ field }) => (
               <FormItem>
                 <FormControl>
@@ -334,7 +334,7 @@ export const PersonalInfoStep = () => {
           />
           <FormField
             control={control}
-            name="personalInfo.guardianRelationship"
+            name="client.guardianRelationship"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Guardian Relationship</FormLabel>
@@ -364,7 +364,7 @@ export const PersonalInfoStep = () => {
         <div className="grid grid-cols-3 col-span-9 gap-6 items-end">
           <FormField
             control={control}
-            name="personalInfo.phoneNumber"
+            name="client.phoneNumber"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Phone Number</FormLabel>
@@ -391,7 +391,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.alternativePhoneNumber"
+            name="client.alternativePhoneNumber"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Alternative Phone</FormLabel>
@@ -409,7 +409,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.email"
+            name="client.email"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Email</FormLabel>
@@ -434,7 +434,7 @@ export const PersonalInfoStep = () => {
         <div className="grid grid-cols-3 col-span-9 gap-6 items-end">
           <FormField
             control={control}
-            name="personalInfo.addressLine1"
+            name="client.addressLine1"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>House/Door/Flat No</FormLabel>
@@ -453,7 +453,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.addressLine2"
+            name="client.addressLine2"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Street/Locality/Police Station</FormLabel>
@@ -472,7 +472,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.addressLine3"
+            name="client.addressLine3"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Location/Landmark</FormLabel>
@@ -491,7 +491,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.city"
+            name="client.city"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>City</FormLabel>
@@ -510,7 +510,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.state"
+            name="client.state"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>State</FormLabel>
@@ -519,7 +519,7 @@ export const PersonalInfoStep = () => {
                     value={field.value || ''}
                     onValueChange={field.onChange}
                     placeholder="Select state"
-                    error={methods.formState.errors.personalInfo?.state?.message}
+                    error={methods.formState.errors.client?.state?.message}
                   />
                 </FormControl>
                 <FormMessage />
@@ -529,7 +529,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.pincode"
+            name="client.pincode"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Pincode</FormLabel>
@@ -550,7 +550,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.isCurrentAddressSameAsPermanentAddress"
+            name="client.isCurrentAddressSameAsPermanentAddress"
             render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 col-span-3">
                 <FormControl>
@@ -565,7 +565,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.permanentAddressLine1"
+            name="client.permanentAddressLine1"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>House/Door/Flat No</FormLabel>
@@ -584,7 +584,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.permanentAddressLine2"
+            name="client.permanentAddressLine2"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Street/Locality/Police Station</FormLabel>
@@ -603,7 +603,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.permanentAddressLine3"
+            name="client.permanentAddressLine3"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Location/Landmark</FormLabel>
@@ -622,7 +622,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.permanentCity"
+            name="client.permanentCity"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>City</FormLabel>
@@ -641,7 +641,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.permanentState"
+            name="client.permanentState"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>State</FormLabel>
@@ -651,7 +651,7 @@ export const PersonalInfoStep = () => {
                     onValueChange={field.onChange}
                     placeholder="Select state"
                     disabled={isSameAddress === true}
-                    error={methods.formState.errors.personalInfo?.permanentState?.message}
+                    error={methods.formState.errors.client?.permanentState?.message}
                   />
                 </FormControl>
                 <FormMessage />
@@ -661,7 +661,7 @@ export const PersonalInfoStep = () => {
 
           <FormField
             control={control}
-            name="personalInfo.permanentPincode"
+            name="client.permanentPincode"
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>Pincode</FormLabel>
@@ -685,7 +685,7 @@ export const PersonalInfoStep = () => {
         <div className="grid grid-cols-3 col-span-9 gap-6 items-end">
           <FormField
             control={control}
-            name="personalInfo.citizenStatus"
+            name="client.citizenStatus"
             render={({ field }) => (
               <FormItem className="col-span-3">
                 <FormControl>

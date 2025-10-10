@@ -4,7 +4,7 @@ import { parseDate } from '@/lib/date-utils';
 
 export const transformClientToFormData = (client: NonNullable<Client>): ClientDetailFormValues => {
   return {
-    personalInfo: {
+    client: {
       firstName: client.firstName,
       lastName: client.lastName,
       aadhaarNumber: client.aadhaarNumber,

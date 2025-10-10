@@ -20,7 +20,7 @@ export const useUnsavedChanges = (
   const getCurrentStepValues = (stepKey: ClientDetailStepKey) => {
     switch (stepKey) {
       case 'personal':
-        return watchedValues.personalInfo;
+        return watchedValues.client;
       case 'license':
         return {
           learningLicense: watchedValues.learningLicense,
@@ -34,7 +34,7 @@ export const useUnsavedChanges = (
   const getOriginalStepValues = (stepKey: ClientDetailStepKey) => {
     switch (stepKey) {
       case 'personal':
-        return defaultValues.personalInfo;
+        return defaultValues.client;
       case 'license':
         return {
           learningLicense: defaultValues.learningLicense,
@@ -65,7 +65,7 @@ export const useUnsavedChanges = (
       case 'personal':
         reset({
           ...watchedValues,
-          personalInfo: defaultValues.personalInfo,
+          client: defaultValues.client,
         });
         break;
       case 'license':

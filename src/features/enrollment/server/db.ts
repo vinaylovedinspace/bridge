@@ -184,7 +184,7 @@ export const createPlanInDB = async (
 
 export const updatePlanInDB = async (
   planId: string,
-  data: Partial<Omit<typeof PlanTable.$inferInsert, 'planCode' | 'clientId'>>
+  data: Partial<Omit<typeof PlanTable.$inferInsert, 'planCode' | 'client.id'>>
 ) => {
   // Validate if present
   if (data.numberOfSessions !== undefined && data.numberOfSessions <= 0) {
@@ -264,6 +264,63 @@ export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert, 
       payment,
       isExistingPayment: false,
       paymentId: payment.id,
+    };
+  });
+};
+
+export const upsertPlanAndPaymentInDB = async (
+  planData: typeof PlanTable.$inferInsert,
+  paymentData: {
+    totalAmount: number;
+    licenseServiceFee: number;
+  }
+) => {
+  return await db.transaction(async (tx) => {
+    let plan: typeof PlanTable.$inferSelect;
+
+    // Upsert plan
+    if (planData.id) {
+      // Update existing plan
+      const existingPlan = await tx.query.PlanTable.findFirst({
+        where: eq(PlanTable.id, planData.id),
+      });
+
+      if (!existingPlan) {
+        throw new Error('Plan not found');
+      }
+
+      [plan] = await tx
+        .update(PlanTable)
+        .set({
+          ...planData,
+          updatedAt: new Date(),
+        })
+        .where(eq(PlanTable.id, planData.id))
+        .returning();
+    } else {
+      // Create new payment
+
+      const [payment] = await tx
+        .insert(PaymentTable)
+        .values({
+          branchId: planData.branchId,
+          clientId: planData.clientId,
+          totalAmount: paymentData.totalAmount,
+          licenseServiceFee: paymentData.licenseServiceFee,
+        })
+        .returning();
+      // Create new plan
+      [plan] = await tx
+        .insert(PlanTable)
+        .values({
+          ...planData,
+          paymentId: payment.id,
+        })
+        .returning();
+    }
+
+    return {
+      plan,
     };
   });
 };

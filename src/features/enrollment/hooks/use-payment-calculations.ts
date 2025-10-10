@@ -26,7 +26,7 @@ type InstallmentPaymentInfo = {
 
 export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculationsProps) => {
   const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
-  const { watch, setValue } = useFormContext<AdmissionFormValues>();
+  const { watch } = useFormContext<AdmissionFormValues>();
   const plan = watch('plan');
   const discount = watch('payment.discount');
   const paymentType = watch('payment.paymentType');
@@ -35,6 +35,7 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
   const serviceType = watch('serviceType');
   const selectedLicenseClasses = watch('learningLicense.class') || [];
   const excludeLearningLicenseFee = watch('learningLicense.excludeLearningLicenseFee') ?? false;
+  const licenseServiceFee = watch('payment.licenseServiceFee');
 
   // Get license fee breakdown for display
   const licenseFeeBreakdown =
@@ -45,11 +46,6 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
           serviceCharge: branchServiceCharge,
         })
       : null;
-
-  const licenseServiceFee = licenseFeeBreakdown?.total ?? 0;
-  useEffect(() => {
-    setValue('payment.licenseServiceFee', licenseServiceFee);
-  }, [licenseServiceFee, setValue]);
 
   const { data: vehicle } = useVehicle(plan?.vehicleId || '');
 

@@ -110,30 +110,11 @@ export const handleSessionGeneration = async (
     numberOfSessions: number;
     vehicleId: string;
   },
-  isExistingPlan: boolean,
   planTimingChanged: boolean
 ): Promise<string> => {
-  // Validate inputs
-  if (!clientId) {
-    throw new Error('Client ID is required for session generation');
-  }
-
-  if (!planId) {
-    throw new Error('Plan ID is required for session generation');
-  }
-
-  if (!planData.vehicleId) {
-    throw new Error('Vehicle ID is required for session generation');
-  }
-
-  if (planData.numberOfSessions <= 0) {
-    throw new Error('Number of sessions must be greater than 0');
-  }
-
   const existingSessions = await getSessionsByClientId(clientId);
 
-  const shouldGenerateSessions =
-    !isExistingPlan || existingSessions.length === 0 || (isExistingPlan && planTimingChanged);
+  const shouldGenerateSessions = !planId || existingSessions.length === 0 || planTimingChanged;
 
   if (!shouldGenerateSessions) {
     return '';
@@ -180,7 +161,7 @@ export const handleSessionGeneration = async (
   }
 
   // Update or create sessions
-  if (isExistingPlan && planTimingChanged && existingSessions.length > 0) {
+  if (planId && planTimingChanged && existingSessions.length > 0) {
     const updateResult = await updateScheduledSessionsForClient(
       clientId,
       sessionsToGenerate.map((s) => ({

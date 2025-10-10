@@ -8,7 +8,7 @@ import {
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
-export const personalInfoSchema = createInsertSchema(ClientTable, {
+export const clientSchema = createInsertSchema(ClientTable, {
   aadhaarNumber: z
     .string()
     .regex(/^[2-9]\d{3}\s?\d{4}\s?\d{4}$/, 'Aadhaar must be 12 digits starting with 2-9')
