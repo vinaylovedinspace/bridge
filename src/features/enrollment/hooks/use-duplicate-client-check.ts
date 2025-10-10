@@ -7,7 +7,7 @@ import {
   mapDrivingLicense,
 } from '@/features/enrollment/lib/utils';
 import { AdmissionFormValues } from '@/features/enrollment/types';
-import { checkPhoneNumberDuplicate, checkAadhaarNumberDuplicate } from '@/server/actions/clients';
+import { checkPhoneNumberDuplicate, checkAadhaarNumberDuplicate } from '@/server/action/clients';
 
 type ExistingClient = {
   id: string;

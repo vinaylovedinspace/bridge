@@ -5,7 +5,7 @@ import {
   getEligibleStudentsForPermanentLicense,
   getEligibleStudentsForLearnersLicense,
   markFormsAsPrinted,
-} from '@/server/actions/forms';
+} from '@/server/action/forms';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 import { Users, Calendar, CheckCircle2, Printer } from 'lucide-react';

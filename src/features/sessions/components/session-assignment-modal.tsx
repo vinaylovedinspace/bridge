@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Search, User } from 'lucide-react';
-import { getClientsWithUnassignedSessions } from '@/server/actions/clients';
+import { getClientsWithUnassignedSessions } from '@/server/action/clients';
 import type { ClientWithUnassignedSessions } from '@/server/db/client';
 
 interface SessionAssignmentModalProps {

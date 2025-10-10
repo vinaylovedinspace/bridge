@@ -1,11 +1,11 @@
 import { PlanTable } from '@/db/schema';
 import { generateSessionsFromPlan } from '@/lib/sessions';
-import { getBranchConfig } from '@/server/actions/branch';
+import { getBranchConfig } from '@/server/action/branch';
 import {
   createSessions,
   getSessionsByClientId,
   updateScheduledSessionsForClient,
-} from '@/server/actions/sessions';
+} from '@/server/action/sessions';
 import { getClientForSessionsInDB } from '../server/db';
 import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 

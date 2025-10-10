@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { UseFormClearErrors, UseFormSetValue } from 'react-hook-form';
 
 import { mapClientToPersonalInfo, mapDrivingLicense } from '@/features/enrollment/lib/utils';
-import { checkPhoneNumberDuplicate, checkAadhaarNumberDuplicate } from '@/server/actions/clients';
+import { checkPhoneNumberDuplicate, checkAadhaarNumberDuplicate } from '@/server/action/clients';
 import { RTOServiceFormValues } from '../types';
 
 type ExistingClient = {

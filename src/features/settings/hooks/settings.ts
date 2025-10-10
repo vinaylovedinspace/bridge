@@ -1,7 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
-import type { BranchConfig } from '@/server/actions/branch';
+import type { BranchConfig } from '@/server/action/branch';
 const fetcher = async (url: string): Promise<BranchConfig> => {
   const response = await fetch(url);
   if (!response.ok) {

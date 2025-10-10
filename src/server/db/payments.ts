@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { ClientTable, PaymentTable, FullPaymentTable } from '@/db/schema';
 import { eq, and, desc, or, ilike } from 'drizzle-orm';
-import { getBranchConfig } from '@/server/actions/branch';
+import { getBranchConfig } from '@/server/action/branch';
 import { PaymentStatus } from '@/db/schema/payment/columns';
 
 const _getPayments = async (branchId: string, name?: string, paymentStatus?: PaymentStatus) => {

@@ -9,7 +9,7 @@ import {
   type FilterType,
 } from '@/server/db/forms';
 import { auth } from '@clerk/nextjs/server';
-import { getBranchConfig } from '@/server/actions/branch';
+import { getBranchConfig } from '@/server/action/branch';
 
 export const getClientsForForms = async () => {
   return getClients();

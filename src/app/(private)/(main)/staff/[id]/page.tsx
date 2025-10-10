@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { TypographyH4 } from '@/components/ui/typography';
 import { StaffForm } from '@/features/staff/components/form';
-import { getStaffMember } from '@/server/actions/staff';
+import { getStaffMember } from '@/server/action/staff';
 import { auth } from '@clerk/nextjs/server';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';

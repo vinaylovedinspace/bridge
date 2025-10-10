@@ -1,4 +1,4 @@
-import { getBranchConfig } from '@/server/actions/branch';
+import { getBranchConfig } from '@/server/action/branch';
 import { NextResponse } from 'next/server';
 
 export async function GET() {

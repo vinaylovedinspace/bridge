@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { formPrints, ClientTable } from '@/db/schema';
 import { and, eq, desc, inArray } from 'drizzle-orm';
-import { getBranchConfig } from '@/server/actions/branch';
+import { getBranchConfig } from '@/server/action/branch';
 
 export type FilterType = 'new-only' | 'all-eligible' | 'recently-printed';
 

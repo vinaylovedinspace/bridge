@@ -1,6 +1,6 @@
 'use server';
 
-import { getBranchConfig } from '@/server/actions/branch';
+import { getBranchConfig } from '@/server/action/branch';
 import {
   getAdmissionStatistics as getAdmissionStatisticsFromDB,
   getLicenceWorkCount as getLicenceWorkCountFromDB,

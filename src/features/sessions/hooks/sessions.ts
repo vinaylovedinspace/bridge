@@ -1,6 +1,6 @@
 'use client';
 
-import { getSessions } from '@/server/actions/sessions';
+import { getSessions } from '@/server/action/sessions';
 import useSWR from 'swr';
 
 export function useSessions(vehicleId?: string) {

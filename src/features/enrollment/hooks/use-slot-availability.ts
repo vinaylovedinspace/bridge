@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { format } from 'date-fns';
-import { getSessions } from '@/server/actions/sessions';
+import { getSessions } from '@/server/action/sessions';
 import { generateTimeSlots, checkTimeSlotConflict } from '@/lib/sessions';
 import { useAtomValue } from 'jotai';
 import { branchOperatingHoursAtom } from '@/lib/atoms/branch-config';
