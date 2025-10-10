@@ -152,7 +152,7 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
     <>
       <Separator className="mb-4 mt-0 col-span-9 col-start-4" />
 
-      <div className="col-span-9 col-start-4">
+      <div className="flex flex-col justify-start col-span-9 col-start-4">
         <FormItem className="space-y-4">
           <FormLabel>Payment Mode</FormLabel>
           <RadioGroup

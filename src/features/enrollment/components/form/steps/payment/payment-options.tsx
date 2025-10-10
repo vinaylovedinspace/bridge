@@ -128,8 +128,6 @@ export const PaymentOptions = ({ existingPayment }: PaymentCheckboxProps) => {
           />
         </div>
       )}
-
-      {/* TODO: Implement installment date selection with new schema */}
     </>
   );
 };

@@ -24,7 +24,6 @@ export const useCreateEnrollmentForm = (
   setValue: UseFormSetValue<AdmissionFormValues>
 ) => {
   const router = useRouter();
-  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handlePersonalStep = useCallback(
     async (data: PersonalInfoValues): ActionReturnType => {
@@ -78,7 +77,6 @@ export const useCreateEnrollmentForm = (
 
           // If learning license fails, return the learning result
           if (learningResult.error) {
-            console.error('Failed to create learning license:', learningResult.message);
             return learningResult;
           }
         }
@@ -89,7 +87,6 @@ export const useCreateEnrollmentForm = (
 
           // If driving license fails, return its error
           if (drivingResult.error) {
-            console.error('Failed to create driving license:', drivingResult.message);
             return drivingResult;
           }
         }
@@ -131,7 +128,6 @@ export const useCreateEnrollmentForm = (
           setValue('plan.id', result.planId);
           setValue('payment.id', result.paymentId);
         } else {
-          console.error('Failed to create/update plan:', result.message);
           return {
             error: true,
             message: 'Failed to create/update plan',
@@ -169,10 +165,10 @@ export const useCreateEnrollmentForm = (
     stepData: unknown,
     isLastStep: boolean
   ): Promise<boolean> => {
-    // Create new abort controller for this submission
-    abortControllerRef.current = new AbortController();
-
     const stepHandlers: Record<string, () => Promise<{ error: boolean; message: string }>> = {
+      service: () => {
+        return Promise.resolve({ error: false, message: 'Service details validated successfully' });
+      },
       personal: () => {
         return handlePersonalStep(stepData as PersonalInfoValues);
       },
@@ -192,13 +188,10 @@ export const useCreateEnrollmentForm = (
 
     const handler = stepHandlers[stepKey];
 
+    console.log(handler);
+
     try {
       const result = await handler();
-
-      // Check if request was aborted
-      if (abortControllerRef.current?.signal.aborted) {
-        return false;
-      }
 
       if (result?.error) {
         toast.error(result.message || 'Failed to save information');
@@ -219,16 +212,7 @@ export const useCreateEnrollmentForm = (
       }
 
       return true;
-    } catch (error) {
-      // Check if error was due to abort
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Request was aborted');
-        return false;
-      }
-
-      console.error('Error submitting step:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast.error(`Failed to submit: ${errorMessage}`);
+    } catch {
       return false;
     }
   };

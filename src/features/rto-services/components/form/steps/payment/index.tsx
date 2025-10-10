@@ -11,7 +11,7 @@ type PaymentStepProps = {
 
 export const PaymentStep = ({ existingPayment }: PaymentStepProps) => {
   return (
-    <Card className="grid grid-cols-12 col-span-8 align-center px-6 py-10 h-full">
+    <Card className="grid grid-cols-12 col-span-8 align-center px-6 py-10 h-fit">
       <TypographyH5 className="col-span-3">Payment Info</TypographyH5>
       <PaymentOptions existingPayment={existingPayment} />
       <PaymentModeSelector />
