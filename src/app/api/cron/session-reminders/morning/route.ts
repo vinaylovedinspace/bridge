@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { env } from '@/env';
 import { SessionTable } from '@/db/schema/sessions/columns';
 import { eq, and, gte } from 'drizzle-orm';
-import { dateToString } from '@/lib/date-time-utils';
+import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 import {
   sendWhatsAppMessage,
   generateSessionReminderMessage,
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const todayDateString = dateToString(new Date());
+    const todayDateString = formatDateToYYYYMMDD(new Date());
 
     // Get all scheduled sessions for today from 12:00 PM onwards
     const sessions = await db.query.SessionTable.findMany({

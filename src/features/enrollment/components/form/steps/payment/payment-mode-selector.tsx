@@ -10,7 +10,7 @@ import { useFormContext } from 'react-hook-form';
 import { AdmissionFormValues } from '@/features/enrollment/types';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle, MessageSquare, Phone } from 'lucide-react';
-import { createPayment, createPaymentLinkAction } from '@/features/enrollment/server/action';
+import { updatePayment, createPaymentLinkAction } from '@/features/enrollment/server/action';
 import { useRouter } from 'next/navigation';
 import { Enrollment } from '@/server/db/plan';
 
@@ -61,7 +61,7 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
         clientId: formValues.client.id,
         planId: formValues.plan.id,
       };
-      const result = await createPayment(paymentInput, formValues.plan.id);
+      const result = await updatePayment(paymentInput);
 
       if (!result.error) {
         toast.success(result.message || 'Payment processed successfully');

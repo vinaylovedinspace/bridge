@@ -14,7 +14,7 @@ import { getNextClientCode } from '@/db/utils/client-code';
 import { rtoServicesFormSchema, rtoServicesFormSchemaWithOptionalPayment } from '../types';
 import { addRTOService as addRTOServiceInDB } from './db';
 import { insertClient, updateClient } from './db';
-import { dateToString } from '@/lib/date-time-utils';
+import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 import { getRTOServiceCharges } from '@/lib/constants/rto-fees';
 import { paymentSchema } from '@/types/zod/payment';
 import { calculateRTOPaymentBreakdown } from '@/lib/payment/calculate';
@@ -52,7 +52,7 @@ export async function saveRTOService(
     const clientInformation = {
       ...data.client,
       clientCode,
-      birthDate: dateToString(data.client.birthDate),
+      birthDate: formatDateToYYYYMMDD(data.client.birthDate),
       branchId,
       tenantId,
     };
@@ -198,7 +198,7 @@ export const createPayment = async (
     // 5. Create or update payment
     const { paymentId } = await upsertPaymentInDB(data, serviceId);
 
-    const currentDate = dateToString(new Date());
+    const currentDate = formatDateToYYYYMMDD(new Date());
 
     if (
       IMMEDIATE_PAYMENT_MODES.includes(data.paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])
@@ -264,7 +264,7 @@ export const saveRTOServiceWithPayment = async (
     const clientInformation = {
       ...data.client,
       clientCode,
-      birthDate: dateToString(data.client.birthDate),
+      birthDate: formatDateToYYYYMMDD(data.client.birthDate),
       branchId,
       tenantId,
     };
@@ -310,7 +310,7 @@ export const saveRTOServiceWithPayment = async (
     );
 
     // Process immediate payment if needed
-    const currentDate = dateToString(new Date());
+    const currentDate = formatDateToYYYYMMDD(new Date());
     const paymentMode = paymentValidation.data.paymentMode;
 
     if (IMMEDIATE_PAYMENT_MODES.includes(paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])) {

@@ -6,35 +6,24 @@ import {
   getSessionsByClientId,
   updateScheduledSessionsForClient,
 } from '@/server/actions/sessions';
-import {
-  createPlanInDB,
-  updatePlanInDB,
-  getClientForSessionsInDB,
-  getVehicleRentAmount,
-} from '../server/db';
-import { formatTimeString, formatDateString } from '@/lib/date-time-utils';
-
-/**
- * Extract time string (HH:MM) from Date object
- * @deprecated Use formatTimeString from @/lib/utils/date-time instead
- */
-export const extractTimeString = formatTimeString;
+import { getClientForSessionsInDB } from '../server/db';
+import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 
 /**
  * Check if plan configuration has changed
  */
 export const hasPlanChanged = (
-  existingPlan: typeof PlanTable.$inferSelect,
-  newDate: Date,
+  existingPlan: typeof PlanTable.$inferSelect | null,
+  newDate: Date | string,
   newTime: string,
   newData: { vehicleId: string; numberOfSessions: number }
 ): boolean => {
-  if (!existingPlan.joiningDate || !existingPlan.joiningTime) {
+  if (!existingPlan?.joiningDate || !existingPlan.joiningTime) {
     return false;
   }
 
-  const existingDate = formatDateString(new Date(existingPlan.joiningDate));
-  const newDateStr = formatDateString(newDate);
+  const existingDate = formatDateToYYYYMMDD(new Date(existingPlan.joiningDate));
+  const newDateStr = typeof newDate === 'string' ? newDate : formatDateToYYYYMMDD(newDate);
 
   return (
     existingDate !== newDateStr ||
@@ -42,58 +31,6 @@ export const hasPlanChanged = (
     existingPlan.vehicleId !== newData.vehicleId ||
     existingPlan.numberOfSessions !== newData.numberOfSessions
   );
-};
-
-/**
- * Upsert plan (create or update)
- */
-export const upsertPlan = async (
-  existingPlan: typeof PlanTable.$inferSelect | null,
-  providedPlanId: string | undefined,
-  planData: Omit<
-    typeof PlanTable.$inferInsert,
-    'id' | 'planCode' | 'createdAt' | 'updatedAt' | 'vehicleRentAmount'
-  >,
-  tenantId: string
-): Promise<{ planId: string; isExisting: boolean }> => {
-  // Validate plan data before upsert
-  if (!planData.clientId) {
-    throw new Error('Client ID is required for plan');
-  }
-
-  if (!planData.vehicleId) {
-    throw new Error('Vehicle ID is required for plan');
-  }
-
-  if (!planData.joiningDate) {
-    throw new Error('Joining date is required for plan');
-  }
-
-  if (!planData.joiningTime) {
-    throw new Error('Joining time is required for plan');
-  }
-
-  const vehicle = await getVehicleRentAmount(planData.vehicleId);
-
-  if (!vehicle) {
-    throw new Error('Vehicle not found');
-  }
-
-  const planDataWithVehicleRent = {
-    ...planData,
-    vehicleRentAmount: vehicle.rent,
-  };
-
-  // Update existing plan
-  if (providedPlanId || existingPlan) {
-    const planIdToUpdate = providedPlanId || existingPlan!.id;
-    const result = await updatePlanInDB(planIdToUpdate, planDataWithVehicleRent);
-    return { planId: result.planId, isExisting: true };
-  }
-
-  // Create new plan
-  const result = await createPlanInDB(planDataWithVehicleRent, tenantId);
-  return { planId: result.planId, isExisting: false };
 };
 
 /**

@@ -10,7 +10,6 @@ import { Enrollment } from '@/server/db/plan';
 import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
 import { useAtomValue } from 'jotai';
 import { calculateLicenseFees } from '@/lib/constants/rto-fees';
-import { useEffect } from 'react';
 
 type UsePaymentCalculationsProps = {
   existingPayment: NonNullable<Enrollment>['payment'];

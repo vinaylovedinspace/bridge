@@ -33,39 +33,6 @@ const _getPayments = async (branchId: string, name?: string, paymentStatus?: Pay
   return payments;
 };
 
-const _getPaymentsByClients = async (
-  branchId: string,
-  name?: string,
-  paymentStatus?: PaymentStatus
-) => {
-  const conditions = [eq(PaymentTable.branchId, branchId)];
-
-  if (name) {
-    conditions.push(
-      or(ilike(ClientTable.firstName, `%${name}%`), ilike(ClientTable.lastName, `%${name}%`))!
-    );
-  }
-
-  if (paymentStatus) {
-    conditions.push(eq(PaymentTable.paymentStatus, paymentStatus));
-  }
-
-  // Get all payments with client information and latest transaction details
-  const payments = await db.query.PaymentTable.findMany({
-    where: and(...conditions),
-    orderBy: desc(PaymentTable.createdAt),
-    with: {
-      client: true,
-      fullPayment: true,
-      installmentPayments: true,
-      plan: true,
-      rtoService: true,
-    },
-  });
-
-  return payments;
-};
-
 export const getPayments = async (name?: string, paymentStatus?: PaymentStatus) => {
   const { id: branchId } = await getBranchConfig();
 

@@ -9,12 +9,8 @@ import {
 import { LearningLicenseTable } from '@/db/schema/learning-licenses/columns';
 import { DrivingLicenseTable } from '@/db/schema/driving-licenses/columns';
 import { eq, and, isNull } from 'drizzle-orm';
-import { getNextClientCode } from '@/db/utils/client-code';
-import { getNextPlanCode } from '@/db/utils/plan-code';
 
-export const upsertClientInDB = async (
-  data: Omit<typeof ClientTable.$inferInsert, 'clientCode'> & { clientCode?: string; id?: string }
-) => {
+export const upsertClientInDB = async (data: typeof ClientTable.$inferInsert) => {
   // If client ID is provided (edit mode), update the existing client by ID
   if (data.id) {
     const [client] = await db
@@ -27,49 +23,28 @@ export const upsertClientInDB = async (
       .returning();
 
     return {
-      isExistingClient: true,
       clientId: client.id,
     };
   }
 
-  // Create a variable to track if this was an update operation
-  let isExistingClient = false;
-
-  // Generate client code if not provided
-  const clientCode = data.clientCode || (await getNextClientCode(data.tenantId));
-
-  // Use onConflictDoUpdate to handle the case where a client with the same phone number and tenant already exists
   const [client] = await db
     .insert(ClientTable)
-    .values({ ...data, clientCode })
+    .values(data)
     .onConflictDoUpdate({
       target: [ClientTable.phoneNumber, ClientTable.tenantId],
       set: {
         ...data,
-        clientCode,
         updatedAt: new Date(),
       },
     })
     .returning();
 
-  // Check if this was an update by comparing createdAt and updatedAt
-  // If they're different by more than a few seconds, it was an update
-  if (client.createdAt && client.updatedAt) {
-    const timeDiff = Math.abs(client.updatedAt.getTime() - client.createdAt.getTime());
-    isExistingClient = timeDiff > 1000; // More than 1 second difference
-  }
-
   return {
-    isExistingClient,
     clientId: client.id,
   };
 };
 
 export const upsertLearningLicenseInDB = async (data: typeof LearningLicenseTable.$inferInsert) => {
-  // Create a variable to track if this was an update operation
-  let isExistingLicense = false;
-
-  // Use onConflictDoUpdate to handle the case where a license for this client already exists
   const [license] = await db
     .insert(LearningLicenseTable)
     .values(data)
@@ -82,24 +57,12 @@ export const upsertLearningLicenseInDB = async (data: typeof LearningLicenseTabl
     })
     .returning();
 
-  // Check if this was an update by comparing createdAt and updatedAt
-  // If they're different by more than a few seconds, it was an update
-  if (license.createdAt && license.updatedAt) {
-    const timeDiff = Math.abs(license.updatedAt.getTime() - license.createdAt.getTime());
-    isExistingLicense = timeDiff > 1000; // More than 1 second difference
-  }
-
   return {
     license,
-    isExistingLicense,
   };
 };
 
 export const upsertDrivingLicenseInDB = async (data: typeof DrivingLicenseTable.$inferInsert) => {
-  // Create a variable to track if this was an update operation
-  let isExistingLicense = false;
-
-  // Use onConflictDoUpdate to handle the case where a license for this client already exists
   const [license] = await db
     .insert(DrivingLicenseTable)
     .values(data)
@@ -112,104 +75,22 @@ export const upsertDrivingLicenseInDB = async (data: typeof DrivingLicenseTable.
     })
     .returning();
 
-  // Check if this was an update by comparing createdAt and updatedAt
-  // If they're different by more than a few seconds, it was an update
-  if (license.createdAt && license.updatedAt) {
-    const timeDiff = Math.abs(license.updatedAt.getTime() - license.createdAt.getTime());
-    isExistingLicense = timeDiff > 1000; // More than 1 second difference
-  }
-
   return {
     license,
-    isExistingLicense,
   };
 };
 
-export const createPlanInDB = async (
-  data: Omit<typeof PlanTable.$inferInsert, 'planCode'> & { planCode?: string },
-  tenantId: string
-) => {
-  // Validate plan data
-  if (data.numberOfSessions <= 0) {
-    throw new Error('Number of sessions must be greater than 0');
-  }
-
-  if (data.numberOfSessions > 100) {
-    throw new Error('Number of sessions cannot exceed 100');
-  }
-
-  if (data.sessionDurationInMinutes <= 0) {
-    throw new Error('Session duration must be greater than 0');
-  }
-
-  if (data.sessionDurationInMinutes > 240) {
-    throw new Error('Session duration cannot exceed 240 minutes');
-  }
-
-  if (!data.vehicleId) {
-    throw new Error('Vehicle ID is required');
-  }
-
-  if (!data.clientId) {
-    throw new Error('Client ID is required');
-  }
-
-  if (!data.branchId) {
-    throw new Error('Branch ID is required');
-  }
-
-  // Validate date is not too far in the past (allow same day)
-  const joiningDate = new Date(data.joiningDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  joiningDate.setHours(0, 0, 0, 0);
-
-  if (joiningDate < today) {
-    throw new Error('Joining date cannot be in the past');
-  }
-
-  // Generate plan code if not provided
-  const planCode = data.planCode || (await getNextPlanCode(tenantId));
-
-  const [plan] = await db
-    .insert(PlanTable)
-    .values({ ...data, planCode })
-    .returning();
+export const createPlanInDB = async (data: typeof PlanTable.$inferInsert) => {
+  const [plan] = await db.insert(PlanTable).values(data).returning();
 
   return {
     plan,
-    planId: plan.id,
   };
 };
 
-export const updatePlanInDB = async (
-  planId: string,
-  data: Partial<Omit<typeof PlanTable.$inferInsert, 'planCode' | 'client.id'>>
-) => {
-  // Validate if present
-  if (data.numberOfSessions !== undefined && data.numberOfSessions <= 0) {
-    throw new Error('Number of sessions must be greater than 0');
-  }
-
-  if (data.numberOfSessions !== undefined && data.numberOfSessions > 100) {
-    throw new Error('Number of sessions cannot exceed 100');
-  }
-
-  if (data.sessionDurationInMinutes !== undefined && data.sessionDurationInMinutes <= 0) {
-    throw new Error('Session duration must be greater than 0');
-  }
-
-  if (data.sessionDurationInMinutes !== undefined && data.sessionDurationInMinutes > 240) {
-    throw new Error('Session duration cannot exceed 240 minutes');
-  }
-
-  // Check if plan exists before updating
-  const existingPlan = await db.query.PlanTable.findFirst({
-    where: eq(PlanTable.id, planId),
-  });
-
-  if (!existingPlan) {
-    throw new Error('Plan not found');
+export const updatePlanInDB = async (data: Partial<typeof PlanTable.$inferInsert>) => {
+  if (!data.id) {
+    throw new Error('Plan ID is required');
   }
 
   const [plan] = await db
@@ -218,54 +99,32 @@ export const updatePlanInDB = async (
       ...data,
       updatedAt: new Date(),
     })
-    .where(eq(PlanTable.id, planId))
+    .where(eq(PlanTable.id, data.id))
     .returning();
 
   return {
     plan,
-    planId: plan.id,
   };
 };
 
-export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert, planId: string) => {
-  return await db.transaction(async (tx) => {
-    // Fetch plan with associated payment
-    const planWithPayment = await tx.query.PlanTable.findFirst({
-      where: eq(PlanTable.id, planId),
-      with: { payment: true },
-    });
-
-    const existingPayment = planWithPayment?.payment;
-
-    // Update existing payment
-    if (existingPayment) {
-      const [updated] = await tx
-        .update(PaymentTable)
-        .set({ ...data, updatedAt: new Date() })
-        .where(eq(PaymentTable.id, existingPayment.id))
-        .returning();
-
-      return {
-        payment: updated,
-        isExistingPayment: true,
-        paymentId: updated.id,
-      };
-    }
-
-    // Create new payment and link to plan
-    const [payment] = await tx.insert(PaymentTable).values(data).returning();
-
-    await tx
-      .update(PlanTable)
-      .set({ paymentId: payment.id, updatedAt: new Date() })
-      .where(eq(PlanTable.id, planId));
+export const updatePaymentInDB = async (data: typeof PaymentTable.$inferInsert) => {
+  if (data.id) {
+    const [updated] = await db
+      .update(PaymentTable)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(PaymentTable.id, data.id))
+      .returning();
 
     return {
-      payment,
-      isExistingPayment: false,
-      paymentId: payment.id,
+      payment: updated,
+      isExistingPayment: true,
+      paymentId: updated.id,
     };
-  });
+  }
+
+  return {
+    payment: null,
+  };
 };
 
 export const upsertPlanAndPaymentInDB = async (
@@ -297,9 +156,20 @@ export const upsertPlanAndPaymentInDB = async (
         })
         .where(eq(PlanTable.id, planData.id))
         .returning();
-    } else {
-      // Create new payment
 
+      if (plan.paymentId) {
+        await db
+          .update(PaymentTable)
+          .set({
+            branchId: planData.branchId,
+            clientId: planData.clientId,
+            totalAmount: paymentData.totalAmount,
+            licenseServiceFee: paymentData.licenseServiceFee,
+          })
+          .where(eq(PaymentTable.id, plan.paymentId));
+      }
+    } else {
+      // Create new Payment
       const [payment] = await tx
         .insert(PaymentTable)
         .values({
@@ -323,6 +193,24 @@ export const upsertPlanAndPaymentInDB = async (
       plan,
     };
   });
+};
+
+export const updatePlanById = async (
+  planId: string,
+  data: Partial<typeof PlanTable.$inferInsert>
+) => {
+  const [plan] = await db
+    .update(PlanTable)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(PlanTable.id, planId))
+    .returning();
+
+  return {
+    plan,
+  };
 };
 
 export const getClientById = async (clientId: string) => {

@@ -3,6 +3,8 @@
  * Handles dates as YYYY-MM-DD strings to avoid timezone conversion issues
  */
 
+import { format } from 'date-fns';
+
 // ============================================================================
 // Date Formatting
 // ============================================================================
@@ -11,44 +13,16 @@
  * Format time from Date object to HH:MM string
  */
 export const formatTimeString = (date: Date): string => {
-  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+  return format(date, 'HH:mm');
 };
 
 /**
  * Format date to YYYY-MM-DD string using toISOString
  */
-export const formatDateString = (date: Date): string => {
-  return date.toISOString().split('T')[0];
+export const formatDateToYYYYMMDD = (date: Date | null): string => {
+  if (!date) return '';
+  return format(date, 'yyyy-MM-dd');
 };
-
-/**
- * Convert JavaScript Date to YYYY-MM-DD string (local date, no timezone conversion)
- */
-export function dateToString(date: Date | null | undefined): string {
-  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
-    throw new Error('Invalid date provided to dateToString');
-  }
-
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-/**
- * Formats a Date object as a YYYY-MM-DD string without timezone information
- * @param date The Date object to format
- * @returns A string in YYYY-MM-DD format, or null if the input is null
- */
-export function formatDateToYYYYMMDD(date: Date | null): string | null {
-  if (!date) return null;
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}
 
 /**
  * Format date for display (e.g., "July 19, 2025")
@@ -142,7 +116,7 @@ export function isValidDateString(dateString: string): boolean {
   if (!dateString.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
 
   const date = stringToDate(dateString);
-  return dateToString(date) === dateString; // Round-trip validation
+  return formatDateToYYYYMMDD(date) === dateString; // Round-trip validation
 }
 
 /**
@@ -164,7 +138,7 @@ export function isNonWorkingDay(date: Date, workingDays: number[]): boolean {
  * Get today's date as YYYY-MM-DD string
  */
 export function getTodayString(): string {
-  return dateToString(new Date());
+  return formatDateToYYYYMMDD(new Date());
 }
 
 /**
@@ -197,6 +171,15 @@ export function createDateFilter(
 // ============================================================================
 // Time Utilities
 // ============================================================================
+
+/**
+ * Normalize time string to HH:MM format (removes seconds if present)
+ * @param timeString Time string in HH:MM or HH:MM:SS format
+ * @returns Time string in HH:MM format
+ */
+export function normalizeTimeString(timeString: string): string {
+  return timeString.substring(0, 5);
+}
 
 /**
  * Parses a time string in HH:MM format to minutes since midnight

@@ -113,6 +113,7 @@ export const mapLearningLicense = (
     expiryDate: parseDateStringToDateObject(learningLicense.expiryDate),
     applicationNumber: learningLicense.applicationNumber,
     excludeLearningLicenseFee: learningLicense.excludeLearningLicenseFee ?? false,
+    clientId: learningLicense.clientId,
   };
 };
 
@@ -133,6 +134,7 @@ export const mapDrivingLicense = (
     imv: drivingLicense.imv,
     rto: drivingLicense.rto,
     department: drivingLicense.department,
+    clientId: drivingLicense.clientId,
   };
 };
 

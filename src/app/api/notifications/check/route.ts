@@ -11,7 +11,7 @@ import {
 import { and, eq, lte, gte, isNull } from 'drizzle-orm';
 import { NotificationService } from '@/lib/notifications/notification-service';
 import { addDays } from 'date-fns';
-import { formatDateString } from '@/lib/date-time-utils';
+import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 
 // This endpoint should be called by a cron job every hour
 export async function POST(request: Request) {
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const today = new Date();
-    const todayString = formatDateString(today);
+    const todayString = formatDateToYYYYMMDD(today);
 
     // Get all branches for notification generation
     const allBranches = await db.select().from(branches);
@@ -91,7 +91,7 @@ async function checkLearningTests(branchId: string, tenantId: string, todayStrin
 }
 
 async function checkDrivingTestEligibility(branchId: string, tenantId: string) {
-  const thirtyDaysAgo = formatDateString(addDays(new Date(), -30));
+  const thirtyDaysAgo = formatDateToYYYYMMDD(addDays(new Date(), -30));
 
   const eligibleClients = await db
     .select({
@@ -121,8 +121,8 @@ async function checkDrivingTestEligibility(branchId: string, tenantId: string) {
 
 async function checkVehicleDocuments(branchId: string, tenantId: string) {
   const today = new Date();
-  const thirtyDaysFromNow = formatDateString(addDays(today, 30));
-  const todayString = formatDateString(today);
+  const thirtyDaysFromNow = formatDateToYYYYMMDD(addDays(today, 30));
+  const todayString = formatDateToYYYYMMDD(today);
 
   // Check PUC expiry dates from vehicles table
   const expiringPucVehicles = await db

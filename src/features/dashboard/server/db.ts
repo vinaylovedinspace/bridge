@@ -11,7 +11,7 @@ import {
   StaffTable,
 } from '@/db/schema';
 import { and, count, countDistinct, eq, gte, inArray, isNull, or, sql } from 'drizzle-orm';
-import { formatDateString } from '@/lib/date-time-utils';
+import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 
 const MONTH_NAMES_SHORT = [
   'Jan',
@@ -308,7 +308,7 @@ export const getOverduePaymentsCount = async (branchId: string) => {
 };
 
 const getTodayString = (): string => {
-  return formatDateString(new Date());
+  return formatDateToYYYYMMDD(new Date());
 };
 
 type InstructorStatusCount = {

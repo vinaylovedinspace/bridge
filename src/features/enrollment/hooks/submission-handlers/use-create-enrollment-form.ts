@@ -13,16 +13,16 @@ import {
   createLearningLicense,
   createDrivingLicense,
   createPlanWithPayment,
-  createPayment,
+  updatePayment,
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
 import { UseFormGetValues, UseFormSetValue } from 'react-hook-form';
-import { getSessions } from '@/server/actions/sessions';
 import { LAST_ENROLLMENT_CLIENT_ID, LAST_ENROLLMENT_STEP } from '@/lib/constants/business';
-import { hasValidData, getLicenseSuccessMessage, handleStepError } from './form-submission-utils';
-import { formatTimeString, formatDateString } from '@/lib/date-time-utils';
+import { formatDateToYYYYMMDD, formatTimeString } from '@/lib/date-time-utils';
+import { checkTimeSlotConflict } from '@/lib/sessions';
+import { getSessions } from '@/server/db/sessions';
 
-export const useAddFormSubmissions = (
+export const useCreateEnrollmentForm = (
   getValues: UseFormGetValues<AdmissionFormValues>,
   setValue: UseFormSetValue<AdmissionFormValues>
 ) => {
@@ -31,19 +31,26 @@ export const useAddFormSubmissions = (
 
   const handlePersonalStep = useCallback(
     async (data: PersonalInfoValues): ActionReturnType => {
-      const result = await createClient(data);
+      const { clientId } = await createClient(data);
 
       // If the client was created successfully, store the clientId for later steps
-      if (!result.error && result.clientId) {
-        setValue('client.id', result.clientId);
-      } else if (result.error) {
+      if (clientId) {
+        setValue('client.id', clientId);
+        setValue('plan.clientId', clientId);
+        setValue('learningLicense.clientId', clientId);
+        setValue('drivingLicense.clientId', clientId);
+        setValue('payment.clientId', clientId);
+      } else {
         return {
           error: true,
           message: 'Failed to create client. Please try again.',
         };
       }
 
-      return result;
+      return {
+        error: false,
+        message: 'Client created successfully',
+      };
     },
     [setValue]
   );
@@ -64,22 +71,13 @@ export const useAddFormSubmissions = (
 
       const { learningLicense, drivingLicense } = data;
 
-      const hasClass = learningLicense?.class && learningLicense.class.length > 0;
-      const hasLearningLicense = hasValidData(
-        learningLicense as Record<string, unknown> | undefined
-      );
-      const hasDrivingLicense = hasValidData(drivingLicense as Record<string, unknown> | undefined);
-
       try {
         let learningResult: Awaited<ActionReturnType> | null = null;
         let drivingResult: Awaited<ActionReturnType> | null = null;
 
         // Handle learning license if present
-        if (hasLearningLicense && learningLicense) {
-          learningResult = await createLearningLicense({
-            ...learningLicense,
-            clientId,
-          });
+        if (learningLicense) {
+          learningResult = await createLearningLicense(learningLicense);
 
           // If learning license fails, return the learning result
           if (learningResult.error) {
@@ -89,12 +87,8 @@ export const useAddFormSubmissions = (
         }
 
         // Handle driving license if present
-        if ((hasDrivingLicense || hasClass) && (drivingLicense || hasClass)) {
-          drivingResult = await createDrivingLicense({
-            ...(drivingLicense || {}),
-            class: learningLicense?.class || drivingLicense?.class || [],
-            clientId,
-          });
+        if (drivingLicense) {
+          drivingResult = await createDrivingLicense(drivingLicense);
 
           // If driving license fails, return its error
           if (drivingResult.error) {
@@ -106,10 +100,13 @@ export const useAddFormSubmissions = (
         // Return success message based on what was processed
         return {
           error: false,
-          message: getLicenseSuccessMessage(!!learningResult, !!drivingResult, 'create'),
+          message: 'success',
         };
-      } catch (error) {
-        return handleStepError(error, 'licence');
+      } catch {
+        return {
+          error: true,
+          message: 'Failed to create/update license',
+        };
       }
     },
     [getValues]
@@ -117,70 +114,44 @@ export const useAddFormSubmissions = (
 
   const handlePlanStep = useCallback(
     async (data: PlanValues): ActionReturnType => {
-      const clientId = getValues('client.id');
+      // 2. Check slot availability
+      const selectedDate = formatDateToYYYYMMDD(data.joiningDate);
+      const selectedTime = formatTimeString(data.joiningDate);
+
+      const selectedSlot = await checkTimeSlotConflict({
+        vehicleId: data.vehicleId,
+        date: selectedDate,
+        time: selectedTime,
+        excludeClientId: data.clientId,
+        getSessionsFn: getSessions,
+      });
+
+      if (selectedSlot.hasConflict) {
+        return {
+          error: true,
+          message: 'Time slot conflict',
+        };
+      }
+
+      const existingPlanId = getValues('plan.id');
       const serviceType = getValues('serviceType');
-
-      // Validate client ID (not validated by Zod since it's added in the hook)
-      if (!clientId) {
-        return {
-          error: true,
-          message: 'Client ID not found. Please complete the personal information step first.',
-        };
-      }
-
-      // Check slot availability before proceeding
-      try {
-        const sessions = await getSessions(data.vehicleId);
-
-        const selectedDate = formatDateString(data.joiningDate);
-        const selectedTime = formatTimeString(data.joiningDate);
-
-        // Check if the selected slot is already taken (excluding current client's sessions)
-        const conflictSession = sessions.find((session) => {
-          const sessionDate = session.sessionDate;
-          const sessionTime = session.startTime.substring(0, 5); // Remove seconds if present
-          const isCurrentClientSession = session.clientId === clientId;
-          return (
-            sessionDate === selectedDate && sessionTime === selectedTime && !isCurrentClientSession
-          );
-        });
-
-        if (conflictSession) {
-          return {
-            error: true,
-            message:
-              'The selected time slot is not available. Please choose an available time slot from the suggestions above.',
-          };
-        }
-      } catch (error) {
-        console.error('Error checking slot availability:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        return {
-          error: true,
-          message: `Unable to verify slot availability: ${errorMessage}`,
-        };
-      }
-      // Get the existing plan ID if it exists (prefer plan.id over planId)
-      const existingPlanId = getValues('plan.id') || getValues('plan.id') || undefined;
 
       const planInput = {
         ...data,
         id: existingPlanId,
         serviceType: serviceType || data.serviceType,
-        clientId,
       };
 
       const paymentInput = getValues('payment');
 
+      // 4. Create plan with payment
       const result = await createPlanWithPayment(planInput, paymentInput);
 
-      // Update form state with plan ID if successful
+      // 5. Update form state on success
       if (!result.error) {
         setValue('plan.id', result.planId);
-        setValue('plan.id', result.planId); // Also store in plan.id for consistency
         setValue('payment.id', result.paymentId);
-        setValue('payment.id', result.paymentId);
-      } else if (result.error) {
+      } else {
         console.error('Failed to create/update plan:', result.message);
       }
 
@@ -195,18 +166,13 @@ export const useAddFormSubmissions = (
   const handlePaymentStep = useCallback(async (): ActionReturnType => {
     const formValues = getValues();
 
-    if (!formValues.client.id || !formValues.plan.id)
+    if (!formValues.client.id)
       return {
         error: true,
         message: 'Payment information was not saved. Please try again later',
       };
 
-    const paymentInput = {
-      ...formValues.payment,
-      clientId: formValues.client.id,
-    };
-
-    return await createPayment(paymentInput, formValues.plan.id);
+    return await updatePayment(formValues.payment);
   }, [getValues]);
 
   const submitStep = async (
@@ -214,11 +180,6 @@ export const useAddFormSubmissions = (
     stepData: unknown,
     isLastStep: boolean
   ): Promise<boolean> => {
-    // Abort any previous ongoing submission
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
     // Create new abort controller for this submission
     abortControllerRef.current = new AbortController();
 
@@ -254,10 +215,6 @@ export const useAddFormSubmissions = (
         toast.error(result.message || 'Failed to save information');
         return false;
       }
-
-      // toast.success(result?.message || 'Information saved successfully', {
-      //   position: 'top-right',
-      // });
 
       localStorage.setItem(LAST_ENROLLMENT_CLIENT_ID, JSON.stringify(getValues('client.id')));
 

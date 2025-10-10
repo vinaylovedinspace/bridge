@@ -16,12 +16,12 @@ import {
   upsertDrivingLicenseInDB,
   getClientById as getClientByIdFromDB,
   findExistingPlanInDB,
-  getPlanAndVehicleInDB,
-  upsertPaymentInDB,
+  updatePaymentInDB,
   upsertPlanAndPaymentInDB,
   getVehicleRentAmount,
+  updatePlanById,
 } from './db';
-import { dateToString } from '@/lib/date-time-utils';
+import { formatDateToYYYYMMDD, formatTimeString } from '@/lib/date-time-utils';
 import {
   createPaymentLink,
   CreatePaymentLinkRequest,
@@ -29,53 +29,38 @@ import {
 } from '@/lib/cashfree/payment-links';
 import { clientSchema } from '@/types/zod/client';
 import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
-import {
-  extractTimeString,
-  hasPlanChanged,
-  upsertPlan,
-  handleSessionGeneration,
-} from '../lib/plan-helpers';
-import {
-  createFallbackSessions,
-  handleFullPayment,
-  handleInstallmentPayment,
-} from '../lib/payment-helpers';
+import { hasPlanChanged, handleSessionGeneration } from '../lib/plan-helpers';
+import { handleFullPayment, handleInstallmentPayment } from '../lib/payment-helpers';
 import { paymentSchema } from '@/types/zod/payment';
-import { calculateEnrollmentPaymentBreakdown } from '@/lib/payment/calculate';
 import { IMMEDIATE_PAYMENT_MODES } from '@/lib/constants/payment';
 import { getNextPlanCode } from '@/db/utils/plan-code';
+import { getNextClientCode } from '@/db/utils/client-code';
 
 export const createClient = async (
   unsafeData: z.infer<typeof clientSchema>
 ): Promise<{ error: boolean; message: string } & { clientId?: string }> => {
-  const { id: branchId, tenantId } = await getBranchConfig();
-
   try {
-    // Safely convert birthDate to string, handling edge cases
-    const birthDateString =
-      unsafeData.birthDate instanceof Date
-        ? dateToString(unsafeData.birthDate)
-        : typeof unsafeData.birthDate === 'string'
-          ? unsafeData.birthDate
-          : '';
+    const { id: branchId, tenantId } = await getBranchConfig();
+    const { success, data } = clientSchema.safeParse(unsafeData);
 
-    if (!birthDateString) {
-      return { error: true, message: 'Birth date is required' };
+    if (!success) {
+      return { error: true, message: 'Invalid client data' };
     }
 
-    const { isExistingClient, clientId } = await upsertClientInDB({
-      ...unsafeData,
-      id: unsafeData.id, // Pass the client ID if editing
+    const birthDateString = formatDateToYYYYMMDD(data.birthDate);
+    const clientCode = data.clientCode ?? (await getNextClientCode(tenantId));
+
+    const { clientId } = await upsertClientInDB({
+      ...data,
       branchId,
       tenantId,
+      clientCode,
       birthDate: birthDateString, // Convert to YYYY-MM-DD string
     });
 
     return {
       error: false,
-      message: isExistingClient
-        ? 'Client information updated successfully'
-        : 'Client created successfully',
+      message: 'Success',
       clientId,
     };
   } catch (error) {
@@ -84,38 +69,37 @@ export const createClient = async (
   }
 };
 
-export const createLearningLicense = async (data: LearningLicenseValues): ActionReturnType => {
+export const createLearningLicense = async (
+  unsafeData: LearningLicenseValues
+): ActionReturnType => {
   try {
     // Validate the learning license data
-    const parseResult = learningLicenseSchema.safeParse(data);
+    const { success, data } = learningLicenseSchema.safeParse(unsafeData);
 
-    if (!parseResult.success) {
+    if (!success) {
       return { error: true, message: 'Invalid learning licence data' };
     }
 
     // Ensure clientId is present for database operation
-    if (!parseResult.data.clientId && !data.clientId) {
+    if (!data.clientId) {
       return { error: true, message: 'Client ID is required' };
     }
 
     const learningLicenseData = {
-      ...parseResult.data,
-      clientId: parseResult.data.clientId || data.clientId || '',
+      ...data,
+      clientId: data.clientId,
       // Convert date fields to YYYY-MM-DD strings
-      testConductedOn: parseResult.data.testConductedOn
-        ? dateToString(parseResult.data.testConductedOn)
-        : null,
-      issueDate: parseResult.data.issueDate ? dateToString(parseResult.data.issueDate) : null,
-      expiryDate: parseResult.data.expiryDate ? dateToString(parseResult.data.expiryDate) : null,
+      testConductedOn: data.testConductedOn ? formatDateToYYYYMMDD(data.testConductedOn) : null,
+      issueDate: data.issueDate ? formatDateToYYYYMMDD(data.issueDate) : null,
+      expiryDate: data.expiryDate ? formatDateToYYYYMMDD(data.expiryDate) : null,
     };
 
     // Create or update the learning license
-    const { isExistingLicense } = await upsertLearningLicenseInDB(learningLicenseData);
+    await upsertLearningLicenseInDB(learningLicenseData);
 
-    const action = isExistingLicense ? 'updated' : 'created';
     return {
       error: false,
-      message: `Learning licence ${action} successfully`,
+      message: 'Success',
     };
   } catch (error) {
     console.error('Error processing learning license data:', error);
@@ -123,243 +107,63 @@ export const createLearningLicense = async (data: LearningLicenseValues): Action
   }
 };
 
-export const createDrivingLicense = async (data: DrivingLicenseValues): ActionReturnType => {
+export const createDrivingLicense = async (unsafeData: DrivingLicenseValues): ActionReturnType => {
   try {
     // Validate the driving license data
-    const parseResult = drivingLicenseSchema.safeParse(data);
-    console.log('Driving license data:', JSON.stringify(data, null, 2));
+    const { success, data } = drivingLicenseSchema.safeParse(unsafeData);
 
-    if (!parseResult.success) {
-      console.log(
-        'Driving license validation errors:',
-        JSON.stringify(parseResult.error.issues, null, 2)
-      );
+    if (!success) {
       return {
         error: true,
-        message: `Invalid driving licence data: ${parseResult.error.issues.map((i) => i.message).join(', ')}`,
+        message: 'Invalid driving licence data',
       };
     }
 
     // Ensure clientId is present for database operation
-    if (!parseResult.data.clientId && !data.clientId) {
+    if (!data.clientId) {
       return { error: true, message: 'Client ID is required' };
     }
 
     const drivingLicenseData = {
-      ...parseResult.data,
-      clientId: parseResult.data.clientId || data.clientId || '',
+      ...data,
+      clientId: data.clientId,
       // Convert date fields to YYYY-MM-DD strings
-      appointmentDate: parseResult.data.appointmentDate
-        ? dateToString(parseResult.data.appointmentDate)
-        : null,
-      issueDate: parseResult.data.issueDate ? dateToString(parseResult.data.issueDate) : null,
-      expiryDate: parseResult.data.expiryDate ? dateToString(parseResult.data.expiryDate) : null,
+      appointmentDate: data.appointmentDate ? formatDateToYYYYMMDD(data.appointmentDate) : null,
+      issueDate: data.issueDate ? formatDateToYYYYMMDD(data.issueDate) : null,
+      expiryDate: data.expiryDate ? formatDateToYYYYMMDD(data.expiryDate) : null,
     };
 
     // Create or update the driving license
-    const { isExistingLicense } = await upsertDrivingLicenseInDB(drivingLicenseData);
+    await upsertDrivingLicenseInDB(drivingLicenseData);
 
-    const action = isExistingLicense ? 'updated' : 'created';
     return {
       error: false,
-      message: `Driving licence ${action} successfully`,
+      message: 'Driving licence created successfully',
     };
-  } catch (error) {
-    console.error('Error processing driving license data:', error);
+  } catch {
     return { error: true, message: 'Failed to save driving licence information' };
   }
 };
 
-export const getClientById = async (
-  clientId: string
-): Promise<
-  { error: boolean; message: string } & { data?: Awaited<ReturnType<typeof getClientByIdFromDB>> }
-> => {
-  if (!clientId) {
-    return { error: true, message: 'Client ID is required' };
-  }
-
-  try {
-    const clientData = await getClientByIdFromDB(clientId);
-
-    if (!clientData) {
-      return { error: true, message: 'Client not found' };
-    }
-
-    return {
-      error: false,
-      message: 'Client data retrieved successfully',
-      data: clientData,
-    };
-  } catch (error) {
-    console.error('Error fetching client:', error);
-    return { error: true, message: 'Failed to fetch client data' };
-  }
-};
-
-export const createPlan = async (
-  data: PlanValues
-): Promise<{ error: boolean; message: string } & { planId?: string }> => {
-  const { tenantId, id: branchId } = await getBranchConfig();
-
-  try {
-    // 1. Extract and validate time
-    const timeString = extractTimeString(data.joiningDate);
-    const parseResult = planSchema.safeParse({ ...data, joiningTime: timeString });
-
-    if (!parseResult.success) {
-      return { error: true, message: 'Invalid plan data' };
-    }
-
-    // 2. Find existing plan (if any)
-    const existingPlan = await findExistingPlanInDB(data.id, data.clientId);
-
-    // 3. Check if plan has changed
-    const planTimingChanged = existingPlan
-      ? hasPlanChanged(existingPlan, data.joiningDate, timeString, data)
-      : false;
-
-    // 4. Prepare plan data for database
-    const planData = {
-      ...parseResult.data,
-      joiningDate: dateToString(data.joiningDate),
-      joiningTime: timeString,
-      branchId,
-    };
-
-    // 5. Upsert the plan
-    const { planId, isExisting: isExistingPlan } = await upsertPlan(
-      existingPlan,
-      data.id,
-      planData,
-      tenantId
-    );
-
-    // 6. Handle session generation/update
-    const sessionMessage = await handleSessionGeneration(
-      data.clientId,
-      planId,
-      {
-        joiningDate: data.joiningDate,
-        joiningTime: timeString,
-        numberOfSessions: data.numberOfSessions,
-        vehicleId: data.vehicleId,
-      },
-      planTimingChanged
-    );
-
-    const action = isExistingPlan ? 'updated' : 'created';
-
-    return {
-      error: false,
-      message: `Plan ${action} successfully${sessionMessage}`,
-      planId,
-    };
-  } catch (error) {
-    console.error('Error processing plan data:', error);
-    return { error: true, message: 'Failed to save plan information' };
-  }
-};
-
-async function processPaymentTransaction(
-  paymentId: string,
-  paymentMode: 'CASH' | 'QR',
-  paymentType: string,
-  firstInstallmentAmount: number,
-  secondInstallmentAmount: number
-): Promise<void> {
-  if (paymentType === 'FULL_PAYMENT') {
-    await handleFullPayment(paymentId, paymentMode);
-  } else if (paymentType === 'INSTALLMENTS') {
-    await handleInstallmentPayment(
-      paymentId,
-      paymentMode,
-      firstInstallmentAmount,
-      secondInstallmentAmount
-    );
-  }
-}
-
-export const createPayment = async (
-  unsafeData: z.infer<typeof paymentSchema>,
-  planId: string
-): Promise<{ error: boolean; message: string; paymentId?: string }> => {
-  try {
-    // 1. Fetch plan and vehicle data
-    const planResult = await getPlanAndVehicleInDB(planId);
-    if (!planResult) {
-      return { error: true, message: 'Plan or vehicle not found' };
-    }
-
-    const { plan, vehicle } = planResult;
-    const { id: branchId } = await getBranchConfig();
-
-    // 2. Calculate payment breakdown
-    const paymentBreakdown = calculateEnrollmentPaymentBreakdown({
-      sessions: plan.numberOfSessions,
-      duration: plan.sessionDurationInMinutes,
-      rate: vehicle.rent,
-      discount: unsafeData.discount,
-      paymentType: unsafeData.paymentType,
-      licenseServiceFee: unsafeData.licenseServiceFee,
-    });
-
-    // 3. Validate payment data with calculated total
-    const validationResult = paymentSchema.safeParse({
-      ...unsafeData,
-      branchId,
-      totalAmount: paymentBreakdown.totalAmountAfterDiscount,
-    });
-
-    if (!validationResult.success) {
-      console.error('[createPayment] Validation failed:', validationResult.error.format());
-      return { error: true, message: 'Invalid payment data' };
-    }
-
-    // 4. Persist payment to database
-    const { paymentId, isExistingPayment } = await upsertPaymentInDB(validationResult.data, planId);
-
-    // 5. Process immediate payment transactions
-    const paymentMode = validationResult.data.paymentMode;
-    if (IMMEDIATE_PAYMENT_MODES.includes(paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])) {
-      await processPaymentTransaction(
-        paymentId,
-        paymentMode as 'CASH' | 'QR',
-        validationResult.data.paymentType,
-        paymentBreakdown.firstInstallmentAmount,
-        paymentBreakdown.secondInstallmentAmount
-      );
-    }
-
-    // 6. Schedule sessions for new payments (non-blocking)
-    if (!isExistingPayment) {
-      createFallbackSessions(planId);
-    }
-
-    return {
-      error: false,
-      message: 'Payment acknowledged successfully',
-      paymentId,
-    };
-  } catch (error) {
-    console.error('Error processing payment data:', error);
-    const message = error instanceof Error ? error.message : 'Failed to save payment information';
-    return { error: true, message };
-  }
-};
-
 export const createPlanWithPayment = async (
-  planData: PlanValues,
-  paymentData: PaymentValues
+  unsafePlanData: PlanValues,
+  unsafePaymentData: PaymentValues
 ): Promise<{ error: boolean; message: string; planId?: string; paymentId?: string }> => {
   const { id: branchId } = await getBranchConfig();
   try {
     // 1. Extract and validate time
-    const timeString = extractTimeString(planData.joiningDate);
-    const parseResult = planSchema.safeParse({ ...planData, joiningTime: timeString });
+    const joiningTime = formatTimeString(unsafePlanData.joiningDate);
+    const joiningDate = formatDateToYYYYMMDD(unsafePlanData.joiningDate);
 
-    if (!parseResult.success) {
-      return { error: true, message: 'Invalid plan data' };
+    const { success: planSuccess, data: planData } = planSchema.safeParse({
+      ...unsafePlanData,
+      joiningTime,
+    });
+    const { success: paymentSuccess, data: paymentData } =
+      paymentSchema.safeParse(unsafePaymentData);
+
+    if (!planSuccess || !paymentSuccess) {
+      return { error: true, message: 'Invalid plan or payment data' };
     }
 
     // 2. Find existing plan (if any)
@@ -367,9 +171,7 @@ export const createPlanWithPayment = async (
     const planCode = existingPlan?.planCode || (await getNextPlanCode(branchId));
 
     // 3. Check if plan has changed
-    const planTimingChanged = existingPlan
-      ? hasPlanChanged(existingPlan, planData.joiningDate, timeString, planData)
-      : false;
+    const planTimingChanged = hasPlanChanged(existingPlan, joiningDate, joiningTime, planData);
 
     // 4. Get vehicle details for payment calculation
     const vehicle = await getVehicleRentAmount(planData.vehicleId);
@@ -378,50 +180,27 @@ export const createPlanWithPayment = async (
       return { error: true, message: 'Vehicle not found' };
     }
 
-    // 5. Calculate payment breakdown
-    const paymentBreakdown = calculateEnrollmentPaymentBreakdown({
-      sessions: planData.numberOfSessions,
-      duration: planData.sessionDurationInMinutes,
-      rate: vehicle.rent,
-      discount: paymentData.discount,
-      paymentType: paymentData.paymentType,
-      licenseServiceFee: paymentData.licenseServiceFee,
-    });
-
-    // 6. Validate payment data with calculated total
-    const validationResult = paymentSchema.safeParse({
-      ...paymentData,
-      branchId,
-      totalAmount: paymentBreakdown.totalAmountAfterDiscount,
-    });
-
-    if (!validationResult.success) {
-      console.error('[createPlanWithPayment] Validation failed:', validationResult.error.format());
-      return { error: true, message: 'Invalid payment data' };
-    }
-
     // 7. Prepare plan data for database
     const planDataForDB = {
-      ...parseResult.data,
-      joiningDate: dateToString(planData.joiningDate),
-      joiningTime: timeString,
+      ...planData,
+      joiningDate,
+      joiningTime,
       branchId,
       vehicleRentAmount: vehicle.rent,
       planCode,
     };
 
     // 8. Persist plan and payment to database in a transaction
-    const { plan } = await upsertPlanAndPaymentInDB(planDataForDB, validationResult.data);
+    const { plan } = await upsertPlanAndPaymentInDB(planDataForDB, paymentData);
 
     // 9. Process immediate payment transactions
-    const paymentMode = validationResult.data.paymentMode;
+    const paymentMode = paymentData.paymentMode;
     if (IMMEDIATE_PAYMENT_MODES.includes(paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])) {
       await processPaymentTransaction(
         plan.paymentId!,
         paymentMode as 'CASH' | 'QR',
-        validationResult.data.paymentType,
-        paymentBreakdown.firstInstallmentAmount,
-        paymentBreakdown.secondInstallmentAmount
+        paymentData.paymentType,
+        paymentData.totalAmount
       );
     }
 
@@ -431,7 +210,7 @@ export const createPlanWithPayment = async (
       plan.id,
       {
         joiningDate: planData.joiningDate,
-        joiningTime: timeString,
+        joiningTime: joiningTime,
         numberOfSessions: planData.numberOfSessions,
         vehicleId: planData.vehicleId,
       },
@@ -451,6 +230,45 @@ export const createPlanWithPayment = async (
     return { error: true, message };
   }
 };
+
+export const getClientById = async (
+  clientId: string
+): Promise<
+  { error: boolean; message: string } & { data?: Awaited<ReturnType<typeof getClientByIdFromDB>> }
+> => {
+  if (!clientId) {
+    return { error: true, message: 'Client ID is required' };
+  }
+
+  try {
+    const client = await getClientByIdFromDB(clientId);
+
+    if (!client) {
+      return { error: true, message: 'Client not found' };
+    }
+
+    return {
+      error: false,
+      message: 'Client data retrieved successfully',
+      data: client,
+    };
+  } catch {
+    return { error: true, message: 'Failed to fetch client data' };
+  }
+};
+
+async function processPaymentTransaction(
+  paymentId: string,
+  paymentMode: 'CASH' | 'QR',
+  paymentType: string,
+  totalAmount: number
+): Promise<void> {
+  if (paymentType === 'FULL_PAYMENT') {
+    await handleFullPayment(paymentId, paymentMode);
+  } else if (paymentType === 'INSTALLMENTS') {
+    await handleInstallmentPayment(paymentId, paymentMode, totalAmount);
+  }
+}
 
 export async function createPaymentLinkAction(
   request: CreatePaymentLinkRequest
@@ -488,6 +306,110 @@ export const updateDrivingLicense = async (
 ): ActionReturnType => {
   return createDrivingLicense(data);
 };
-export const updatePlan = async (_planId: string, data: PlanValues): ActionReturnType => {
-  return createPlan(data);
+
+export const updatePlan = async (unsafeData: PlanValues): ActionReturnType => {
+  const { id: branchId } = await getBranchConfig();
+  try {
+    // 1. Extract and validate time
+    const joiningTime = formatTimeString(unsafeData.joiningDate);
+    const joiningDate = formatDateToYYYYMMDD(unsafeData.joiningDate);
+
+    const { success: planSuccess, data: planData } = planSchema.safeParse({
+      ...unsafeData,
+      joiningTime,
+    });
+
+    if (!planSuccess) {
+      return { error: true, message: 'Invalid plan data' };
+    }
+
+    // 2. Find existing plan (if any)
+    const existingPlan = await findExistingPlanInDB(planData.id, planData.clientId);
+
+    // 3. Check if plan has changed
+    const planTimingChanged = hasPlanChanged(existingPlan, joiningDate, joiningTime, planData);
+
+    // 4. Get vehicle details for payment calculation
+    const vehicle = await getVehicleRentAmount(planData.vehicleId);
+
+    if (!vehicle) {
+      return { error: true, message: 'Vehicle not found' };
+    }
+
+    // 7. Prepare plan data for database
+    const planDataForDB = {
+      ...planData,
+      joiningDate,
+      joiningTime,
+      branchId,
+      vehicleRentAmount: vehicle.rent,
+    };
+
+    // 8. Persist plan and payment to database in a transaction
+    const { plan } = await updatePlanById(planDataForDB.id!, planDataForDB);
+
+    // 10. Handle session generation/update
+    const sessionMessage = await handleSessionGeneration(
+      planData.clientId,
+      plan.id,
+      {
+        joiningDate: planData.joiningDate,
+        joiningTime: joiningTime,
+        numberOfSessions: planData.numberOfSessions,
+        vehicleId: planData.vehicleId,
+      },
+      planTimingChanged
+    );
+
+    return {
+      error: false,
+      message: `Plan and payment acknowledged successfully${sessionMessage}`,
+    };
+  } catch (error) {
+    console.error('Error processing plan and payment data:', error);
+    const message =
+      error instanceof Error ? error.message : 'Failed to save plan and payment information';
+    return { error: true, message };
+  }
+};
+
+export const updatePayment = async (
+  unsafeData: z.infer<typeof paymentSchema>
+): Promise<{ error: boolean; message: string; paymentId?: string }> => {
+  try {
+    const { success, data } = paymentSchema.safeParse(unsafeData);
+
+    if (!success) {
+      return { error: true, message: 'Invalid payment data' };
+    }
+    const newTotalAmount = Math.max(data.totalAmount - data.discount, 0);
+
+    // 4. Persist payment to database
+    const { payment } = await updatePaymentInDB({ ...data, totalAmount: newTotalAmount });
+
+    if (payment?.id) {
+      // 5. Process immediate payment transactions
+      const paymentMode = data.paymentMode;
+
+      if (
+        IMMEDIATE_PAYMENT_MODES.includes(paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])
+      ) {
+        await processPaymentTransaction(
+          payment.id,
+          paymentMode as 'CASH' | 'QR',
+          data.paymentType,
+          payment.totalAmount
+        );
+      }
+    }
+
+    return {
+      error: false,
+      message: 'Payment acknowledged successfully',
+    };
+  } catch (error) {
+    console.error('Error processing payment data:', error);
+    const message = error instanceof Error ? error.message : 'Failed to save payment information';
+    return { error: true, message };
+  }
 };

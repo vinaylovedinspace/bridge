@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { clientSchema } from '@/types/zod/client';
 import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
 import { ActionReturnType } from '@/types/actions';
-import { dateToString } from '@/lib/date-time-utils';
+import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 import { db } from '@/db';
 import { ClientTable } from '@/db/schema/client/columns';
 import { LearningLicenseTable } from '@/db/schema/learning-licenses/columns';
@@ -32,7 +32,7 @@ export const updateClientPersonalInfo = async (
     // Convert birthDate to string
     const birthDateString =
       data.birthDate instanceof Date
-        ? dateToString(data.birthDate)
+        ? formatDateToYYYYMMDD(data.birthDate)
         : typeof data.birthDate === 'string'
           ? data.birthDate
           : '';
@@ -110,9 +110,9 @@ export const updateClientLearningLicense = async (
       clientId,
       licenseNumber: data.licenseNumber || null,
       applicationNumber: data.applicationNumber || null,
-      testConductedOn: data.testConductedOn ? dateToString(data.testConductedOn) : null,
-      issueDate: data.issueDate ? dateToString(data.issueDate) : null,
-      expiryDate: data.expiryDate ? dateToString(data.expiryDate) : null,
+      testConductedOn: data.testConductedOn ? formatDateToYYYYMMDD(data.testConductedOn) : null,
+      issueDate: data.issueDate ? formatDateToYYYYMMDD(data.issueDate) : null,
+      expiryDate: data.expiryDate ? formatDateToYYYYMMDD(data.expiryDate) : null,
       updatedAt: new Date(),
     };
 
@@ -165,9 +165,9 @@ export const updateClientDrivingLicense = async (
       clientId,
       licenseNumber: data.licenseNumber || null,
       applicationNumber: data.applicationNumber || null,
-      appointmentDate: data.appointmentDate ? dateToString(data.appointmentDate) : null,
-      issueDate: data.issueDate ? dateToString(data.issueDate) : null,
-      expiryDate: data.expiryDate ? dateToString(data.expiryDate) : null,
+      appointmentDate: data.appointmentDate ? formatDateToYYYYMMDD(data.appointmentDate) : null,
+      issueDate: data.issueDate ? formatDateToYYYYMMDD(data.issueDate) : null,
+      expiryDate: data.expiryDate ? formatDateToYYYYMMDD(data.expiryDate) : null,
       testConductedBy: data.testConductedBy || null,
       imv: data.imv || null,
       rto: data.rto || null,

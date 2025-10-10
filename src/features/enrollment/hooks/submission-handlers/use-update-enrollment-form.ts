@@ -15,13 +15,12 @@ import {
   updateLearningLicense,
   updateDrivingLicense,
   updatePlan,
-  createPayment,
+  updatePayment,
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
 import { Enrollment } from '@/server/db/plan';
-import { hasValidData, getLicenseSuccessMessage, handleStepError } from './form-submission-utils';
 
-export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
+export const useUpdateEnrollmentForm = (enrollment: NonNullable<Enrollment>) => {
   const router = useRouter();
 
   const handlePersonalStep = useCallback(
@@ -37,26 +36,19 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
       drivingLicense?: DrivingLicenseValues;
     }): ActionReturnType => {
       const { learningLicense, drivingLicense } = data;
-      const hasLearningLicense = hasValidData(
-        learningLicense as Record<string, unknown> | undefined
-      );
-      const hasDrivingLicense = hasValidData(drivingLicense as Record<string, unknown> | undefined);
 
       try {
         let learningResult: Awaited<ActionReturnType> | null = null;
         let drivingResult: Awaited<ActionReturnType> | null = null;
 
-        if (hasLearningLicense && learningLicense) {
+        if (learningLicense) {
           if (enrollment.client.learningLicense) {
-            learningResult = await updateLearningLicense(enrollment.client.learningLicense.id, {
-              ...learningLicense,
-              clientId: enrollment.client.id,
-            });
+            learningResult = await updateLearningLicense(
+              enrollment.client.learningLicense.id,
+              learningLicense
+            );
           } else {
-            learningResult = await createLearningLicense({
-              ...learningLicense,
-              clientId: enrollment.client.id,
-            });
+            learningResult = await createLearningLicense(learningLicense);
           }
 
           if (learningResult.error) {
@@ -65,18 +57,17 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
         }
 
         const hasClass = learningLicense?.class && learningLicense.class.length > 0;
+        const hasDrivingLicense = !!drivingLicense;
         if ((hasDrivingLicense || hasClass) && (drivingLicense || hasClass)) {
           if (enrollment.client.drivingLicense) {
             drivingResult = await updateDrivingLicense(enrollment.client.drivingLicense.id, {
-              ...(drivingLicense || {}),
+              ...drivingLicense,
               class: learningLicense?.class || drivingLicense?.class || [],
-              clientId: enrollment.client.id,
             });
           } else {
             drivingResult = await createDrivingLicense({
-              ...(drivingLicense || {}),
+              ...drivingLicense,
               class: learningLicense?.class || drivingLicense?.class || [],
-              clientId: enrollment.client.id,
             });
           }
 
@@ -87,43 +78,36 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
 
         return {
           error: false,
-          message: getLicenseSuccessMessage(!!learningResult, !!drivingResult, 'update'),
+          message: 'License information updated successfully',
         };
       } catch (error) {
-        return handleStepError(error, 'licence');
-      }
-    },
-    [enrollment.client.id, enrollment.client.learningLicense, enrollment.client.drivingLicense]
-  );
-
-  const handlePlanStep = useCallback(
-    async (data: PlanValues): ActionReturnType => {
-      try {
-        const result = await updatePlan(enrollment.id, {
-          ...data,
-          clientId: enrollment.client.id,
-        });
-
-        return result;
-      } catch (error) {
-        console.error('Error updating plan:', error);
-        return Promise.resolve({
+        console.error('Error updating license:', error);
+        return {
           error: true,
-          message: 'Unable to update plan. Please try again.',
-        });
+          message: 'Failed to update license information',
+        };
       }
     },
-    [enrollment.id, enrollment.client.id]
+    [enrollment.client.learningLicense, enrollment.client.drivingLicense]
   );
+
+  const handlePlanStep = useCallback(async (data: PlanValues): ActionReturnType => {
+    try {
+      const result = await updatePlan(data);
+      return result;
+    } catch (error) {
+      console.error('Error updating plan:', error);
+      return Promise.resolve({
+        error: true,
+        message: 'Unable to update plan. Please try again.',
+      });
+    }
+  }, []);
 
   const handlePaymentStep = useCallback(
     async (data: PaymentValues): ActionReturnType => {
       try {
-        const paymentData = {
-          ...data,
-          clientId: enrollment.clientId,
-        };
-        const result = await createPayment(paymentData, enrollment.id);
+        const result = await updatePayment(data);
 
         if (result.error) {
           return {
@@ -145,7 +129,7 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
         };
       }
     },
-    [enrollment.id, enrollment.clientId, enrollment.payment]
+    [enrollment.payment]
   );
 
   const submitStep = useCallback(

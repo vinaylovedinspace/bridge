@@ -1,4 +1,4 @@
-import { dateToString } from '@/lib/date-time-utils';
+import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 import { generateSessionsFromPlan } from '@/lib/sessions';
 import { getBranchConfig } from '@/server/db/branch';
 import { createSessions, getSessionsByClientId } from '@/server/actions/sessions';
@@ -17,7 +17,7 @@ export const handleFullPayment = async (
   paymentId: string,
   paymentMode: 'CASH' | 'QR'
 ): Promise<void> => {
-  const currentDate = dateToString(new Date());
+  const currentDate = formatDateToYYYYMMDD(new Date());
 
   await upsertFullPaymentInDB({
     paymentId,
@@ -33,19 +33,18 @@ export const handleFullPayment = async (
 export const handleInstallmentPayment = async (
   paymentId: string,
   paymentMode: 'CASH' | 'QR',
-  firstInstallmentAmount: number,
-  secondInstallmentAmount: number
+  totalAmount: number
 ): Promise<void> => {
-  const currentDate = dateToString(new Date());
+  const currentDate = formatDateToYYYYMMDD(new Date());
 
   // Check if first installment already exists
   const existingInstallments = await getExistingInstallmentsInDB(paymentId);
 
-  const firstInstallmentExists = existingInstallments.some(
+  const firstInstallment = existingInstallments.find(
     (installment) => installment.installmentNumber === 1 && installment.isPaid
   );
 
-  if (firstInstallmentExists) {
+  if (firstInstallment?.isPaid) {
     // Check if both installments already paid
     const secondInstallmentPaid = existingInstallments.some(
       (installment) => installment.installmentNumber === 2 && installment.isPaid
@@ -55,6 +54,8 @@ export const handleInstallmentPayment = async (
       // Both installments already paid, nothing to do
       return;
     }
+
+    const secondInstallmentAmount = totalAmount - firstInstallment.amount;
 
     // Create/update second installment
     await createInstallmentPaymentsInDB({
@@ -66,6 +67,8 @@ export const handleInstallmentPayment = async (
       isPaid: true,
     });
   } else {
+    const firstInstallmentAmount = totalAmount / 2;
+
     // Create first installment
     await createInstallmentPaymentsInDB({
       paymentId,
