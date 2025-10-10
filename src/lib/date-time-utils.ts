@@ -1,6 +1,149 @@
 /**
- * Utility functions for date handling and validation
+ * Comprehensive date and time utilities for India-only application
+ * Handles dates as YYYY-MM-DD strings to avoid timezone conversion issues
  */
+
+// ============================================================================
+// Date Formatting
+// ============================================================================
+
+/**
+ * Format time from Date object to HH:MM string
+ */
+export const formatTimeString = (date: Date): string => {
+  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+};
+
+/**
+ * Format date to YYYY-MM-DD string using toISOString
+ */
+export const formatDateString = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
+
+/**
+ * Convert JavaScript Date to YYYY-MM-DD string (local date, no timezone conversion)
+ */
+export function dateToString(date: Date | null | undefined): string {
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    throw new Error('Invalid date provided to dateToString');
+  }
+
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Formats a Date object as a YYYY-MM-DD string without timezone information
+ * @param date The Date object to format
+ * @returns A string in YYYY-MM-DD format, or null if the input is null
+ */
+export function formatDateToYYYYMMDD(date: Date | null): string | null {
+  if (!date) return null;
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Format date for display (e.g., "July 19, 2025")
+ */
+export function formatDateForDisplay(input: Date | string | null | undefined): string {
+  const date = parseDate(input);
+  if (!date) return '';
+
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+// ============================================================================
+// Date Parsing
+// ============================================================================
+
+/**
+ * Convert YYYY-MM-DD string to JavaScript Date (local date, no timezone conversion)
+ */
+export function stringToDate(dateString: string): Date {
+  // Parse as local date by adding T00:00:00 (prevents UTC interpretation)
+  return new Date(dateString + 'T00:00:00');
+}
+
+/**
+ * Parses a YYYY-MM-DD string to a Date object
+ * @param dateString The string in YYYY-MM-DD format
+ * @returns A Date object, or null if the input is null or invalid
+ */
+export function parseYYYYMMDDToDate(dateString: string | null): Date | null {
+  if (!dateString) return null;
+
+  // Check if the string is in the expected format
+  const isValidFormat = /^\d{4}-\d{2}-\d{2}$/.test(dateString);
+  if (!isValidFormat) return null;
+
+  // Create a new date (using the constructor with year, month, day ensures no timezone issues)
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+
+  // Validate that the date is valid
+  if (isNaN(date.getTime())) return null;
+
+  return date;
+}
+
+/**
+ * Parse date from various formats (Date object, YYYY-MM-DD string, or ISO string)
+ * Returns Date object in local timezone
+ */
+export function parseDate(input: Date | string | null | undefined): Date | null {
+  if (!input) return null;
+
+  if (input instanceof Date) {
+    return new Date(input.getFullYear(), input.getMonth(), input.getDate());
+  }
+
+  if (typeof input === 'string') {
+    // YYYY-MM-DD format (preferred)
+    if (input.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return stringToDate(input);
+    }
+
+    // ISO string or other format (legacy)
+    const parsed = new Date(input);
+    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  }
+
+  return null;
+}
+
+/**
+ * Helper function to convert date string to Date object
+ */
+export const parseDateStringToDateObject = (dateString: string | null): Date | null => {
+  if (!dateString) return null;
+  return new Date(dateString);
+};
+
+// ============================================================================
+// Date Validation
+// ============================================================================
+
+/**
+ * Check if a date string is valid YYYY-MM-DD format
+ */
+export function isValidDateString(dateString: string): boolean {
+  if (!dateString.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
+
+  const date = stringToDate(dateString);
+  return dateToString(date) === dateString; // Round-trip validation
+}
 
 /**
  * Checks if a date falls on a non-working day
@@ -11,6 +154,17 @@
 export function isNonWorkingDay(date: Date, workingDays: number[]): boolean {
   const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
   return !workingDays.includes(dayOfWeek);
+}
+
+// ============================================================================
+// Date Utilities
+// ============================================================================
+
+/**
+ * Get today's date as YYYY-MM-DD string
+ */
+export function getTodayString(): string {
+  return dateToString(new Date());
 }
 
 /**
@@ -39,6 +193,10 @@ export function createDateFilter(
     return additionalFilter ? additionalFilter(date) : false;
   };
 }
+
+// ============================================================================
+// Time Utilities
+// ============================================================================
 
 /**
  * Parses a time string in HH:MM format to minutes since midnight
@@ -146,6 +304,7 @@ export function getValidHours(
  * @param hour Selected hour in 12-hour format (1-12)
  * @param isPM Whether it's PM (true) or AM (false)
  * @param operatingHours Operating hours object with start and end times in HH:MM format
+ * @param minuteStep Step size for minutes (default: 5)
  * @returns Array of valid minutes (0-55, step 5) that can be selected
  */
 export function getValidMinutes(

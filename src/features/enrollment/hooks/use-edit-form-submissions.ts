@@ -19,6 +19,7 @@ import {
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
 import { Enrollment } from '@/server/db/plan';
+import { hasValidData, getLicenseSuccessMessage, handleStepError } from './form-submission-utils';
 
 export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
   const router = useRouter();
@@ -36,14 +37,16 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
       drivingLicense?: DrivingLicenseValues;
     }): ActionReturnType => {
       const { learningLicense, drivingLicense } = data;
-      const hasLearningLicense = learningLicense && Object.keys(learningLicense).length > 0;
-      const hasDrivingLicense = drivingLicense && Object.keys(drivingLicense).length > 0;
+      const hasLearningLicense = hasValidData(
+        learningLicense as Record<string, unknown> | undefined
+      );
+      const hasDrivingLicense = hasValidData(drivingLicense as Record<string, unknown> | undefined);
 
       try {
         let learningResult: Awaited<ActionReturnType> | null = null;
         let drivingResult: Awaited<ActionReturnType> | null = null;
 
-        if (hasLearningLicense) {
+        if (hasLearningLicense && learningLicense) {
           if (enrollment.client.learningLicense) {
             learningResult = await updateLearningLicense(enrollment.client.learningLicense.id, {
               ...learningLicense,
@@ -62,17 +65,17 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
         }
 
         const hasClass = learningLicense?.class && learningLicense.class.length > 0;
-        if (hasDrivingLicense || hasClass) {
+        if ((hasDrivingLicense || hasClass) && (drivingLicense || hasClass)) {
           if (enrollment.client.drivingLicense) {
             drivingResult = await updateDrivingLicense(enrollment.client.drivingLicense.id, {
-              ...drivingLicense,
-              class: learningLicense?.class || [],
+              ...(drivingLicense || {}),
+              class: learningLicense?.class || drivingLicense?.class || [],
               clientId: enrollment.client.id,
             });
           } else {
             drivingResult = await createDrivingLicense({
-              ...drivingLicense,
-              class: learningLicense?.class || [],
+              ...(drivingLicense || {}),
+              class: learningLicense?.class || drivingLicense?.class || [],
               clientId: enrollment.client.id,
             });
           }
@@ -84,13 +87,10 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
 
         return {
           error: false,
-          message: 'Licence information updated successfully',
+          message: getLicenseSuccessMessage(!!learningResult, !!drivingResult, 'update'),
         };
-      } catch {
-        return Promise.resolve({
-          error: true,
-          message: 'An unexpected error occurred while processing licence data',
-        });
+      } catch (error) {
+        return handleStepError(error, 'licence');
       }
     },
     [enrollment.client.id, enrollment.client.learningLicense, enrollment.client.drivingLicense]

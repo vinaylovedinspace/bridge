@@ -8,7 +8,7 @@ import {
   DEFAULT_SESSION_MINUTES,
   DEFAULT_STATE,
 } from '@/lib/constants/business';
-import { parseDateStringToDateObject } from '@/lib/date-utils';
+import { parseDateStringToDateObject } from '@/lib/date-time-utils';
 
 // Function to get validation fields for a specific step
 export const getMultistepAdmissionStepValidationFields = (

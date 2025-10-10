@@ -21,7 +21,7 @@ import {
   upsertPlanAndPaymentInDB,
   getVehicleRentAmount,
 } from './db';
-import { dateToString } from '@/lib/date-utils';
+import { dateToString } from '@/lib/date-time-utils';
 import {
   createPaymentLink,
   CreatePaymentLinkRequest,

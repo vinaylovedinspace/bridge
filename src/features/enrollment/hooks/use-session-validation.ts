@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getSessionsByClientId } from '@/server/actions/sessions';
-import { isTimeWithinOperatingHours } from '@/lib/utils/date-utils';
+import { isTimeWithinOperatingHours } from '@/lib/date-time-utils';
 import { useAtomValue } from 'jotai';
 import { branchOperatingHoursAtom } from '@/lib/atoms/branch-config';
 

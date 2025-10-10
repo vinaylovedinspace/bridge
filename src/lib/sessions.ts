@@ -1,5 +1,5 @@
 import { addDays, format, parse } from 'date-fns';
-import { parseDate, dateToString } from './date-utils';
+import { parseDate, dateToString } from './date-time-utils';
 import { BranchConfig } from '@/server/db/branch';
 
 export type TimeSlot = {

@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { env } from '@/env';
 import { SessionTable } from '@/db/schema/sessions/columns';
 import { eq, and, gte } from 'drizzle-orm';
-import { dateToString } from '@/lib/date-utils';
+import { dateToString } from '@/lib/date-time-utils';
 import {
   sendWhatsAppMessage,
   generateSessionReminderMessage,

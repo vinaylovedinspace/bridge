@@ -14,7 +14,7 @@ import { getNextClientCode } from '@/db/utils/client-code';
 import { rtoServicesFormSchema, rtoServicesFormSchemaWithOptionalPayment } from '../types';
 import { addRTOService as addRTOServiceInDB } from './db';
 import { insertClient, updateClient } from './db';
-import { dateToString } from '@/lib/date-utils';
+import { dateToString } from '@/lib/date-time-utils';
 import { getRTOServiceCharges } from '@/lib/constants/rto-fees';
 import { paymentSchema } from '@/types/zod/payment';
 import { calculateRTOPaymentBreakdown } from '@/lib/payment/calculate';

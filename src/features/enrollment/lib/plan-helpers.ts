@@ -12,15 +12,13 @@ import {
   getClientForSessionsInDB,
   getVehicleRentAmount,
 } from '../server/db';
+import { formatTimeString, formatDateString } from '@/lib/date-time-utils';
 
 /**
  * Extract time string (HH:MM) from Date object
+ * @deprecated Use formatTimeString from @/lib/utils/date-time instead
  */
-export const extractTimeString = (date: Date): string => {
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  return `${hours}:${minutes}`;
-};
+export const extractTimeString = formatTimeString;
 
 /**
  * Check if plan configuration has changed
@@ -35,8 +33,8 @@ export const hasPlanChanged = (
     return false;
   }
 
-  const existingDate = new Date(existingPlan.joiningDate).toISOString().split('T')[0];
-  const newDateStr = newDate.toISOString().split('T')[0];
+  const existingDate = formatDateString(new Date(existingPlan.joiningDate));
+  const newDateStr = formatDateString(newDate);
 
   return (
     existingDate !== newDateStr ||

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { clientSchema } from '@/types/zod/client';
 import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
 import { ActionReturnType } from '@/types/actions';
-import { dateToString } from '@/lib/date-utils';
+import { dateToString } from '@/lib/date-time-utils';
 import { db } from '@/db';
 import { ClientTable } from '@/db/schema/client/columns';
 import { LearningLicenseTable } from '@/db/schema/learning-licenses/columns';

@@ -16,7 +16,7 @@ import { useSessions } from '../hooks/sessions';
 import { useBranchSettings } from '@/features/settings/hooks/settings';
 import { updateSession, cancelSession, assignSessionToSlot } from '@/server/actions/sessions';
 import type { Session } from '@/server/db/sessions';
-import { dateToString, formatDateForDisplay } from '@/lib/date-utils';
+import { dateToString, formatDateForDisplay } from '@/lib/date-time-utils';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { PopConfirm } from '@/components/ui/pop-confirm';

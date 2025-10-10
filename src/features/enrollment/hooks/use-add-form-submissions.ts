@@ -19,38 +19,8 @@ import { ActionReturnType } from '@/types/actions';
 import { UseFormGetValues, UseFormSetValue } from 'react-hook-form';
 import { getSessions } from '@/server/actions/sessions';
 import { LAST_ENROLLMENT_CLIENT_ID, LAST_ENROLLMENT_STEP } from '@/lib/constants/business';
-import { getNextPlanCode } from '@/db/utils/plan-code';
-
-/**
- * Validate that an object has meaningful data (not just empty object)
- */
-const hasValidData = (obj: Record<string, unknown> | undefined): boolean => {
-  if (!obj) return false;
-  const keys = Object.keys(obj);
-  if (keys.length === 0) return false;
-
-  // Check if at least one property has a truthy value (excluding clientId which is added later)
-  return keys.some((key) => {
-    if (key === 'client.id') return false;
-    const value = obj[key];
-    // Allow false boolean values, but not undefined/null/empty string
-    return value !== undefined && value !== null && value !== '';
-  });
-};
-
-/**
- * Format time from Date object to HH:MM string
- */
-const formatTimeString = (date: Date): string => {
-  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-};
-
-/**
- * Format date to YYYY-MM-DD string
- */
-const formatDateString = (date: Date): string => {
-  return date.toISOString().split('T')[0];
-};
+import { hasValidData, getLicenseSuccessMessage, handleStepError } from './form-submission-utils';
+import { formatTimeString, formatDateString } from '@/lib/date-time-utils';
 
 export const useAddFormSubmissions = (
   getValues: UseFormGetValues<AdmissionFormValues>,
@@ -134,36 +104,12 @@ export const useAddFormSubmissions = (
         }
 
         // Return success message based on what was processed
-        if (learningResult && drivingResult) {
-          return {
-            error: false,
-            message: 'Learning and driving licence information saved successfully',
-          };
-        } else if (learningResult) {
-          return {
-            error: false,
-            message: 'Learning licence information saved successfully',
-          };
-        } else if (drivingResult) {
-          return {
-            error: false,
-            message: 'Driving licence information saved successfully',
-          };
-        }
-
-        // If no licenses were processed, allow progression (licenses are optional)
         return {
           error: false,
-          message: 'Licence step completed',
+          message: getLicenseSuccessMessage(!!learningResult, !!drivingResult, 'create'),
         };
       } catch (error) {
-        console.error('Error processing license data:', error);
-        const errorMessage =
-          error instanceof Error ? error.message : 'An unexpected error occurred';
-        return {
-          error: true,
-          message: `Failed to process licence data: ${errorMessage}`,
-        };
+        return handleStepError(error, 'licence');
       }
     },
     [getValues]

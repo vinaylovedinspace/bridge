@@ -1,4 +1,4 @@
-import { dateToString } from '@/lib/date-utils';
+import { dateToString } from '@/lib/date-time-utils';
 import { generateSessionsFromPlan } from '@/lib/sessions';
 import { getBranchConfig } from '@/server/db/branch';
 import { createSessions, getSessionsByClientId } from '@/server/actions/sessions';
