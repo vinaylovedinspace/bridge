@@ -111,7 +111,7 @@ export const PaymentOverview = ({ existingPayment, isEditMode = false }: Payment
               <div className="flex justify-between mt-2">
                 <TypographyMuted className="flex items-center gap-2">
                   Total Due
-                  {existingPayment?.fullPayment.paymentMode && (
+                  {existingPayment?.fullPayment?.paymentMode && (
                     <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
                       Received via {existingPayment?.fullPayment.paymentMode}
                     </span>

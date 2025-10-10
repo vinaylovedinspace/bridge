@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FormProvider } from 'react-hook-form';
 import React from 'react';
 import { useRouter } from 'next/navigation';
@@ -41,6 +41,17 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
 
   // Use the enrollment form submissions hook
   const { submitStep } = useCreateEnrollmentForm(getValues, setValue);
+
+  // Set clientId for all form sections when existingClient is present
+  useEffect(() => {
+    if (existingClient?.id) {
+      setValue('client.id', existingClient.id);
+      setValue('plan.clientId', existingClient.id);
+      setValue('learningLicense.clientId', existingClient.id);
+      setValue('drivingLicense.clientId', existingClient.id);
+      setValue('payment.clientId', existingClient.id);
+    }
+  }, [existingClient?.id, setValue]);
 
   // Map step keys to components and their corresponding actions
   const stepComponents = React.useMemo(() => {

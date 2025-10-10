@@ -10,6 +10,7 @@ import { Enrollment } from '@/server/db/plan';
 import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
 import { useAtomValue } from 'jotai';
 import { calculateLicenseFees } from '@/lib/constants/rto-fees';
+import { useEffect, useMemo } from 'react';
 
 type UsePaymentCalculationsProps = {
   existingPayment: NonNullable<Enrollment>['payment'];
@@ -25,26 +26,40 @@ type InstallmentPaymentInfo = {
 
 export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculationsProps) => {
   const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
-  const { watch } = useFormContext<AdmissionFormValues>();
+  const { watch, setValue } = useFormContext<AdmissionFormValues>();
   const plan = watch('plan');
   const discount = watch('payment.discount');
   const paymentType = watch('payment.paymentType');
 
   // Calculate license fee from selected classes
   const serviceType = watch('serviceType');
-  const selectedLicenseClasses = watch('learningLicense.class') || [];
+  const _selectedLicenseClasses = watch('learningLicense.class');
+
+  const selectedLicenseClasses = useMemo(
+    () => _selectedLicenseClasses ?? [],
+    [_selectedLicenseClasses]
+  );
+
   const excludeLearningLicenseFee = watch('learningLicense.excludeLearningLicenseFee') ?? false;
   const licenseServiceFee = watch('payment.licenseServiceFee');
 
-  // Get license fee breakdown for display
-  const licenseFeeBreakdown =
-    serviceType === 'FULL_SERVICE'
-      ? calculateLicenseFees({
-          licenseClasses: selectedLicenseClasses,
-          excludeLearningLicenseFee,
-          serviceCharge: branchServiceCharge,
-        })
-      : null;
+  // Calculate fees breakdown for display (only if not excluded)
+  const licenseFeeBreakdown = useMemo(() => {
+    if (serviceType === 'FULL_SERVICE') {
+      return calculateLicenseFees({
+        licenseClasses: selectedLicenseClasses,
+        excludeLearningLicenseFee,
+        serviceCharge: branchServiceCharge,
+      });
+    }
+    return null;
+  }, [branchServiceCharge, excludeLearningLicenseFee, selectedLicenseClasses, serviceType]);
+
+  // Update form value when fees change
+  useEffect(() => {
+    if (!licenseFeeBreakdown?.total) return;
+    setValue('payment.licenseServiceFee', licenseFeeBreakdown?.total);
+  }, [licenseFeeBreakdown?.total, setValue]);
 
   const { data: vehicle } = useVehicle(plan?.vehicleId || '');
 

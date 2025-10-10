@@ -28,6 +28,7 @@ import {
   PaymentLinkResult,
 } from '@/lib/cashfree/payment-links';
 import { clientSchema } from '@/types/zod/client';
+import { calculateEnrollmentPaymentBreakdown } from '@/lib/payment/calculate';
 import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
 import { hasPlanChanged, handleSessionGeneration } from '../lib/plan-helpers';
 import { handleFullPayment, handleInstallmentPayment } from '../lib/payment-helpers';
@@ -41,9 +42,14 @@ export const createClient = async (
 ): Promise<{ error: boolean; message: string } & { clientId?: string }> => {
   try {
     const { id: branchId, tenantId } = await getBranchConfig();
-    const { success, data } = clientSchema.safeParse(unsafeData);
+    const { success, data, error } = clientSchema.safeParse({
+      ...unsafeData,
+      branchId,
+      tenantId,
+    });
 
     if (!success) {
+      console.error('Invalid client data:', error);
       return { error: true, message: 'Invalid client data' };
     }
 
@@ -145,7 +151,7 @@ export const createDrivingLicense = async (unsafeData: DrivingLicenseValues): Ac
   }
 };
 
-export const createPlanWithPayment = async (
+export const upsertPlanWithPayment = async (
   unsafePlanData: PlanValues,
   unsafePaymentData: PaymentValues
 ): Promise<{ error: boolean; message: string; planId?: string; paymentId?: string }> => {
@@ -155,45 +161,77 @@ export const createPlanWithPayment = async (
     const joiningTime = formatTimeString(unsafePlanData.joiningDate);
     const joiningDate = formatDateToYYYYMMDD(unsafePlanData.joiningDate);
 
-    const { success: planSuccess, data: planData } = planSchema.safeParse({
-      ...unsafePlanData,
-      joiningTime,
-    });
-    const { success: paymentSuccess, data: paymentData } =
-      paymentSchema.safeParse(unsafePaymentData);
-
-    if (!planSuccess || !paymentSuccess) {
-      return { error: true, message: 'Invalid plan or payment data' };
-    }
-
     // 2. Find existing plan (if any)
-    const existingPlan = await findExistingPlanInDB(planData.id, planData.clientId);
+    const existingPlan = await findExistingPlanInDB(unsafePlanData.id, unsafePlanData.clientId);
     const planCode = existingPlan?.planCode || (await getNextPlanCode(branchId));
 
     // 3. Check if plan has changed
-    const planTimingChanged = hasPlanChanged(existingPlan, joiningDate, joiningTime, planData);
+    const planTimingChanged = hasPlanChanged(
+      existingPlan,
+      joiningDate,
+      joiningTime,
+      unsafePlanData
+    );
 
     // 4. Get vehicle details for payment calculation
-    const vehicle = await getVehicleRentAmount(planData.vehicleId);
+    const vehicle = await getVehicleRentAmount(unsafePlanData.vehicleId);
 
     if (!vehicle) {
       return { error: true, message: 'Vehicle not found' };
     }
 
-    // 7. Prepare plan data for database
-    const planDataForDB = {
-      ...planData,
-      joiningDate,
-      joiningTime,
+    // 5. Calculate total amount using the shared calculation function
+    const { totalAmountAfterDiscount } = calculateEnrollmentPaymentBreakdown({
+      sessions: unsafePlanData.numberOfSessions,
+      duration: unsafePlanData.sessionDurationInMinutes,
+      rate: vehicle.rent,
+      discount: unsafePaymentData.discount || 0,
+      paymentType: unsafePaymentData.paymentType,
+      licenseServiceFee: unsafePaymentData.licenseServiceFee || 0,
+    });
+
+    // 6. Prepare plan data for database
+    const _planData = {
+      ...unsafePlanData,
+      joiningDate: unsafePlanData.joiningDate,
       branchId,
       vehicleRentAmount: vehicle.rent,
       planCode,
     };
 
-    // 8. Persist plan and payment to database in a transaction
-    const { plan } = await upsertPlanAndPaymentInDB(planDataForDB, paymentData);
+    const {
+      success: planSuccess,
+      data: planDataWithoutFormattedDateTime,
+      error: planError,
+    } = planSchema.safeParse(_planData);
 
-    // 9. Process immediate payment transactions
+    const _paymentData = {
+      ...unsafePaymentData,
+      branchId,
+      totalAmount: totalAmountAfterDiscount,
+    };
+
+    const {
+      success: paymentSuccess,
+      data: paymentData,
+      error: paymentError,
+    } = paymentSchema.safeParse(_paymentData);
+
+    if (!planSuccess || !paymentSuccess) {
+      console.error('Invalid plan or payment data:', planError, paymentError);
+      return { error: true, message: 'Invalid plan or payment data' };
+    }
+
+    const planData = {
+      ...planDataWithoutFormattedDateTime,
+      joiningDate,
+      joiningTime,
+    };
+
+    // 7. Persist plan and payment to database in a transaction
+    const { plan } = await upsertPlanAndPaymentInDB(planData, paymentData);
+
+    // 8. Process immediate payment transactions
     const paymentMode = paymentData.paymentMode;
     if (IMMEDIATE_PAYMENT_MODES.includes(paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])) {
       await processPaymentTransaction(
@@ -204,13 +242,13 @@ export const createPlanWithPayment = async (
       );
     }
 
-    // 10. Handle session generation/update
+    // 9. Handle session generation/update
     const sessionMessage = await handleSessionGeneration(
       planData.clientId,
       plan.id,
       {
-        joiningDate: planData.joiningDate,
-        joiningTime: joiningTime,
+        joiningDate: planDataWithoutFormattedDateTime.joiningDate,
+        joiningTime,
         numberOfSessions: planData.numberOfSessions,
         vehicleId: planData.vehicleId,
       },
@@ -307,85 +345,23 @@ export const updateDrivingLicense = async (
   return createDrivingLicense(data);
 };
 
-export const updatePlan = async (unsafeData: PlanValues): ActionReturnType => {
-  const { id: branchId } = await getBranchConfig();
-  try {
-    // 1. Extract and validate time
-    const joiningTime = formatTimeString(unsafeData.joiningDate);
-    const joiningDate = formatDateToYYYYMMDD(unsafeData.joiningDate);
-
-    const { success: planSuccess, data: planData } = planSchema.safeParse({
-      ...unsafeData,
-      joiningTime,
-    });
-
-    if (!planSuccess) {
-      return { error: true, message: 'Invalid plan data' };
-    }
-
-    // 2. Find existing plan (if any)
-    const existingPlan = await findExistingPlanInDB(planData.id, planData.clientId);
-
-    // 3. Check if plan has changed
-    const planTimingChanged = hasPlanChanged(existingPlan, joiningDate, joiningTime, planData);
-
-    // 4. Get vehicle details for payment calculation
-    const vehicle = await getVehicleRentAmount(planData.vehicleId);
-
-    if (!vehicle) {
-      return { error: true, message: 'Vehicle not found' };
-    }
-
-    // 7. Prepare plan data for database
-    const planDataForDB = {
-      ...planData,
-      joiningDate,
-      joiningTime,
-      branchId,
-      vehicleRentAmount: vehicle.rent,
-    };
-
-    // 8. Persist plan and payment to database in a transaction
-    const { plan } = await updatePlanById(planDataForDB.id!, planDataForDB);
-
-    // 10. Handle session generation/update
-    const sessionMessage = await handleSessionGeneration(
-      planData.clientId,
-      plan.id,
-      {
-        joiningDate: planData.joiningDate,
-        joiningTime: joiningTime,
-        numberOfSessions: planData.numberOfSessions,
-        vehicleId: planData.vehicleId,
-      },
-      planTimingChanged
-    );
-
-    return {
-      error: false,
-      message: `Plan and payment acknowledged successfully${sessionMessage}`,
-    };
-  } catch (error) {
-    console.error('Error processing plan and payment data:', error);
-    const message =
-      error instanceof Error ? error.message : 'Failed to save plan and payment information';
-    return { error: true, message };
-  }
-};
-
 export const updatePayment = async (
   unsafeData: z.infer<typeof paymentSchema>
 ): Promise<{ error: boolean; message: string; paymentId?: string }> => {
   try {
-    const { success, data } = paymentSchema.safeParse(unsafeData);
+    const { id: branchId } = await getBranchConfig();
+    const { success, data, error } = paymentSchema.safeParse({
+      ...unsafeData,
+      branchId,
+    });
 
     if (!success) {
+      console.log(error);
       return { error: true, message: 'Invalid payment data' };
     }
-    const newTotalAmount = Math.max(data.totalAmount - data.discount, 0);
 
     // 4. Persist payment to database
-    const { payment } = await updatePaymentInDB({ ...data, totalAmount: newTotalAmount });
+    const { payment } = await updatePaymentInDB(data);
 
     if (payment?.id) {
       // 5. Process immediate payment transactions

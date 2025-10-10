@@ -109,6 +109,7 @@ export const updatePlanInDB = async (data: Partial<typeof PlanTable.$inferInsert
 
 export const updatePaymentInDB = async (data: typeof PaymentTable.$inferInsert) => {
   if (data.id) {
+    console.log('update payment', data);
     const [updated] = await db
       .update(PaymentTable)
       .set({ ...data, updatedAt: new Date() })
@@ -135,19 +136,11 @@ export const upsertPlanAndPaymentInDB = async (
   }
 ) => {
   return await db.transaction(async (tx) => {
-    let plan: typeof PlanTable.$inferSelect;
+    let plan: typeof PlanTable.$inferSelect | undefined;
 
     // Upsert plan
     if (planData.id) {
       // Update existing plan
-      const existingPlan = await tx.query.PlanTable.findFirst({
-        where: eq(PlanTable.id, planData.id),
-      });
-
-      if (!existingPlan) {
-        throw new Error('Plan not found');
-      }
-
       [plan] = await tx
         .update(PlanTable)
         .set({
@@ -187,6 +180,10 @@ export const upsertPlanAndPaymentInDB = async (
           paymentId: payment.id,
         })
         .returning();
+    }
+
+    if (!plan) {
+      throw new Error('Failed to create or update plan');
     }
 
     return {

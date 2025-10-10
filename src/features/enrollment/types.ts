@@ -7,7 +7,7 @@ import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license
 import { paymentSchema } from '@/types/zod/payment';
 
 // Base plan schema without operating hours validation
-export const basePlanSchema = createInsertSchema(PlanTable, {
+export const planSchema = createInsertSchema(PlanTable, {
   vehicleId: z.string().min(1, 'Vehicle selection is required'),
   numberOfSessions: z.number().min(1, 'Number of sessions is required'),
   sessionDurationInMinutes: z.number().min(1, 'Session duration is required'),
@@ -19,7 +19,7 @@ export const basePlanSchema = createInsertSchema(PlanTable, {
 
 // Function to create plan schema with operating hours validation
 export const createPlanSchema = (operatingHours?: { start: string; end: string }) => {
-  return basePlanSchema.extend({
+  return planSchema.extend({
     joiningDate: z
       .date()
       .min(new Date('1900-01-01'), 'Invalid joining date')
@@ -38,12 +38,6 @@ export const createPlanSchema = (operatingHours?: { start: string; end: string }
       ),
   });
 };
-
-export const planSchema = basePlanSchema.omit({
-  planCode: true,
-  branchId: true,
-  vehicleRentAmount: true,
-});
 
 // Service type schema (separate from personal info for the first step)
 export const serviceTypeSchema = z.object({

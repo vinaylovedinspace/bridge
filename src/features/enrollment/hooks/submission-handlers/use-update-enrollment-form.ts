@@ -1,12 +1,14 @@
 import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import { toast } from 'sonner';
+import { UseFormGetValues } from 'react-hook-form';
 import {
   PersonalInfoValues,
   PlanValues,
   LearningLicenseValues,
   DrivingLicenseValues,
   PaymentValues,
+  AdmissionFormValues,
 } from '@/features/enrollment/types';
 import {
   updateClient,
@@ -14,13 +16,16 @@ import {
   createDrivingLicense,
   updateLearningLicense,
   updateDrivingLicense,
-  updatePlan,
   updatePayment,
+  upsertPlanWithPayment,
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
 import { Enrollment } from '@/server/db/plan';
 
-export const useUpdateEnrollmentForm = (enrollment: NonNullable<Enrollment>) => {
+export const useUpdateEnrollmentForm = (
+  enrollment: NonNullable<Enrollment>,
+  getValues: UseFormGetValues<AdmissionFormValues>
+) => {
   const router = useRouter();
 
   const handlePersonalStep = useCallback(
@@ -91,18 +96,31 @@ export const useUpdateEnrollmentForm = (enrollment: NonNullable<Enrollment>) => 
     [enrollment.client.learningLicense, enrollment.client.drivingLicense]
   );
 
-  const handlePlanStep = useCallback(async (data: PlanValues): ActionReturnType => {
-    try {
-      const result = await updatePlan(data);
-      return result;
-    } catch (error) {
-      console.error('Error updating plan:', error);
-      return Promise.resolve({
-        error: true,
-        message: 'Unable to update plan. Please try again.',
-      });
-    }
-  }, []);
+  const handlePlanStep = useCallback(
+    async (data: PlanValues): ActionReturnType => {
+      try {
+        // Ensure plan id is included for update operation
+        const planData = {
+          ...data,
+          id: enrollment.id, // Explicitly set the plan id from enrollment
+        };
+
+        // Get current payment form values for recalculation
+        const paymentFormData = getValues('payment');
+
+        // Use upsertPlanWithPayment which handles both create and update
+        const result = await upsertPlanWithPayment(planData, paymentFormData);
+        return result;
+      } catch (error) {
+        console.error('Error updating plan:', error);
+        return Promise.resolve({
+          error: true,
+          message: 'Unable to update plan. Please try again.',
+        });
+      }
+    },
+    [enrollment.id, getValues]
+  );
 
   const handlePaymentStep = useCallback(
     async (data: PaymentValues): ActionReturnType => {

@@ -79,11 +79,11 @@ export const calculateLicenseFees = ({
   excludeLearningLicenseFee,
   serviceCharge: _serviceCharge,
 }: {
-  licenseClasses: LicenseClass[];
+  licenseClasses: LicenseClass[] | null;
   excludeLearningLicenseFee: boolean;
   serviceCharge: number;
 }) => {
-  if (licenseClasses.length === 0) {
+  if (!licenseClasses || licenseClasses.length === 0) {
     return {
       governmentFees: 0,
       total: 0,

@@ -26,7 +26,6 @@ export const createSessions = async (
     sessionNumber: number;
   }>
 ) => {
-  console.log('Creating sessions:', sessions);
   try {
     const createdSessions = await createSessionsInDB(sessions);
     return {

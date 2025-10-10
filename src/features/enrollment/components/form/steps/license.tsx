@@ -12,7 +12,7 @@ import { LICENSE_CLASS_OPTIONS, LicenseClass } from '@/lib/constants/license-cla
 import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
 import { useAtomValue } from 'jotai';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 
 type LicenseStepProps = {
   isEditMode?: boolean;
@@ -26,20 +26,28 @@ export const LicenseStep = ({}: LicenseStepProps) => {
   const serviceType = watch('serviceType');
 
   // Watch selected license classes and checkbox for fee calculation
-  const selectedLicenseClasses = watch('learningLicense.class');
+  const _selectedLicenseClasses = watch('learningLicense.class');
+
+  const selectedLicenseClasses = useMemo(
+    () => _selectedLicenseClasses ?? [],
+    [_selectedLicenseClasses]
+  );
+
   const excludeLearningLicenseFee = watch('learningLicense.excludeLearningLicenseFee') ?? false;
 
   // Calculate fees breakdown for display (only if not excluded)
   const feeCalculation = useMemo(() => {
-    const fees = calculateLicenseFees({
+    return calculateLicenseFees({
       licenseClasses: selectedLicenseClasses,
       excludeLearningLicenseFee,
       serviceCharge: branchServiceCharge,
     });
+  }, [branchServiceCharge, excludeLearningLicenseFee, selectedLicenseClasses]);
 
-    setValue('payment.licenseServiceFee', fees.total);
-    return fees;
-  }, [branchServiceCharge, excludeLearningLicenseFee, selectedLicenseClasses, setValue]);
+  // Update form value when fees change
+  useEffect(() => {
+    setValue('payment.licenseServiceFee', feeCalculation.total);
+  }, [feeCalculation.total, setValue]);
 
   return (
     <div className="space-y-10">

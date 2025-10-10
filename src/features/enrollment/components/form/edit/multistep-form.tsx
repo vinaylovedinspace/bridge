@@ -34,7 +34,7 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
     useAdmissionStepNavigation();
-  const { submitStep } = useUpdateEnrollmentForm(enrollment);
+  const { submitStep } = useUpdateEnrollmentForm(enrollment, getValues);
 
   const {
     showUnsavedChangesDialog,
@@ -80,12 +80,8 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
     }
 
     // If no changes, just navigate
-    if (!hasCurrentStepChanges()) {
-      if (isLastStep) {
-        router.push('/enrollments');
-      } else {
-        goToNext();
-      }
+    if (!hasCurrentStepChanges() && !isLastStep) {
+      goToNext();
       return;
     }
 

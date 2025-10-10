@@ -12,15 +12,12 @@ import {
   createClient,
   createLearningLicense,
   createDrivingLicense,
-  createPlanWithPayment,
+  upsertPlanWithPayment,
   updatePayment,
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
 import { UseFormGetValues, UseFormSetValue } from 'react-hook-form';
 import { LAST_ENROLLMENT_CLIENT_ID, LAST_ENROLLMENT_STEP } from '@/lib/constants/business';
-import { formatDateToYYYYMMDD, formatTimeString } from '@/lib/date-time-utils';
-import { checkTimeSlotConflict } from '@/lib/sessions';
-import { getSessions } from '@/server/db/sessions';
 
 export const useCreateEnrollmentForm = (
   getValues: UseFormGetValues<AdmissionFormValues>,
@@ -114,51 +111,43 @@ export const useCreateEnrollmentForm = (
 
   const handlePlanStep = useCallback(
     async (data: PlanValues): ActionReturnType => {
-      // 2. Check slot availability
-      const selectedDate = formatDateToYYYYMMDD(data.joiningDate);
-      const selectedTime = formatTimeString(data.joiningDate);
+      try {
+        const existingPlanId = getValues('plan.id');
+        const serviceType = getValues('serviceType');
 
-      const selectedSlot = await checkTimeSlotConflict({
-        vehicleId: data.vehicleId,
-        date: selectedDate,
-        time: selectedTime,
-        excludeClientId: data.clientId,
-        getSessionsFn: getSessions,
-      });
+        const planInput = {
+          ...data,
+          id: existingPlanId,
+          serviceType: serviceType || data.serviceType,
+        };
 
-      if (selectedSlot.hasConflict) {
+        const paymentInput = getValues('payment');
+
+        // 2. Create plan with payment
+        const result = await upsertPlanWithPayment(planInput, paymentInput);
+
+        // 3. Update form state on success
+        if (!result.error) {
+          setValue('plan.id', result.planId);
+          setValue('payment.id', result.paymentId);
+        } else {
+          console.error('Failed to create/update plan:', result.message);
+          return {
+            error: true,
+            message: 'Failed to create/update plan',
+          };
+        }
+
+        return {
+          error: false,
+          message: 'Plan details validated successfully',
+        };
+      } catch {
         return {
           error: true,
-          message: 'Time slot conflict',
+          message: 'Failed to create/update plan',
         };
       }
-
-      const existingPlanId = getValues('plan.id');
-      const serviceType = getValues('serviceType');
-
-      const planInput = {
-        ...data,
-        id: existingPlanId,
-        serviceType: serviceType || data.serviceType,
-      };
-
-      const paymentInput = getValues('payment');
-
-      // 4. Create plan with payment
-      const result = await createPlanWithPayment(planInput, paymentInput);
-
-      // 5. Update form state on success
-      if (!result.error) {
-        setValue('plan.id', result.planId);
-        setValue('payment.id', result.paymentId);
-      } else {
-        console.error('Failed to create/update plan:', result.message);
-      }
-
-      return {
-        error: false,
-        message: 'Plan details validated successfully',
-      };
     },
     [getValues, setValue]
   );

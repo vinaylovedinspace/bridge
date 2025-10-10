@@ -116,7 +116,7 @@ export function calculateEnrollmentPaymentBreakdown({
  */
 export function formatCurrency(amount: number): string {
   if (!Number.isFinite(amount)) {
-    throw new Error(`Invalid amount for currency formatting: ${amount}`);
+    return '₹0';
   }
 
   return new Intl.NumberFormat('en-IN', {

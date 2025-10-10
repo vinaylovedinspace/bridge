@@ -54,14 +54,13 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
     try {
       const formValues = getValues();
 
-      if (!formValues.client.id || !formValues.plan.id) return;
+      if (!formValues.client.id)
+        return {
+          error: true,
+          message: 'Payment information was not saved. Please try again later',
+        };
 
-      const paymentInput = {
-        ...formValues.payment,
-        clientId: formValues.client.id,
-        planId: formValues.plan.id,
-      };
-      const result = await updatePayment(paymentInput);
+      const result = await updatePayment(formValues.payment);
 
       if (!result.error) {
         toast.success(result.message || 'Payment processed successfully');

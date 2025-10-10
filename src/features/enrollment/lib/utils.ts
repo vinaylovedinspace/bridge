@@ -200,9 +200,13 @@ export const getDefaultValuesForEditEnrollmentForm = (
       joiningTime: enrollment.joiningTime,
       serviceType: enrollment.serviceType,
       clientId: enrollment.clientId,
+      planCode: enrollment.planCode,
+      vehicleRentAmount: enrollment.vehicleRentAmount,
+      branchId: enrollment.branchId,
     },
     payment: payment
       ? {
+          id: payment.id,
           discount: payment.discount,
           paymentType: payment.paymentType || 'FULL_PAYMENT',
           paymentStatus: payment.paymentStatus || 'PENDING',
