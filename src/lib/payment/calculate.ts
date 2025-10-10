@@ -205,6 +205,9 @@ export function calculateAmountDue({
   paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS';
   firstInstallmentAmount?: number;
 }): number {
+  console.log('calculateAmountDue', {
+    totalAmount,
+  });
   if (existingPayment) {
     return calculateOutstandingAmount(existingPayment, totalAmount);
   } else {

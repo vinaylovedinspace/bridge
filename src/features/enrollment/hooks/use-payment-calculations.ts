@@ -55,13 +55,16 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
     return null;
   }, [branchServiceCharge, excludeLearningLicenseFee, selectedLicenseClasses, serviceType]);
 
+  const { data: vehicle } = useVehicle(plan?.vehicleId || '');
+
+  // Use the calculated license fee total directly, or fall back to form value
+  const effectiveLicenseServiceFee = licenseFeeBreakdown?.total ?? licenseServiceFee;
+
   // Update form value when fees change
   useEffect(() => {
     if (!licenseFeeBreakdown?.total) return;
     setValue('payment.licenseServiceFee', licenseFeeBreakdown?.total);
   }, [licenseFeeBreakdown?.total, setValue]);
-
-  const { data: vehicle } = useVehicle(plan?.vehicleId || '');
 
   // Calculate payment breakdown (vehicle rental fees only)
   const {
@@ -76,7 +79,7 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
     rate: vehicle?.rent ?? 0,
     discount,
     paymentType,
-    licenseServiceFee,
+    licenseServiceFee: effectiveLicenseServiceFee,
   });
 
   // Extract installment payment info
@@ -98,6 +101,11 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
     paymentType,
     firstInstallmentAmount,
   });
+
+  // Update totalAmount in form when it changes
+  useEffect(() => {
+    setValue('payment.totalAmount', totalAmountAfterDiscount);
+  }, [totalAmountAfterDiscount, setValue]);
 
   // Format all amounts
   const formatted = {
