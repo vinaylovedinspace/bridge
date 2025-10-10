@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { TenantTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { getBranchConfig } from './branch';
+import { getBranchConfig } from '@/server/actions/branch';
 
 export const getTenantById = async (tenantId: string) => {
   const tenant = await db.query.TenantTable.findFirst({

@@ -8,7 +8,7 @@ import {
   planSchema,
   PaymentValues,
 } from '../types';
-import { getBranchConfig } from '@/server/db/branch';
+import { getBranchConfig } from '@/server/actions/branch';
 import { ActionReturnType } from '@/types/actions';
 import {
   upsertClientInDB,

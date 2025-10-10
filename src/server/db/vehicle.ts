@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { VehicleTable } from '@/db/schema';
 import { eq, ilike, and, or, lte, isNotNull, isNull } from 'drizzle-orm';
-import { getBranchConfig } from './branch';
+import { getBranchConfig } from '@/server/actions/branch';
 import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 
 const _getVehicles = async (branchId: string, name?: string) => {

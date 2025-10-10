@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { notifications } from '@/db/schema';
 import { and, eq, desc, sql } from 'drizzle-orm';
-import { getBranchConfig } from '@/server/db/branch';
+import { getBranchConfig } from '@/server/actions/branch';
 
 export async function GET(req: NextRequest) {
   const { userId, orgId } = await auth();

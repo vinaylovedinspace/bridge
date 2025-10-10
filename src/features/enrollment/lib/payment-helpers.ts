@@ -1,6 +1,6 @@
 import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 import { generateSessionsFromPlan } from '@/lib/sessions';
-import { getBranchConfig } from '@/server/db/branch';
+import { getBranchConfig } from '@/server/actions/branch';
 import { createSessions, getSessionsByClientId } from '@/server/actions/sessions';
 import {
   createInstallmentPaymentsInDB,

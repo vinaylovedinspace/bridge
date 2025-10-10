@@ -8,8 +8,7 @@
 
 import { useHydrateAtoms } from 'jotai/utils';
 import { branchConfigAtom } from '@/lib/atoms/branch-config';
-import type { BranchConfig } from '@/server/db/branch';
-
+import type { BranchConfig } from '@/server/actions/branch';
 type BranchConfigProviderProps = {
   branchConfig: BranchConfig;
   children: React.ReactNode;

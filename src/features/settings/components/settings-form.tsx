@@ -18,7 +18,7 @@ import {
   DEFAULT_OPERATING_HOURS,
   DAYS_OF_WEEK,
 } from '@/lib/constants/business';
-import { BranchConfig } from '@/server/db/branch';
+import { BranchConfig } from '@/server/actions/branch';
 import { useSetAtom } from 'jotai';
 import { branchConfigAtom } from '@/lib/atoms/branch-config';
 

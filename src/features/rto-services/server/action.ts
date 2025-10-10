@@ -9,7 +9,7 @@ import {
   saveRTOServiceAndPaymentInDB,
 } from './db';
 import { ActionReturnType } from '@/types/actions';
-import { getBranchConfig } from '@/server/db/branch';
+import { getBranchConfig } from '@/server/actions/branch';
 import { getNextClientCode } from '@/db/utils/client-code';
 import { rtoServicesFormSchema, rtoServicesFormSchemaWithOptionalPayment } from '../types';
 import { addRTOService as addRTOServiceInDB } from './db';

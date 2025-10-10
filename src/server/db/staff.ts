@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { StaffTable, StaffRoleEnum } from '@/db/schema';
 import { eq, ilike, and, desc, or, isNull } from 'drizzle-orm';
-import { getBranchConfig } from './branch';
+import { getBranchConfig } from '@/server/actions/branch';
 
 const _getStaff = async (branchId: string, name?: string, role?: string | 'ALL') => {
   const conditions = [eq(StaffTable.branchId, branchId), isNull(StaffTable.deletedAt)];

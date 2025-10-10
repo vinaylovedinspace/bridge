@@ -1,6 +1,6 @@
 'use client';
 
-import { BranchConfig } from '@/server/db/branch';
+import { BranchConfig } from '@/server/actions/branch';
 import { Client } from '@/server/db/client';
 import { ClientDetailStepKey } from './progress-bar';
 import { PersonalInfoStep } from './steps/personal-info';

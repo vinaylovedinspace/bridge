@@ -4,7 +4,7 @@
  */
 
 import { atom } from 'jotai';
-import { BranchConfig } from '@/server/db/branch';
+import { BranchConfig } from '@/server/actions/branch';
 import { DEFAULT_OPERATING_HOURS, DEFAULT_WORKING_DAYS } from '../constants/business';
 
 /**

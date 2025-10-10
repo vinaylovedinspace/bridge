@@ -9,7 +9,7 @@ import {
 } from './db';
 import { ActionReturnType } from '@/types/actions';
 import { staffFormSchema } from '../schemas/staff';
-import { getBranchConfig } from '@/server/db/branch';
+import { getBranchConfig } from '@/server/actions/branch';
 
 /**
  * Server action to add a new staff member

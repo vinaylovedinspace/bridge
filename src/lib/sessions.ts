@@ -1,6 +1,6 @@
 import { addDays, addMinutes, format, getDay, parse, set, isSameDay, addYears } from 'date-fns';
 import { parseDate, formatDateToYYYYMMDD, normalizeTimeString } from './date-time-utils';
-import { BranchConfig } from '@/server/db/branch';
+import { BranchConfig } from '@/server/actions/branch';
 
 // ============================================================================
 // Types

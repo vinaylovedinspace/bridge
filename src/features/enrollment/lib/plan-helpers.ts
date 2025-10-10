@@ -1,6 +1,6 @@
 import { PlanTable } from '@/db/schema';
 import { generateSessionsFromPlan } from '@/lib/sessions';
-import { getBranchConfig } from '@/server/db/branch';
+import { getBranchConfig } from '@/server/actions/branch';
 import {
   createSessions,
   getSessionsByClientId,
