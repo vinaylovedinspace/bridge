@@ -10,7 +10,10 @@ import { useFormContext } from 'react-hook-form';
 import { AdmissionFormValues } from '@/features/enrollment/types';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle, MessageSquare, Phone } from 'lucide-react';
-import { updatePayment, createPaymentLinkAction } from '@/features/enrollment/server/action';
+import {
+  createPaymentLinkAction,
+  updatePaymentAndProcessTransaction,
+} from '@/features/enrollment/server/action';
 import { useRouter } from 'next/navigation';
 import { Enrollment } from '@/server/db/plan';
 
@@ -60,7 +63,7 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
           message: 'Payment information was not saved. Please try again later',
         };
 
-      const result = await updatePayment(formValues.payment);
+      const result = await updatePaymentAndProcessTransaction(formValues.payment);
 
       if (!result.error) {
         toast.success(result.message || 'Payment processed successfully');

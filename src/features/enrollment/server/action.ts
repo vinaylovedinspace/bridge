@@ -19,7 +19,6 @@ import {
   updatePaymentInDB,
   upsertPlanAndPaymentInDB,
   getVehicleRentAmount,
-  updatePlanById,
 } from './db';
 import { formatDateToYYYYMMDD, formatTimeString } from '@/lib/date-time-utils';
 import {
@@ -363,6 +362,36 @@ export const updatePayment = async (
     // 4. Persist payment to database
     const { payment } = await updatePaymentInDB(data);
 
+    return {
+      error: false,
+      message: 'Payment acknowledged successfully',
+      paymentId: payment?.id,
+    };
+  } catch (error) {
+    console.error('Error processing payment data:', error);
+    const message = error instanceof Error ? error.message : 'Failed to save payment information';
+    return { error: true, message };
+  }
+};
+
+export const updatePaymentAndProcessTransaction = async (
+  unsafeData: z.infer<typeof paymentSchema>
+): Promise<{ error: boolean; message: string; paymentId?: string }> => {
+  try {
+    const { id: branchId } = await getBranchConfig();
+    const { success, data, error } = paymentSchema.safeParse({
+      ...unsafeData,
+      branchId,
+    });
+
+    if (!success) {
+      console.log(error);
+      return { error: true, message: 'Invalid payment data' };
+    }
+
+    // 4. Persist payment to database
+    const { payment } = await updatePaymentInDB(data);
+
     if (payment?.id) {
       // 5. Process immediate payment transactions
       const paymentMode = data.paymentMode;
@@ -382,6 +411,7 @@ export const updatePayment = async (
     return {
       error: false,
       message: 'Payment acknowledged successfully',
+      paymentId: payment?.id,
     };
   } catch (error) {
     console.error('Error processing payment data:', error);

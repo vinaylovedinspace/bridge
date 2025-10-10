@@ -101,9 +101,18 @@ export const mapClientToPersonalInfo = (
 
 // Helper function to map learning license to form values
 export const mapLearningLicense = (
-  learningLicense: NonNullable<Enrollment>['client']['learningLicense']
+  learningLicense: NonNullable<Enrollment>['client']['learningLicense'],
+  clientId?: string
 ): AdmissionFormValues['learningLicense'] => {
-  if (!learningLicense) return undefined;
+  if (!learningLicense) {
+    return clientId
+      ? {
+          class: [],
+          excludeLearningLicenseFee: false,
+          clientId,
+        }
+      : undefined;
+  }
 
   return {
     class: learningLicense.class || [],
@@ -119,9 +128,17 @@ export const mapLearningLicense = (
 
 // Helper function to map driving license to form values
 export const mapDrivingLicense = (
-  drivingLicense: NonNullable<Enrollment>['client']['drivingLicense']
+  drivingLicense: NonNullable<Enrollment>['client']['drivingLicense'],
+  clientId?: string
 ): AdmissionFormValues['drivingLicense'] => {
-  if (!drivingLicense) return undefined;
+  if (!drivingLicense) {
+    return clientId
+      ? {
+          class: [],
+          clientId,
+        }
+      : undefined;
+  }
 
   return {
     class: drivingLicense.class || [],
@@ -160,10 +177,16 @@ export const getDefaultValuesForAddEnrollmentForm = (
     return {
       serviceType: 'FULL_SERVICE' as const,
       client: mapClientToPersonalInfo(existingClient),
-      learningLicense: mapLearningLicense(existingClient.learningLicense),
-      drivingLicense: mapDrivingLicense(existingClient.drivingLicense),
-      plan: DEFAULT_PLAN_VALUES,
-      payment: DEFAULT_PAYMENT_VALUES,
+      learningLicense: mapLearningLicense(existingClient.learningLicense, existingClient.id),
+      drivingLicense: mapDrivingLicense(existingClient.drivingLicense, existingClient.id),
+      plan: {
+        ...DEFAULT_PLAN_VALUES,
+        clientId: existingClient.id,
+      },
+      payment: {
+        ...DEFAULT_PAYMENT_VALUES,
+        clientId: existingClient.id,
+      },
     } as AdmissionFormValues;
   }
 
