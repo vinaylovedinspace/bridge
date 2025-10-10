@@ -61,19 +61,14 @@ export const useUpdateEnrollmentForm = (
           }
         }
 
-        const hasClass = learningLicense?.class && learningLicense.class.length > 0;
-        const hasDrivingLicense = !!drivingLicense;
-        if ((hasDrivingLicense || hasClass) && (drivingLicense || hasClass)) {
+        if (drivingLicense) {
           if (enrollment.client.drivingLicense) {
-            drivingResult = await updateDrivingLicense(enrollment.client.drivingLicense.id, {
-              ...drivingLicense,
-              class: learningLicense?.class || drivingLicense?.class || [],
-            });
+            drivingResult = await updateDrivingLicense(
+              enrollment.client.drivingLicense.id,
+              drivingLicense
+            );
           } else {
-            drivingResult = await createDrivingLicense({
-              ...drivingLicense,
-              class: learningLicense?.class || drivingLicense?.class || [],
-            });
+            drivingResult = await createDrivingLicense(drivingLicense);
           }
 
           if (drivingResult.error) {
@@ -93,23 +88,17 @@ export const useUpdateEnrollmentForm = (
         };
       }
     },
-    [enrollment.client.learningLicense, enrollment.client.drivingLicense]
+    [enrollment.client.drivingLicense, enrollment.client.learningLicense]
   );
 
   const handlePlanStep = useCallback(
     async (data: PlanValues): ActionReturnType => {
       try {
-        // Ensure plan id is included for update operation
-        const planData = {
-          ...data,
-          id: enrollment.id, // Explicitly set the plan id from enrollment
-        };
-
         // Get current payment form values for recalculation
         const paymentFormData = getValues('payment');
 
         // Use upsertPlanWithPayment which handles both create and update
-        const result = await upsertPlanWithPayment(planData, paymentFormData);
+        const result = await upsertPlanWithPayment(data, paymentFormData);
         return result;
       } catch (error) {
         console.error('Error updating plan:', error);
@@ -119,36 +108,21 @@ export const useUpdateEnrollmentForm = (
         });
       }
     },
-    [enrollment.id, getValues]
+    [getValues]
   );
 
-  const handlePaymentStep = useCallback(
-    async (data: PaymentValues): ActionReturnType => {
-      try {
-        const result = await updatePayment(data);
+  const handlePaymentStep = useCallback(async (data: PaymentValues): ActionReturnType => {
+    try {
+      const result = await updatePayment(data);
 
-        if (result.error) {
-          return {
-            error: true,
-            message: result.message || 'Failed to save payment',
-          };
-        }
-
-        return {
-          error: false,
-          message: enrollment.payment
-            ? 'Payment updated successfully'
-            : 'Payment created successfully',
-        };
-      } catch {
-        return {
-          error: true,
-          message: 'Unable to save payment. Please try again.',
-        };
-      }
-    },
-    [enrollment.payment]
-  );
+      return result;
+    } catch {
+      return {
+        error: true,
+        message: 'Unable to save payment. Please try again.',
+      };
+    }
+  }, []);
 
   const submitStep = useCallback(
     async (
@@ -172,9 +146,6 @@ export const useUpdateEnrollmentForm = (
       };
 
       const handler = stepHandlers[stepKey as keyof typeof stepHandlers];
-      if (!handler) {
-        throw new Error(`Unknown step: ${stepKey}`);
-      }
 
       const result = await handler();
 
