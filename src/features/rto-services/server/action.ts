@@ -2,7 +2,6 @@
 
 import { z } from 'zod';
 import {
-  updateRTOService as updateRTOServiceInDB,
   deleteRTOService as deleteRTOServiceInDB,
   getRTOService,
   upsertPaymentInDB,
@@ -11,7 +10,7 @@ import {
 import { ActionReturnType } from '@/types/actions';
 import { getBranchConfig } from '@/server/action/branch';
 import { getNextClientCode } from '@/db/utils/client-code';
-import { rtoServicesFormSchema } from '../types';
+import { rtoServicesFormSchema, rtoServicesFormSchemaWithOptionalPayment } from '../types';
 import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 import { getRTOServiceCharges } from '@/lib/constants/rto-fees';
 import { paymentSchema } from '@/types/zod/payment';
@@ -116,23 +115,66 @@ export const saveRTOServiceWithPayment = async (
   message: string;
 }> => {
   try {
-    // Validate the data
-    const { success, data, error } = rtoServicesFormSchema.safeParse(unsafeData);
-
-    if (!success) {
-      console.error('RTO service validation error:', error);
-      return {
-        error: true,
-        message: 'Invalid RTO service data',
-      };
-    }
-
     const {
       tenantId,
       id: branchId,
       licenseServiceCharge: branchServiceCharge,
     } = await getBranchConfig();
-    const isUpdate = !!data.serviceId;
+
+    const { governmentFees, additionalCharges } = getRTOServiceCharges(unsafeData.service.type);
+
+    // Calculate payment amounts for validation
+    const paymentBreakdown = calculateRTOPaymentBreakdown({
+      governmentFees,
+      serviceCharge: additionalCharges,
+      branchServiceCharge,
+      discount: unsafeData.payment.discount,
+    });
+
+    // Validate everything at once
+    const { success, data, error } = rtoServicesFormSchemaWithOptionalPayment.safeParse(unsafeData);
+
+    if (!success) {
+      console.error('Validation error:', error);
+      return {
+        error: true,
+        message: 'Invalid data',
+      };
+    }
+
+    const _paymentData = {
+      ...unsafeData.payment,
+      branchId,
+      totalAmount: paymentBreakdown.totalAmountAfterDiscount,
+      licenseServiceFee: paymentBreakdown.branchServiceCharge,
+    };
+
+    const {
+      success: paymentSuccess,
+      data: paymentData,
+      error: paymentError,
+    } = paymentSchema
+      .extend({
+        clientId: z.string().optional(),
+      })
+      .safeParse(_paymentData);
+
+    if (!paymentSuccess) {
+      console.error('Validation error:', paymentError);
+      return {
+        error: true,
+        message: 'Invalid data',
+      };
+    }
+
+    // Prepare RTO service data
+    const serviceData = {
+      ...data.service,
+      branchId,
+      serviceType: data.service.type,
+      governmentFees,
+      serviceCharge: additionalCharges,
+    };
 
     // Prepare client information
     const clientCode = data.client.clientCode ?? (await getNextClientCode(tenantId));
@@ -145,49 +187,16 @@ export const saveRTOServiceWithPayment = async (
       tenantId,
     };
 
-    const { governmentFees, additionalCharges } = getRTOServiceCharges(data.service.type);
-
-    // Prepare RTO service data
-    const serviceData = {
-      branchId,
-      serviceType: data.service.type,
-      governmentFees,
-      serviceCharge: additionalCharges,
-    };
-
-    // Calculate payment amounts
-    const paymentBreakdown = calculateRTOPaymentBreakdown({
-      governmentFees,
-      serviceCharge: additionalCharges,
-      branchServiceCharge,
-      discount: data.payment.discount,
-    });
-
-    // Validate payment data
-    const paymentValidation = paymentSchema.safeParse({
-      ...data.payment,
-      branchId,
-      clientId: data.clientId,
-      totalAmount: paymentBreakdown.totalAmountAfterDiscount,
-      licenseServiceFee: paymentBreakdown.branchServiceCharge,
-    });
-
-    if (!paymentValidation.success) {
-      console.error('Payment validation error:', paymentValidation.error);
-      return { error: true, message: 'Invalid payment data' };
-    }
-
     // Save RTO service and payment in a transaction
     const { clientId, serviceId, paymentId } = await saveRTOServiceAndPaymentInDB(
-      data.serviceId,
       clientInformation,
       serviceData,
-      paymentValidation.data
+      paymentData
     );
 
     // Process immediate payment if needed
     const currentDate = formatDateToYYYYMMDD(new Date());
-    const paymentMode = paymentValidation.data.paymentMode;
+    const paymentMode = paymentData.paymentMode;
 
     if (IMMEDIATE_PAYMENT_MODES.includes(paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])) {
       await upsertFullPaymentInDB({
@@ -200,9 +209,7 @@ export const saveRTOServiceWithPayment = async (
 
     return {
       error: false,
-      message: isUpdate
-        ? 'RTO service and payment updated successfully'
-        : 'RTO service and payment saved successfully',
+      message: 'RTO service and payment saved successfully',
       clientId,
       serviceId,
       paymentId,

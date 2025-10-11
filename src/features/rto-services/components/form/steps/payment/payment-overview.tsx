@@ -12,7 +12,7 @@ export const PaymentOverview = ({
 }) => {
   const { formattedValues: formatted } = useRTOPaymentCalculations();
 
-  const paidVia = existingPayment?.fullPayment.paymentMode;
+  const paidVia = existingPayment?.fullPayment?.paymentMode;
 
   return (
     <Card className="p-6 flex flex-col pt-10 min-h-[32rem] h-full">

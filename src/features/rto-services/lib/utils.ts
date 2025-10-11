@@ -30,6 +30,7 @@ export const mapClientToPersonalInfo = (
   client: NonNullable<NonNullable<Awaited<ReturnType<typeof getRTOService>>>['client']>
 ): RTOServiceFormValues['client'] => {
   return {
+    id: client.id,
     clientCode: client.clientCode,
     firstName: client.firstName,
     lastName: client.lastName,
@@ -71,6 +72,7 @@ export const mapRTOServiceToServiceInfo = (
   rtoService: NonNullable<Awaited<ReturnType<typeof getRTOService>>>
 ): RTOServiceFormValues['service'] => {
   return {
+    id: rtoService.id,
     type: rtoService.serviceType,
     license: {
       licenseNumber: rtoService.client?.drivingLicense?.licenseNumber,
@@ -90,8 +92,6 @@ export const getDefaultValuesForRTOServiceForm = (
 ): Partial<RTOServiceFormValues> => {
   if (rtoService?.client) {
     return {
-      clientId: rtoService.clientId,
-      serviceId: rtoService.id,
       client: mapClientToPersonalInfo(rtoService.client),
       service: mapRTOServiceToServiceInfo(rtoService),
       payment: rtoService.payment

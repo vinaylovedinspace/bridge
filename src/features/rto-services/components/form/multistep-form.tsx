@@ -87,7 +87,7 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
         setValue('client.id', result.clientId);
       }
       if (result.serviceId) {
-        setValue('serviceId', result.serviceId);
+        setValue('service.id', result.serviceId);
       }
 
       toast.success(result.message);
