@@ -83,6 +83,7 @@ export const PlanStep = ({ currentClientId }: PlanStepProps) => {
                       selected={field.value}
                       onChange={field.onChange}
                       placeholderText="Select joining date and time"
+                      minDate={new Date()}
                       maxDate={new Date(2100, 0, 1)}
                       disableDateChange={hasCompletedSessions}
                       workingDays={branchWorkingDays}
