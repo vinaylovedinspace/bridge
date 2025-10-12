@@ -1,7 +1,8 @@
 import { db } from '@/db';
 import { VehicleTable } from '@/db/schema';
 import { eq, ilike, and, or, lte, isNotNull, isNull } from 'drizzle-orm';
-import { getBranchConfig } from './branch';
+import { getBranchConfig } from '@/server/action/branch';
+import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 
 const _getVehicles = async (branchId: string, name?: string) => {
   // Create a base condition for the organization
@@ -41,6 +42,7 @@ const _getVehicleDocumentExpiry = async (branchId: string) => {
   const today = new Date();
   const thirtyDaysFromNow = new Date();
   thirtyDaysFromNow.setDate(today.getDate() + 30);
+  const thirtyDaysFromNowStr = formatDateToYYYYMMDD(thirtyDaysFromNow);
 
   const vehicles = await db
     .select({
@@ -58,19 +60,16 @@ const _getVehicleDocumentExpiry = async (branchId: string) => {
         isNull(VehicleTable.deletedAt),
         or(
           // PUC expiring soon or expired
-          and(
-            isNotNull(VehicleTable.pucExpiry),
-            lte(VehicleTable.pucExpiry, thirtyDaysFromNow.toISOString().split('T')[0])
-          ),
+          and(isNotNull(VehicleTable.pucExpiry), lte(VehicleTable.pucExpiry, thirtyDaysFromNowStr)),
           // Insurance expiring soon or expired
           and(
             isNotNull(VehicleTable.insuranceExpiry),
-            lte(VehicleTable.insuranceExpiry, thirtyDaysFromNow.toISOString().split('T')[0])
+            lte(VehicleTable.insuranceExpiry, thirtyDaysFromNowStr)
           ),
           // Registration expiring soon or expired
           and(
             isNotNull(VehicleTable.registrationExpiry),
-            lte(VehicleTable.registrationExpiry, thirtyDaysFromNow.toISOString().split('T')[0])
+            lte(VehicleTable.registrationExpiry, thirtyDaysFromNowStr)
           )
         )
       )

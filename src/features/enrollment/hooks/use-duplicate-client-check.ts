@@ -7,7 +7,7 @@ import {
   mapDrivingLicense,
 } from '@/features/enrollment/lib/utils';
 import { AdmissionFormValues } from '@/features/enrollment/types';
-import { checkPhoneNumberDuplicate, checkAadhaarNumberDuplicate } from '@/server/actions/clients';
+import { checkPhoneNumberDuplicate, checkAadhaarNumberDuplicate } from '@/server/action/clients';
 
 type ExistingClient = {
   id: string;
@@ -70,12 +70,12 @@ export const useDuplicateClientCheck = (
   const handleUseExisting = () => {
     if (existingClient?.data) {
       // Fill the form with existing client data using the helper functions
-      const personalInfo = mapClientToPersonalInfo(existingClient.data);
+      const client = mapClientToPersonalInfo(existingClient.data);
       const learningLicense = mapLearningLicense(existingClient.data.learningLicense);
       const drivingLicense = mapDrivingLicense(existingClient.data.drivingLicense);
 
-      setValue('clientId', existingClient.data.id);
-      setValue('personalInfo', personalInfo);
+      setValue('client.id', existingClient.data.id);
+      setValue('client', client);
 
       if (learningLicense) {
         setValue('learningLicense', learningLicense);

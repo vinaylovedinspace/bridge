@@ -1,5 +1,5 @@
 import { Sidebar } from '@/components/sidebar/sidebar';
-import { getBranchConfig } from '@/server/db/branch';
+import { getBranchConfig } from '@/server/action/branch';
 import { BranchConfigProvider } from '@/components/providers/branch-config-provider';
 
 export default async function PrivateLayout({

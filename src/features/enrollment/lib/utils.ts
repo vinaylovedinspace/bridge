@@ -8,7 +8,7 @@ import {
   DEFAULT_SESSION_MINUTES,
   DEFAULT_STATE,
 } from '@/lib/constants/business';
-import { parseDateStringToDateObject } from '@/lib/date-utils';
+import { parseDateStringToDateObject } from '@/lib/date-time-utils';
 
 // Function to get validation fields for a specific step
 export const getMultistepAdmissionStepValidationFields = (
@@ -20,7 +20,7 @@ export const getMultistepAdmissionStepValidationFields = (
       return ['serviceType'];
     case 'personal':
       return generateFieldPaths<AdmissionFormValues>({
-        prefix: 'personalInfo',
+        prefix: 'client',
         getValues,
       });
     case 'license':
@@ -60,7 +60,7 @@ const combineDateAndTime = (dateString: string, timeString: string): Date => {
 // Helper function to map client data to personal info form values
 export const mapClientToPersonalInfo = (
   client: NonNullable<Enrollment>['client']
-): AdmissionFormValues['personalInfo'] => {
+): AdmissionFormValues['client'] => {
   return {
     id: client.id, // Include the client ID for edit mode
     clientCode: client.clientCode,
@@ -101,9 +101,18 @@ export const mapClientToPersonalInfo = (
 
 // Helper function to map learning license to form values
 export const mapLearningLicense = (
-  learningLicense: NonNullable<Enrollment>['client']['learningLicense']
+  learningLicense: NonNullable<Enrollment>['client']['learningLicense'],
+  clientId?: string
 ): AdmissionFormValues['learningLicense'] => {
-  if (!learningLicense) return undefined;
+  if (!learningLicense) {
+    return clientId
+      ? {
+          class: [],
+          excludeLearningLicenseFee: false,
+          clientId,
+        }
+      : undefined;
+  }
 
   return {
     class: learningLicense.class || [],
@@ -113,14 +122,23 @@ export const mapLearningLicense = (
     expiryDate: parseDateStringToDateObject(learningLicense.expiryDate),
     applicationNumber: learningLicense.applicationNumber,
     excludeLearningLicenseFee: learningLicense.excludeLearningLicenseFee ?? false,
+    clientId: learningLicense.clientId,
   };
 };
 
 // Helper function to map driving license to form values
 export const mapDrivingLicense = (
-  drivingLicense: NonNullable<Enrollment>['client']['drivingLicense']
+  drivingLicense: NonNullable<Enrollment>['client']['drivingLicense'],
+  clientId?: string
 ): AdmissionFormValues['drivingLicense'] => {
-  if (!drivingLicense) return undefined;
+  if (!drivingLicense) {
+    return clientId
+      ? {
+          class: [],
+          clientId,
+        }
+      : undefined;
+  }
 
   return {
     class: drivingLicense.class || [],
@@ -133,6 +151,7 @@ export const mapDrivingLicense = (
     imv: drivingLicense.imv,
     rto: drivingLicense.rto,
     department: drivingLicense.department,
+    clientId: drivingLicense.clientId,
   };
 };
 
@@ -157,18 +176,23 @@ export const getDefaultValuesForAddEnrollmentForm = (
   if (existingClient) {
     return {
       serviceType: 'FULL_SERVICE' as const,
-      personalInfo: mapClientToPersonalInfo(existingClient),
-      learningLicense: mapLearningLicense(existingClient.learningLicense),
-      drivingLicense: mapDrivingLicense(existingClient.drivingLicense),
-      plan: DEFAULT_PLAN_VALUES,
-      payment: DEFAULT_PAYMENT_VALUES,
-      clientId: existingClient.id,
+      client: mapClientToPersonalInfo(existingClient),
+      learningLicense: mapLearningLicense(existingClient.learningLicense, existingClient.id),
+      drivingLicense: mapDrivingLicense(existingClient.drivingLicense, existingClient.id),
+      plan: {
+        ...DEFAULT_PLAN_VALUES,
+        clientId: existingClient.id,
+      },
+      payment: {
+        ...DEFAULT_PAYMENT_VALUES,
+        clientId: existingClient.id,
+      },
     } as AdmissionFormValues;
   }
 
   return {
     serviceType: 'FULL_SERVICE' as const,
-    personalInfo: {
+    client: {
       educationalQualification: 'GRADUATE',
       citizenStatus: 'BIRTH',
       isCurrentAddressSameAsPermanentAddress: false,
@@ -186,10 +210,9 @@ export const getDefaultValuesForEditEnrollmentForm = (
   enrollment: NonNullable<Enrollment>
 ): AdmissionFormValues => {
   const { client, payment } = enrollment;
-  console.log('clientId', client.id);
   return {
     serviceType: enrollment.serviceType,
-    personalInfo: mapClientToPersonalInfo(client),
+    client: mapClientToPersonalInfo(client),
     learningLicense: mapLearningLicense(client?.learningLicense),
     drivingLicense: mapDrivingLicense(client?.drivingLicense),
     clientId: client.id,
@@ -203,15 +226,20 @@ export const getDefaultValuesForEditEnrollmentForm = (
       joiningTime: enrollment.joiningTime,
       serviceType: enrollment.serviceType,
       clientId: enrollment.clientId,
+      planCode: enrollment.planCode,
+      vehicleRentAmount: enrollment.vehicleRentAmount,
+      branchId: enrollment.branchId,
     },
     payment: payment
       ? {
+          id: payment.id,
           discount: payment.discount,
           paymentType: payment.paymentType || 'FULL_PAYMENT',
           paymentStatus: payment.paymentStatus || 'PENDING',
           licenseServiceFee: payment.licenseServiceFee,
           totalAmount: payment.totalAmount,
           clientId: payment.clientId,
+          branchId: payment.branchId,
           paymentMode: 'PAYMENT_LINK' as const,
           applyDiscount: payment.discount > 0,
         }
@@ -222,6 +250,7 @@ export const getDefaultValuesForEditEnrollmentForm = (
           licenseServiceFee: 0,
           totalAmount: 0,
           clientId: client.id,
+          branchId: client.branchId,
           paymentMode: 'PAYMENT_LINK' as const,
           applyDiscount: false,
         },

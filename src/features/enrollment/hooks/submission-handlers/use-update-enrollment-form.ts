@@ -1,12 +1,14 @@
 import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import { toast } from 'sonner';
+import { UseFormGetValues } from 'react-hook-form';
 import {
   PersonalInfoValues,
   PlanValues,
   LearningLicenseValues,
   DrivingLicenseValues,
   PaymentValues,
+  AdmissionFormValues,
 } from '@/features/enrollment/types';
 import {
   updateClient,
@@ -14,13 +16,16 @@ import {
   createDrivingLicense,
   updateLearningLicense,
   updateDrivingLicense,
-  updatePlan,
-  createPayment,
+  updatePayment,
+  upsertPlanWithPayment,
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
 import { Enrollment } from '@/server/db/plan';
 
-export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
+export const useUpdateEnrollmentForm = (
+  enrollment: NonNullable<Enrollment>,
+  getValues: UseFormGetValues<AdmissionFormValues>
+) => {
   const router = useRouter();
 
   const handlePersonalStep = useCallback(
@@ -36,24 +41,19 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
       drivingLicense?: DrivingLicenseValues;
     }): ActionReturnType => {
       const { learningLicense, drivingLicense } = data;
-      const hasLearningLicense = learningLicense && Object.keys(learningLicense).length > 0;
-      const hasDrivingLicense = drivingLicense && Object.keys(drivingLicense).length > 0;
 
       try {
         let learningResult: Awaited<ActionReturnType> | null = null;
         let drivingResult: Awaited<ActionReturnType> | null = null;
 
-        if (hasLearningLicense) {
+        if (learningLicense) {
           if (enrollment.client.learningLicense) {
-            learningResult = await updateLearningLicense(enrollment.client.learningLicense.id, {
-              ...learningLicense,
-              clientId: enrollment.client.id,
-            });
+            learningResult = await updateLearningLicense(
+              enrollment.client.learningLicense.id,
+              learningLicense
+            );
           } else {
-            learningResult = await createLearningLicense({
-              ...learningLicense,
-              clientId: enrollment.client.id,
-            });
+            learningResult = await createLearningLicense(learningLicense);
           }
 
           if (learningResult.error) {
@@ -61,20 +61,14 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
           }
         }
 
-        const hasClass = learningLicense?.class && learningLicense.class.length > 0;
-        if (hasDrivingLicense || hasClass) {
+        if (drivingLicense) {
           if (enrollment.client.drivingLicense) {
-            drivingResult = await updateDrivingLicense(enrollment.client.drivingLicense.id, {
-              ...drivingLicense,
-              class: learningLicense?.class || [],
-              clientId: enrollment.client.id,
-            });
+            drivingResult = await updateDrivingLicense(
+              enrollment.client.drivingLicense.id,
+              drivingLicense
+            );
           } else {
-            drivingResult = await createDrivingLicense({
-              ...drivingLicense,
-              class: learningLicense?.class || [],
-              clientId: enrollment.client.id,
-            });
+            drivingResult = await createDrivingLicense(drivingLicense);
           }
 
           if (drivingResult.error) {
@@ -84,26 +78,27 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
 
         return {
           error: false,
-          message: 'Licence information updated successfully',
+          message: 'License information updated successfully',
         };
-      } catch {
-        return Promise.resolve({
+      } catch (error) {
+        console.error('Error updating license:', error);
+        return {
           error: true,
-          message: 'An unexpected error occurred while processing licence data',
-        });
+          message: 'Failed to update license information',
+        };
       }
     },
-    [enrollment.client.id, enrollment.client.learningLicense, enrollment.client.drivingLicense]
+    [enrollment.client.drivingLicense, enrollment.client.learningLicense]
   );
 
   const handlePlanStep = useCallback(
     async (data: PlanValues): ActionReturnType => {
       try {
-        const result = await updatePlan(enrollment.id, {
-          ...data,
-          clientId: enrollment.client.id,
-        });
+        // Get current payment form values for recalculation
+        const paymentFormData = getValues('payment');
 
+        // Use upsertPlanWithPayment which handles both create and update
+        const result = await upsertPlanWithPayment(data, paymentFormData);
         return result;
       } catch (error) {
         console.error('Error updating plan:', error);
@@ -113,40 +108,21 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
         });
       }
     },
-    [enrollment.id, enrollment.client.id]
+    [getValues]
   );
 
-  const handlePaymentStep = useCallback(
-    async (data: PaymentValues): ActionReturnType => {
-      try {
-        const paymentData = {
-          ...data,
-          clientId: enrollment.clientId,
-        };
-        const result = await createPayment(paymentData, enrollment.id);
+  const handlePaymentStep = useCallback(async (data: PaymentValues): ActionReturnType => {
+    try {
+      const result = await updatePayment(data);
 
-        if (result.error) {
-          return {
-            error: true,
-            message: result.message || 'Failed to save payment',
-          };
-        }
-
-        return {
-          error: false,
-          message: enrollment.payment
-            ? 'Payment updated successfully'
-            : 'Payment created successfully',
-        };
-      } catch {
-        return {
-          error: true,
-          message: 'Unable to save payment. Please try again.',
-        };
-      }
-    },
-    [enrollment.id, enrollment.clientId, enrollment.payment]
-  );
+      return result;
+    } catch {
+      return {
+        error: true,
+        message: 'Unable to save payment. Please try again.',
+      };
+    }
+  }, []);
 
   const submitStep = useCallback(
     async (
@@ -170,9 +146,6 @@ export const useEditFormSubmissions = (enrollment: NonNullable<Enrollment>) => {
       };
 
       const handler = stepHandlers[stepKey as keyof typeof stepHandlers];
-      if (!handler) {
-        throw new Error(`Unknown step: ${stepKey}`);
-      }
 
       const result = await handler();
 

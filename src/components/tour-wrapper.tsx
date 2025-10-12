@@ -4,7 +4,7 @@ import { useClerk } from '@clerk/nextjs';
 import { NextStep } from 'nextstepjs';
 
 import { tourSteps } from '@/lib/tour-steps';
-import { markOnboardingComplete } from '@/server/actions/user';
+import { markOnboardingComplete } from '@/server/action/user';
 
 export function TourWrapper({ children }: { children: React.ReactNode }) {
   const { session } = useClerk();

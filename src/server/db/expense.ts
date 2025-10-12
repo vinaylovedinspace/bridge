@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { ExpenseTable } from '@/db/schema';
 import { eq, and, isNull, desc } from 'drizzle-orm';
-import { getBranchConfig } from './branch';
+import { getBranchConfig } from '@/server/action/branch';
 
 const _getExpenses = async (branchId: string) => {
   const expenses = await db.query.ExpenseTable.findMany({

@@ -23,7 +23,7 @@ export const PaymentModeSelector = () => {
   const [paymentMode, setPaymentMode] =
     useState<(typeof PaymentModeEnum.enumValues)[number]>('PAYMENT_LINK');
   const [isEditingPhone, setIsEditingPhone] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState(getValues().personalInfo?.phoneNumber);
+  const [phoneNumber, setPhoneNumber] = useState(getValues().client?.phoneNumber);
   const [isSendingLink, setIsSendingLink] = useState(false);
   const [smsSent, setSmsSent] = useState(false);
   const [isAcceptingPayment, setIsAcceptingPayment] = useState(false);
@@ -92,7 +92,7 @@ export const PaymentModeSelector = () => {
       const formValues = getValues();
       const formPlanId = formValues.serviceId;
       const customerName =
-        `${formValues.personalInfo?.firstName || ''} ${formValues.personalInfo?.lastName || ''}`.trim();
+        `${formValues.client?.firstName || ''} ${formValues.client?.lastName || ''}`.trim();
 
       if (!formPlanId) {
         toast.error('Missing plan information. Please complete the Plan step first.');

@@ -16,9 +16,8 @@ import {
   getMultistepRTOServiceStepValidationFields,
   getDefaultValuesForRTOServiceForm,
 } from '../../lib/utils';
-import { saveRTOService } from '../../server/action';
+import { saveRTOServiceWithPayment } from '../../server/action';
 import { getRTOService } from '../../server/db';
-import { createPayment } from '../../server/action';
 import { FormNavigation } from '@/components/ui/form-navigation';
 import { cn } from '@/lib/utils';
 
@@ -47,7 +46,7 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
     return {
       personal: {
         component: <PersonalInfoStep />,
-        getData: () => getValues('personalInfo'),
+        getData: () => getValues('client'),
       },
       license: {
         component: <LicenseStep />,
@@ -66,57 +65,41 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
   }, [goToNext]);
 
   const handleLicenseStep = useCallback(async () => {
+    // Just validate and move to next step - actual service creation happens in payment step
+    goToNext();
+  }, [goToNext]);
+
+  const handlePaymentStep = useCallback(async () => {
+    const formData = getValues();
+
     setIsSubmitting(true);
     try {
-      const result = await saveRTOService(getValues());
+      // Use combined RTO service + payment transaction
+      const result = await saveRTOServiceWithPayment(formData);
 
       if (result.error) {
         toast.error(result.message);
         return;
       }
 
-      setValue('clientId', result.clientId);
-      setValue('serviceId', result.serviceId);
-
-      toast.success(result.message);
-      router.refresh();
-      goToNext();
-    } catch (error) {
-      console.error('Error saving RTO service:', error);
-      toast.error('Failed to save RTO service');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [getValues, setValue, router, goToNext]);
-
-  const handlePaymentStep = useCallback(async () => {
-    const formData = getValues();
-    const { serviceId, payment } = formData;
-
-    if (!serviceId) {
-      toast.error('Service ID is missing');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const paymentResult = await createPayment(payment, serviceId);
-
-      if (paymentResult.error) {
-        toast.error(paymentResult.message);
-        return;
+      // Update form state with IDs if successful
+      if (result.clientId) {
+        setValue('client.id', result.clientId);
+      }
+      if (result.serviceId) {
+        setValue('service.id', result.serviceId);
       }
 
-      toast.success('RTO service and payment saved successfully');
+      toast.success(result.message);
       router.push('/rto-services');
       router.refresh();
     } catch (error) {
-      console.error('Error saving payment:', error);
-      toast.error('Failed to save payment');
+      console.error('Error saving RTO service with payment:', error);
+      toast.error('Failed to save RTO service and payment');
     } finally {
       setIsSubmitting(false);
     }
-  }, [getValues, router]);
+  }, [getValues, setValue, router]);
 
   // Map step handlers
   const stepHandlers = React.useMemo(() => {

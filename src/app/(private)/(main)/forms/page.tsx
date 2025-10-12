@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { FormsContainer } from '@/features/forms/components/forms-container';
-import { getClientsForForms } from '@/server/actions/forms';
+import { getClientsForForms } from '@/server/action/forms';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default async function FormsPage() {

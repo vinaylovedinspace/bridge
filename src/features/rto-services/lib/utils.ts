@@ -12,7 +12,7 @@ export const getMultistepRTOServiceStepValidationFields = (
   switch (step) {
     case 'personal':
       return generateFieldPaths<RTOServiceFormValues>({
-        prefix: 'personalInfo',
+        prefix: 'client',
         getValues,
       });
     case 'license':
@@ -28,8 +28,9 @@ export const getMultistepRTOServiceStepValidationFields = (
 // Helper function to map client data to personal info form values
 export const mapClientToPersonalInfo = (
   client: NonNullable<NonNullable<Awaited<ReturnType<typeof getRTOService>>>['client']>
-): RTOServiceFormValues['personalInfo'] => {
+): RTOServiceFormValues['client'] => {
   return {
+    id: client.id,
     clientCode: client.clientCode,
     firstName: client.firstName,
     lastName: client.lastName,
@@ -71,6 +72,7 @@ export const mapRTOServiceToServiceInfo = (
   rtoService: NonNullable<Awaited<ReturnType<typeof getRTOService>>>
 ): RTOServiceFormValues['service'] => {
   return {
+    id: rtoService.id,
     type: rtoService.serviceType,
     license: {
       licenseNumber: rtoService.client?.drivingLicense?.licenseNumber,
@@ -90,9 +92,7 @@ export const getDefaultValuesForRTOServiceForm = (
 ): Partial<RTOServiceFormValues> => {
   if (rtoService?.client) {
     return {
-      clientId: rtoService.clientId,
-      serviceId: rtoService.id,
-      personalInfo: mapClientToPersonalInfo(rtoService.client),
+      client: mapClientToPersonalInfo(rtoService.client),
       service: mapRTOServiceToServiceInfo(rtoService),
       payment: rtoService.payment
         ? {
@@ -102,6 +102,7 @@ export const getDefaultValuesForRTOServiceForm = (
             licenseServiceFee: rtoService.payment.licenseServiceFee,
             totalAmount: rtoService.payment.totalAmount,
             clientId: rtoService.payment.clientId,
+            branchId: rtoService.payment.branchId,
             paymentMode: 'PAYMENT_LINK' as const,
             applyDiscount: rtoService.payment.discount > 0,
           }
@@ -112,6 +113,7 @@ export const getDefaultValuesForRTOServiceForm = (
             licenseServiceFee: 0,
             totalAmount: 0,
             clientId: rtoService.clientId,
+            branchId: rtoService.branchId,
             paymentMode: 'PAYMENT_LINK' as const,
             applyDiscount: false,
           },
@@ -119,7 +121,7 @@ export const getDefaultValuesForRTOServiceForm = (
   }
 
   return {
-    personalInfo: {
+    client: {
       educationalQualification: 'GRADUATE',
       citizenStatus: 'BIRTH',
       isCurrentAddressSameAsPermanentAddress: false,

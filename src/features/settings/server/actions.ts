@@ -7,12 +7,13 @@ import { eq, and, gte } from 'drizzle-orm';
 import { branchSettingsSchema, type BranchSettings } from '../types';
 import { CACHE_TAGS, revalidateDbCache } from '@/lib/cache';
 import { auth } from '@clerk/nextjs/server';
+import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 
 async function updateScheduledSessionsForWorkingDays(branchId: string, newWorkingDays: number[]) {
   try {
     // Get today's date in YYYY-MM-DD format
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = formatDateToYYYYMMDD(today);
 
     // Find all future scheduled sessions for this branch
     const futureScheduledSessions = await db

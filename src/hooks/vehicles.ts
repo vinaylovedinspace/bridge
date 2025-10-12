@@ -1,6 +1,6 @@
 'use client';
 
-import { getVehicle, getVehicles } from '@/server/actions/vehicle';
+import { getVehicle, getVehicles } from '@/server/action/vehicle';
 import useSWR from 'swr';
 
 export function useVehicles() {

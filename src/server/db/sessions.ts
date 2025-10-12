@@ -2,7 +2,7 @@ import { db } from '@/db';
 import { SessionTable } from '@/db/schema';
 import { auth } from '@clerk/nextjs/server';
 import { eq, and, ne } from 'drizzle-orm';
-import { getBranchConfig } from './branch';
+import { getBranchConfig } from '@/server/action/branch';
 
 const _getSessions = async (branchId: string, vehicleId?: string, clientId?: string) => {
   const conditions = [

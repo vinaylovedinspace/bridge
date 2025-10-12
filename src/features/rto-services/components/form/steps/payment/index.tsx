@@ -2,10 +2,8 @@ import { TypographyH5 } from '@/components/ui/typography';
 import { Card } from '@/components/ui/card';
 import { PaymentOptions } from './payment-options';
 import { PaymentModeSelector } from './payment-mode-selector';
-import { PaymentOverview as PaymentOverviewComponent } from './payment-overview';
+import { PaymentOverview } from './payment-overview';
 import { getRTOService } from '@/features/rto-services/server/db';
-
-export { PaymentOverviewComponent as PaymentOverview };
 
 type PaymentStepProps = {
   existingPayment?: NonNullable<Awaited<ReturnType<typeof getRTOService>>>['payment'];
@@ -43,7 +41,7 @@ export const PaymentContainer = ({ existingPayment }: PaymentContainerProps) => 
           </div>
         </div>
         <div className="col-span-12 md:col-span-6 md:col-start-4">
-          <PaymentOverviewComponent />
+          <PaymentOverview existingPayment={existingPayment} />
         </div>
       </div>
     );
@@ -53,7 +51,7 @@ export const PaymentContainer = ({ existingPayment }: PaymentContainerProps) => 
     <div className="grid grid-cols-12 gap-6 px-4">
       <PaymentStep existingPayment={existingPayment} />
       <div className="col-span-4">
-        <PaymentOverviewComponent />
+        <PaymentOverview existingPayment={existingPayment} />
       </div>
 
       {/* Show existing payment info if discount was applied */}

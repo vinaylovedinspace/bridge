@@ -1,6 +1,6 @@
 import { RTOServiceTypeEnum, type RTOServicesTable } from '@/db/schema';
 import { RTO_OFFICES as _RTO_OFFICES } from '@/lib/constants/rto-offices';
-import { personalInfoSchema } from '@/types/zod/client';
+import { clientSchema } from '@/types/zod/client';
 import { drivingLicenseSchema } from '@/types/zod/license';
 import { paymentSchema } from '@/types/zod/payment';
 import { z } from 'zod';
@@ -36,13 +36,9 @@ export const RTO_OFFICES = _RTO_OFFICES;
 export type RTOOffice = (typeof RTO_OFFICES)[number];
 
 export const rtoServicesFormSchema = z.object({
-  clientId: z.string().optional(),
-  serviceId: z.string().optional(),
-  personalInfo: personalInfoSchema.extend({
-    branchId: z.string().optional(),
-    tenantId: z.string().optional(),
-  }),
+  client: clientSchema,
   service: z.object({
+    id: z.string().optional(),
     type: z.enum(RTOServiceTypeEnum.enumValues, {
       required_error: 'Service type is required',
       invalid_type_error: 'Service type is required',
@@ -57,10 +53,8 @@ export const rtoServicesFormSchema = z.object({
 });
 
 export const rtoServicesFormSchemaWithOptionalPayment = rtoServicesFormSchema.pick({
-  personalInfo: true,
+  client: true,
   service: true,
-  serviceId: true,
-  clientId: true,
 });
 
 export type RTOServiceFormValues = z.infer<typeof rtoServicesFormSchema>;

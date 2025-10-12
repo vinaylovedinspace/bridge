@@ -3,7 +3,7 @@ import { getRTOServices } from '../../server/db';
 import { type RTOServiceStatus, type RTOServiceType } from '../../types';
 import { DataTable } from './data-table';
 import { columns } from './columns';
-import { getBranchConfig } from '@/server/db/branch';
+import { getBranchConfig } from '@/server/action/branch';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type RTOServicesProps = {

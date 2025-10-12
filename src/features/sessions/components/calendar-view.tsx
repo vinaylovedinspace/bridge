@@ -14,9 +14,9 @@ import { ChevronLeft, ChevronRight, Calendar, Trash2 } from 'lucide-react';
 import { useVehicles } from '@/hooks/vehicles';
 import { useSessions } from '../hooks/sessions';
 import { useBranchSettings } from '@/features/settings/hooks/settings';
-import { updateSession, cancelSession, assignSessionToSlot } from '@/server/actions/sessions';
+import { updateSession, cancelSession, assignSessionToSlot } from '@/server/action/sessions';
 import type { Session } from '@/server/db/sessions';
-import { dateToString, formatDateForDisplay } from '@/lib/date-utils';
+import { formatDateToYYYYMMDD, formatDateForDisplay } from '@/lib/date-time-utils';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { PopConfirm } from '@/components/ui/pop-confirm';
@@ -171,7 +171,7 @@ export const CalendarView = () => {
         const result = await assignSessionToSlot(
           clientId,
           selectedVehicle,
-          dateToString(selectedTimeSlot.date || selectedDate),
+          formatDateToYYYYMMDD(selectedTimeSlot.date || selectedDate),
           startTime,
           endTime
         );

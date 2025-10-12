@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { UseFormClearErrors, UseFormSetValue } from 'react-hook-form';
 
 import { mapClientToPersonalInfo, mapDrivingLicense } from '@/features/enrollment/lib/utils';
-import { checkPhoneNumberDuplicate, checkAadhaarNumberDuplicate } from '@/server/actions/clients';
+import { checkPhoneNumberDuplicate, checkAadhaarNumberDuplicate } from '@/server/action/clients';
 import { RTOServiceFormValues } from '../types';
 
 type ExistingClient = {
@@ -64,11 +64,11 @@ export const useDuplicateClientCheck = (
   const handleUseExisting = () => {
     if (existingClient?.data) {
       // Fill the form with existing client data using the helper functions
-      const personalInfo = mapClientToPersonalInfo(existingClient.data);
+      const client = mapClientToPersonalInfo(existingClient.data);
       const drivingLicense = mapDrivingLicense(existingClient.data.drivingLicense);
 
-      setValue('personalInfo', personalInfo);
-      setValue('clientId', existingClient.id);
+      setValue('client', client);
+      setValue('client.id', existingClient.id);
 
       if (drivingLicense?.licenseNumber) {
         setValue('service.license.licenseNumber', drivingLicense.licenseNumber);

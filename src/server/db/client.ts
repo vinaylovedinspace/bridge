@@ -2,7 +2,7 @@ import { db } from '@/db';
 import { ClientTable, SessionTable } from '@/db/schema';
 import { auth } from '@clerk/nextjs/server';
 import { eq, ilike, and, desc, or } from 'drizzle-orm';
-import { getBranchConfig } from './branch';
+import { getBranchConfig } from '@/server/action/branch';
 
 const _getClients = async (
   branchId: string,

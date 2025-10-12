@@ -89,7 +89,7 @@ export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
 
       const result =
         currentStep === 'personal'
-          ? await updateClientPersonalInfo(client.id, formValues.personalInfo)
+          ? await updateClientPersonalInfo(client.id, formValues.client)
           : await saveLicenseStep(formValues);
 
       if (result.error) {

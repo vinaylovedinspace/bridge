@@ -17,6 +17,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import type { Session } from '@/server/db/sessions';
+import { formatTimeString } from '@/lib/date-time-utils';
 
 interface SessionTimeEditorProps {
   session: Session | null;
@@ -48,7 +49,7 @@ const calculateEndTime = (startTime: string, durationMinutes: number = 30): stri
   startDate.setHours(hours, minutes, 0, 0);
 
   const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
-  return `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+  return formatTimeString(endDate);
 };
 
 export const SessionTimeEditor = ({

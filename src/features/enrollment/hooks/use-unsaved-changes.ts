@@ -25,7 +25,7 @@ export const useUnsavedChanges = (
       case 'service':
         return { serviceType: watchedValues.serviceType };
       case 'personal':
-        return watchedValues.personalInfo;
+        return watchedValues.client;
       case 'license':
         return {
           learningLicense: watchedValues.learningLicense,
@@ -45,7 +45,7 @@ export const useUnsavedChanges = (
       case 'service':
         return { serviceType: originalValues.serviceType };
       case 'personal':
-        return originalValues.personalInfo;
+        return originalValues.client;
       case 'license':
         return {
           learningLicense: originalValues.learningLicense,
@@ -92,7 +92,7 @@ export const useUnsavedChanges = (
       case 'personal':
         reset({
           ...getValues(),
-          personalInfo: originalValues.personalInfo,
+          client: originalValues.client,
         });
         break;
       case 'license':

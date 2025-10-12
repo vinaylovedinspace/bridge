@@ -9,7 +9,7 @@ import {
 } from './db';
 import { ActionReturnType } from '@/types/actions';
 import { expenseFormSchema } from '../schemas/expense';
-import { getBranchConfig } from '@/server/db/branch';
+import { getBranchConfig } from '@/server/action/branch';
 
 /**
  * Server action to add a new expense

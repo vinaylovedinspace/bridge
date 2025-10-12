@@ -32,8 +32,8 @@ import { addStaff, updateStaff } from '../server/action';
 import { staffFormSchema } from '../schemas/staff';
 import { Staff } from '@/server/db/staff';
 import { useRouter } from 'next/navigation';
-import { getVehicles } from '@/server/actions/vehicle';
-import { getStaff } from '@/server/actions/staff';
+import { getVehicles } from '@/server/action/vehicle';
+import { getStaff } from '@/server/action/staff';
 import {
   AlertDialog,
   AlertDialogAction,

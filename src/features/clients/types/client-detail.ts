@@ -1,10 +1,10 @@
-import { personalInfoSchema } from '@/types/zod/client';
+import { clientSchema } from '@/types/zod/client';
 import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
 import { z } from 'zod';
 
 // Client Detail Form Schema
 export const clientDetailFormSchema = z.object({
-  personalInfo: personalInfoSchema,
+  client: clientSchema,
   learningLicense: learningLicenseSchema.optional(),
   drivingLicense: drivingLicenseSchema.optional(),
 });

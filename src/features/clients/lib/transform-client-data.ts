@@ -1,10 +1,10 @@
 import { Client } from '@/server/db/client';
 import { ClientDetailFormValues } from '../types/client-detail';
-import { parseDate } from '@/lib/date-utils';
+import { parseDate } from '@/lib/date-time-utils';
 
 export const transformClientToFormData = (client: NonNullable<Client>): ClientDetailFormValues => {
   return {
-    personalInfo: {
+    client: {
       firstName: client.firstName,
       lastName: client.lastName,
       aadhaarNumber: client.aadhaarNumber,

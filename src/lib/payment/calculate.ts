@@ -116,7 +116,7 @@ export function calculateEnrollmentPaymentBreakdown({
  */
 export function formatCurrency(amount: number): string {
   if (!Number.isFinite(amount)) {
-    throw new Error(`Invalid amount for currency formatting: ${amount}`);
+    return '₹0';
   }
 
   return new Intl.NumberFormat('en-IN', {
@@ -205,6 +205,9 @@ export function calculateAmountDue({
   paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS';
   firstInstallmentAmount?: number;
 }): number {
+  console.log('calculateAmountDue', {
+    totalAmount,
+  });
   if (existingPayment) {
     return calculateOutstandingAmount(existingPayment, totalAmount);
   } else {

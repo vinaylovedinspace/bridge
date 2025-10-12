@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAdmissionStepNavigation, ProgressBar } from '../progress-bar/progress-bar';
 import { PaymentContainer } from './steps/payment';
 import { getMultistepAdmissionStepValidationFields } from '../../lib/utils';
-import { useEnrollmentFormSubmissions } from '../../hooks/use-enrollment-form-submissions';
+import { useCreateEnrollmentForm } from '../../hooks/submission-handlers/use-create-enrollment-form';
 import { getClientById } from '../../server/action';
 import { useAddAdmissionForm } from '../../hooks/use-admission-form';
 import { AdmissionFormValues } from '../../types';
@@ -37,10 +37,10 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
 
   // Watch all form values to detect changes
   const watchedValues = watch();
-  const clientId = watch('clientId');
+  const clientId = watch('client.id');
 
   // Use the enrollment form submissions hook
-  const { submitStep } = useEnrollmentFormSubmissions(getValues, setValue);
+  const { submitStep } = useCreateEnrollmentForm(getValues, setValue);
 
   // Map step keys to components and their corresponding actions
   const stepComponents = React.useMemo(() => {
@@ -51,7 +51,7 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
       },
       personal: {
         component: <PersonalInfoStep />,
-        getData: () => getValues('personalInfo'),
+        getData: () => getValues('client'),
       },
       license: {
         component: <LicenseStep />,
@@ -82,7 +82,7 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
         case 'service':
           return { serviceType: watchedValues.serviceType };
         case 'personal':
-          return watchedValues.personalInfo;
+          return watchedValues.client;
         case 'license':
           return {
             learningLicense: watchedValues.learningLicense,
@@ -102,7 +102,7 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
         case 'service':
           return { serviceType: initialValues.serviceType };
         case 'personal':
-          return initialValues.personalInfo;
+          return initialValues.client;
         case 'license':
           return {
             learningLicense: initialValues.learningLicense,

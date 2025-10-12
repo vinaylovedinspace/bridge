@@ -21,23 +21,36 @@ export const columns: ColumnDef<Payment>[] = [
     accessorKey: 'clientCode',
     header: 'Client Code',
     cell: ({ row }) => {
-      return <Badge variant="outline">CS-{row.original.clientCode}</Badge>;
+      return <Badge variant="outline">CS-{row.original.client?.clientCode}</Badge>;
     },
   },
   {
     accessorKey: 'clientName',
     header: 'Name',
+    cell: ({ row }) => {
+      return row.original.client?.firstName + ' ' + row.original.client?.lastName;
+    },
   },
   {
-    accessorKey: 'amountDue',
-    header: 'Amount Due',
+    accessorKey: 'client.phoneNumber',
+    header: 'Phone Number',
+  },
+  {
+    accessorKey: 'type',
+    header: 'Payment for',
     cell: ({ row }) => {
-      const amount = row.original.amountDue;
-      return (
-        <span className={amount > 0 ? 'text-blue-600' : 'text-green-600'}>
-          {formatCurrency(amount)}
-        </span>
-      );
+      const plan = row.original.plan;
+      const rtoService = row.original.rtoService;
+
+      if (plan) {
+        return <Badge>{plan.serviceType.replace('_', ' ')}</Badge>;
+      }
+
+      if (rtoService) {
+        return <Badge>RTO Service</Badge>;
+      }
+
+      return '-';
     },
   },
   {
@@ -47,16 +60,7 @@ export const columns: ColumnDef<Payment>[] = [
       return formatCurrency(row.original.totalAmount);
     },
   },
-  {
-    accessorKey: 'nextInstallmentDate',
-    header: 'Next Installment Date',
-    cell: ({ row }) => {
-      const date = row.original.nextInstallmentDate;
-      const isOverdue =
-        date && new Date(date) < new Date() && row.original.paymentStatus === 'OVERDUE';
-      return <span className={isOverdue ? 'text-red-600' : ''}>{formatDate(date)}</span>;
-    },
-  },
+
   {
     accessorKey: 'paymentStatus',
     header: 'Payment Status',
@@ -65,10 +69,10 @@ export const columns: ColumnDef<Payment>[] = [
     },
   },
   {
-    accessorKey: 'lastPaymentDate',
-    header: 'Last Payment Date',
+    accessorKey: 'createdAt',
+    header: 'Created At',
     cell: ({ row }) => {
-      return formatDate(row.original.lastPaymentDate);
+      return formatDate(row.original.createdAt);
     },
   },
 ];

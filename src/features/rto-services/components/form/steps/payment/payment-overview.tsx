@@ -3,9 +3,16 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Info } from 'lucide-react';
 import { useRTOPaymentCalculations } from '@/features/rto-services/hooks/use-rto-payment-calculations';
+import { getRTOService } from '@/features/rto-services/server/db';
 
-export const PaymentOverview = () => {
+export const PaymentOverview = ({
+  existingPayment,
+}: {
+  existingPayment?: NonNullable<Awaited<ReturnType<typeof getRTOService>>>['payment'];
+}) => {
   const { formattedValues: formatted } = useRTOPaymentCalculations();
+
+  const paidVia = existingPayment?.fullPayment?.paymentMode;
 
   return (
     <Card className="p-6 flex flex-col pt-10 min-h-[32rem] h-full">
@@ -55,7 +62,14 @@ export const PaymentOverview = () => {
           <Separator className="my-4" />
 
           <div className="flex justify-between">
-            <TypographyMuted className="font-semibold">Total Due</TypographyMuted>
+            <div className="flex items-center space-x-2">
+              <TypographyMuted className="font-semibold">Total Due</TypographyMuted>
+              {paidVia && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                  Received via {existingPayment?.fullPayment.paymentMode}
+                </span>
+              )}
+            </div>
             <TypographyMuted className="font-semibold">{formatted.amountDue}</TypographyMuted>
           </div>
         </div>

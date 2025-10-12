@@ -8,10 +8,11 @@ import { TypographyH5, TypographyMuted } from '@/components/ui/typography';
 import { AdmissionFormValues } from '@/features/enrollment/types';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { calculateLicenseFees } from '@/lib/constants/rto-fees';
-import { LICENSE_CLASS_OPTIONS } from '@/lib/constants/license-classes';
+import { LICENSE_CLASS_OPTIONS, LicenseClass } from '@/lib/constants/license-classes';
 import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
 import { useAtomValue } from 'jotai';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useMemo, useEffect } from 'react';
 
 type LicenseStepProps = {
   isEditMode?: boolean;
@@ -19,21 +20,34 @@ type LicenseStepProps = {
 
 export const LicenseStep = ({}: LicenseStepProps) => {
   const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
-  const { control, watch, getValues } = useFormContext<AdmissionFormValues>();
+  const { control, watch, getValues, setValue } = useFormContext<AdmissionFormValues>();
 
   // Watch service type to conditionally show/hide fields
   const serviceType = watch('serviceType');
 
   // Watch selected license classes and checkbox for fee calculation
-  const selectedLicenseClasses = watch('learningLicense.class') || [];
+  const _selectedLicenseClasses = watch('learningLicense.class');
+
+  const selectedLicenseClasses = useMemo(
+    () => _selectedLicenseClasses ?? [],
+    [_selectedLicenseClasses]
+  );
+
   const excludeLearningLicenseFee = watch('learningLicense.excludeLearningLicenseFee') ?? false;
 
   // Calculate fees breakdown for display (only if not excluded)
-  const feeCalculation = calculateLicenseFees({
-    licenseClasses: selectedLicenseClasses,
-    excludeLearningLicenseFee,
-    serviceCharge: branchServiceCharge,
-  });
+  const feeCalculation = useMemo(() => {
+    return calculateLicenseFees({
+      licenseClasses: selectedLicenseClasses,
+      excludeLearningLicenseFee,
+      serviceCharge: branchServiceCharge,
+    });
+  }, [branchServiceCharge, excludeLearningLicenseFee, selectedLicenseClasses]);
+
+  // Update form value when fees change
+  useEffect(() => {
+    setValue('payment.licenseServiceFee', feeCalculation.total);
+  }, [feeCalculation.total, setValue]);
 
   return (
     <div className="space-y-10">
@@ -51,7 +65,10 @@ export const LicenseStep = ({}: LicenseStepProps) => {
                 </FormLabel>
                 <MultiSelect
                   options={LICENSE_CLASS_OPTIONS}
-                  onValueChange={field.onChange}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    setValue('drivingLicense.class', value as LicenseClass[]);
+                  }}
                   defaultValue={field.value}
                   placeholder="Select licence classes"
                   maxCount={5}

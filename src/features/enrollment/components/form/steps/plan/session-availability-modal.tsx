@@ -5,7 +5,7 @@ import { format, addDays } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, X } from 'lucide-react';
-import { getSessions } from '@/server/actions/sessions';
+import { getSessions } from '@/server/action/sessions';
 import type { Session } from '@/server/db/sessions';
 import { generateTimeSlots } from '@/lib/sessions';
 import { branchOperatingHoursAtom, branchWorkingDaysAtom } from '@/lib/atoms/branch-config';

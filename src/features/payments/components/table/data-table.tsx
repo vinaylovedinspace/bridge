@@ -26,9 +26,15 @@ export function PaymentDataTable<TData, TValue>({ columns, data }: DataTableProp
   });
 
   const handleRowClick = (row: Row<TData>) => {
-    const original = row.original as { clientId?: string };
-    if (original?.clientId) {
-      router.push(`/clients/${original.clientId}?step=payment`);
+    const { plan, rtoService } = row.original as {
+      plan?: { id: string };
+      rtoService?: { id: string };
+    };
+    if (plan) {
+      router.push(`/enrollment/${plan.id}?step=payment`);
+    }
+    if (rtoService) {
+      router.push(`/rto-services/${rtoService.id}?step=payment`);
     }
   };
 
