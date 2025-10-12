@@ -118,14 +118,6 @@ export const deleteRTOService = async (id: string, branchId: string) => {
         )
         .returning();
 
-      // Soft-delete associated payment if exists
-      if (rtoService?.paymentId) {
-        await tx
-          .update(PaymentTable)
-          .set({ deletedAt: new Date(), updatedAt: new Date() })
-          .where(eq(PaymentTable.id, rtoService.paymentId));
-      }
-
       return rtoService;
     });
   } catch (error) {

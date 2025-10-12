@@ -1,4 +1,3 @@
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useCallback } from 'react';
 import {
@@ -23,8 +22,6 @@ export const useCreateEnrollmentForm = (
   getValues: UseFormGetValues<AdmissionFormValues>,
   setValue: UseFormSetValue<AdmissionFormValues>
 ) => {
-  const router = useRouter();
-
   const handlePersonalStep = useCallback(
     async (data: PersonalInfoValues): ActionReturnType => {
       const { clientId } = await createClient(data);
