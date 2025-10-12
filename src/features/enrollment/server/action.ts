@@ -157,7 +157,7 @@ export const upsertPlanWithPayment = async (
 
     // 2. Find existing plan (if any)
     const existingPlan = await findExistingPlanInDB(unsafePlanData.id, unsafePlanData.clientId);
-    const planCode = existingPlan?.planCode || (await getNextPlanCode(branchId));
+    const planCode = existingPlan?.planCode ?? (await getNextPlanCode(branchId));
 
     // 3. Check if plan has changed
     const planTimingChanged = hasPlanChanged(
