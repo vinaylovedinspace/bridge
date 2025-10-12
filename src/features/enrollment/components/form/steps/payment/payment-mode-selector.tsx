@@ -46,7 +46,6 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
 
     if (!result.error) {
       toast.success(result.message || 'Payment processed successfully');
-      router.push('/enrollments');
     } else {
       toast.error(result.message || 'Failed to process payment');
       throw new Error(result.message);
