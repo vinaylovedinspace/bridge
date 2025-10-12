@@ -110,5 +110,11 @@ export const ClientTable = pgTable(
     ),
     // Dashboard performance index
     branchCreatedAtIdx: index('idx_clients_branch_created').on(table.branchId, table.createdAt),
+    // Duplicate check performance indexes (composite with tenantId for scoped lookups)
+    phoneNumberTenantIdx: index('idx_clients_phone_tenant').on(table.phoneNumber, table.tenantId),
+    aadhaarNumberTenantIdx: index('idx_clients_aadhaar_tenant').on(
+      table.aadhaarNumber,
+      table.tenantId
+    ),
   })
 );
