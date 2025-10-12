@@ -155,6 +155,11 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
       if (success && !isLastStep) {
         goToNext();
       }
+
+      if (success && isLastStep) {
+        router.refresh();
+        router.push('/enrollments');
+      }
     } catch (error) {
       console.error(`Error submitting step ${currentStep}:`, error);
       toast.error('Failed to save your information. Please try again.');

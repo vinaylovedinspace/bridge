@@ -191,7 +191,6 @@ export const upsertPlanWithPayment = async (
     // 6. Prepare plan data for database
     const _planData = {
       ...unsafePlanData,
-      joiningDate: unsafePlanData.joiningDate,
       branchId,
       vehicleRentAmount: vehicle.rent,
       planCode,
