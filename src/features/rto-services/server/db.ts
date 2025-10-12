@@ -105,19 +105,29 @@ export const getRTOServices = async (
 
 export const deleteRTOService = async (id: string, branchId: string) => {
   try {
-    const [rtoService] = await db
-      .update(RTOServicesTable)
-      .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(
-        and(
-          eq(RTOServicesTable.id, id),
-          eq(RTOServicesTable.branchId, branchId),
-          isNull(RTOServicesTable.deletedAt)
+    return await db.transaction(async (tx) => {
+      const [rtoService] = await tx
+        .update(RTOServicesTable)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(
+          and(
+            eq(RTOServicesTable.id, id),
+            eq(RTOServicesTable.branchId, branchId),
+            isNull(RTOServicesTable.deletedAt)
+          )
         )
-      )
-      .returning();
+        .returning();
 
-    return rtoService;
+      // Soft-delete associated payment if exists
+      if (rtoService?.paymentId) {
+        await tx
+          .update(PaymentTable)
+          .set({ deletedAt: new Date(), updatedAt: new Date() })
+          .where(eq(PaymentTable.id, rtoService.paymentId));
+      }
+
+      return rtoService;
+    });
   } catch (error) {
     console.log(error);
     throw error;
