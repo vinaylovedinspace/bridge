@@ -51,7 +51,7 @@ export async function createPaymentLink(
 
     const client = getCashfreeClient();
 
-    const linkId = `${tenant.name}_${nanoid(8)}`;
+    const linkId = `${tenant.name.replace(/\s/g, '_')}_${nanoid(8)}`;
 
     const params: CreatePaymentLinkParams = {
       link_id: linkId,

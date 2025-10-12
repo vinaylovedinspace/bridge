@@ -92,6 +92,7 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
     try {
       const formValues = getValues();
       const formPlanId = formValues.plan.id;
+      console.log(formValues);
       const customerName =
         `${formValues.client?.firstName || ''} ${formValues.client?.lastName || ''}`.trim();
 
@@ -222,17 +223,17 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
                   {isSendingLink ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending SMS...
+                      Sending...
                     </>
                   ) : smsSent ? (
                     <>
                       <CheckCircle className="mr-2 h-4 w-4" />
-                      SMS Sent
+                      Sent
                     </>
                   ) : (
                     <>
                       <MessageSquare className="mr-2 h-4 w-4" />
-                      Send SMS
+                      Send
                     </>
                   )}
                 </Button>
