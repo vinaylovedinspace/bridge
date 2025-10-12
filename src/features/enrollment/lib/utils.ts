@@ -115,6 +115,7 @@ export const mapLearningLicense = (
   }
 
   return {
+    id: learningLicense.id,
     class: learningLicense.class || [],
     testConductedOn: parseDateStringToDateObject(learningLicense.testConductedOn),
     licenseNumber: learningLicense.licenseNumber,
@@ -141,6 +142,7 @@ export const mapDrivingLicense = (
   }
 
   return {
+    id: drivingLicense.id,
     class: drivingLicense.class || [],
     appointmentDate: parseDateStringToDateObject(drivingLicense.appointmentDate),
     licenseNumber: drivingLicense.licenseNumber,
@@ -216,6 +218,7 @@ export const getDefaultValuesForEditEnrollmentForm = (
     learningLicense: mapLearningLicense(client?.learningLicense),
     drivingLicense: mapDrivingLicense(client?.drivingLicense),
     plan: {
+      id: enrollment.id,
       vehicleId: enrollment.vehicleId,
       numberOfSessions: enrollment.numberOfSessions,
       sessionDurationInMinutes: enrollment.sessionDurationInMinutes,

@@ -215,17 +215,17 @@ export const PaymentModeSelector = () => {
                   {isSendingLink ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending SMS...
+                      Sending...
                     </>
                   ) : smsSent ? (
                     <>
                       <CheckCircle className="mr-2 h-4 w-4" />
-                      SMS Sent
+                      Sent
                     </>
                   ) : (
                     <>
                       <MessageSquare className="mr-2 h-4 w-4" />
-                      Send SMS
+                      Send
                     </>
                   )}
                 </Button>
