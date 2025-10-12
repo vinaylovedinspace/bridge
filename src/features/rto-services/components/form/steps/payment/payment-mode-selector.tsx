@@ -37,8 +37,8 @@ export const PaymentModeSelector = () => {
     try {
       const formValues = getValues();
       const payment = formValues.payment;
-      const clientId = formValues.clientId;
-      const rtoServiceId = formValues.serviceId;
+      const clientId = formValues.client?.id;
+      const rtoServiceId = formValues.service?.id;
 
       if (!clientId) {
         toast.error('Client ID not found. Please complete the personal information step first.');
@@ -90,7 +90,7 @@ export const PaymentModeSelector = () => {
 
     try {
       const formValues = getValues();
-      const formPlanId = formValues.serviceId;
+      const formPlanId = formValues.service?.id;
       const customerName =
         `${formValues.client?.firstName || ''} ${formValues.client?.lastName || ''}`.trim();
 
