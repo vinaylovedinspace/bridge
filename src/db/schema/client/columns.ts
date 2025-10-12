@@ -94,10 +94,11 @@ export const ClientTable = pgTable(
     citizenStatus: CitizenStatusEnum().default('BIRTH'),
 
     branchId: uuid('branch_id').notNull(),
+    tenantId: uuid('tenant_id').notNull(),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
-    tenantId: uuid('tenant_id').notNull(),
+    deletedAt: timestamp('deleted_at'),
   },
   (table) => ({
     phoneNumberTenantUnique: unique('phone_number_tenant_unique').on(

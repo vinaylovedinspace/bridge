@@ -46,4 +46,5 @@ export const TransactionTable = pgTable('transactions', {
   installmentNumber: integer('installment_number'),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
 });

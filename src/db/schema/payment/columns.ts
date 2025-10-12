@@ -31,7 +31,6 @@ export const PaymentTable = pgTable(
     licenseServiceFee: integer('license_service_fee').notNull().default(0),
     paymentStatus: PaymentStatusEnum('payment_status').default('PENDING'),
     paymentType: PaymentTypeEnum('payment_type').default('FULL_PAYMENT'),
-    deletedAt: timestamp('deleted_at'),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -56,6 +55,7 @@ export const FullPaymentTable = pgTable(
     isPaid: boolean('is_paid').default(false),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
+    deletedAt: timestamp('deleted_at'),
   },
   (table) => ({
     // Dashboard performance index
@@ -75,6 +75,7 @@ export const InstallmentPaymentTable = pgTable(
     isPaid: boolean('is_paid').default(false),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
+    deletedAt: timestamp('deleted_at'),
   },
   (table) => ({
     // Dashboard performance index
