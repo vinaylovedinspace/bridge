@@ -5,22 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { TypographyMuted } from '@/components/ui/typography';
 import { Separator } from '@/components/ui/separator';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { PaymentMode, PaymentModeEnum } from '@/db/schema/transactions/columns';
 import { toast } from 'sonner';
-import { Loader2, CheckCircle, MessageSquare, Phone, QrCode } from 'lucide-react';
-import { createPaymentLinkAction, getPaymentLinkStatusAction } from '@/server/action/payments';
-import Image from 'next/image';
+import { CheckCircle, MessageSquare, Phone, QrCode } from 'lucide-react';
+import { createPaymentLinkAction } from '@/server/action/payments';
+import { QRModal } from './qr-modal';
 
 // Constants
 const SMS_SENT_RESET_TIMEOUT = 30; // 30 seconds
-const POLLING_INTERVAL = 10000; // 10 seconds
 
 // Phone number validation
 const isValidPhoneNumber = (phone: string): boolean => {
@@ -31,7 +23,7 @@ const isValidPhoneNumber = (phone: string): boolean => {
 type PaymentModeSelectorProps = {
   phoneNumber: string;
   customerName: string;
-  planId?: string;
+  paymentId?: string;
   amount: number;
   buttonText?: string;
   onAcceptPayment: () => Promise<void>;
@@ -41,10 +33,10 @@ type PaymentModeSelectorProps = {
 export const PaymentModeSelector = ({
   phoneNumber: initialPhoneNumber,
   customerName,
-  planId,
   amount,
   buttonText = 'Accept Payment',
   onAcceptPayment,
+  paymentId,
   handlePaymentModeChange,
 }: PaymentModeSelectorProps) => {
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('PAYMENT_LINK');
@@ -54,23 +46,16 @@ export const PaymentModeSelector = ({
   const [smsSent, setSmsSent] = useState(false);
   const [isAcceptingPayment, setIsAcceptingPayment] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [expiryTime, setExpiryTime] = useState<string | null>(null);
-  const [linkId, setLinkId] = useState<string | null>(null);
-  const [isPolling, setIsPolling] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Cleanup intervals on unmount
   useEffect(() => {
     return () => {
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
-      }
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
       }
     };
   }, []);
@@ -118,11 +103,6 @@ export const PaymentModeSelector = ({
       return;
     }
 
-    if (!planId) {
-      toast.error('Missing plan information. Please complete the Plan step first.');
-      return;
-    }
-
     setIsSendingLink(true);
     setSmsSent(false);
 
@@ -133,26 +113,27 @@ export const PaymentModeSelector = ({
     }
 
     try {
+      if (!paymentId) {
+        toast.error('Payment ID is required to send payment link');
+        return;
+      }
+
       const result = await createPaymentLinkAction({
         amount,
         customerPhone: trimmedPhone,
         customerName: customerName || 'Student',
-        id: planId,
         sendSms: true,
+        paymentId,
+        type: 'enrollment',
+        sendEmail: false,
+        enablePartialPayments: false,
       });
 
       if (result.success) {
         setSmsSent(true);
         setCountdown(SMS_SENT_RESET_TIMEOUT);
-        setPaymentUrl(result.data?.paymentUrl || null);
         setQrCode(result.data?.qrCode || null);
         setExpiryTime(result.data?.expiryTime || null);
-        setLinkId(result.data?.linkId || null);
-
-        // Start polling for payment status
-        if (result.data?.linkId) {
-          startPolling(result.data.linkId);
-        }
 
         toast.success('Payment link created!', {
           description: `Payment link sent to ${trimmedPhone}`,
@@ -191,54 +172,6 @@ export const PaymentModeSelector = ({
   };
 
   const isPhoneValid = isValidPhoneNumber(phoneNumber);
-
-  const startPolling = (linkIdToCheck: string) => {
-    // Clear any existing polling
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-    }
-
-    setIsPolling(true);
-
-    pollingIntervalRef.current = setInterval(async () => {
-      try {
-        const status = await getPaymentLinkStatusAction(linkIdToCheck);
-
-        if (status.success && status.data) {
-          const { status: linkStatus, amountPaid } = status.data;
-
-          // Stop polling and notify if payment is completed
-          if (linkStatus === 'PAID') {
-            stopPolling();
-            toast.success('Payment received!', {
-              description: `Amount: ₹${amountPaid}`,
-              duration: 7000,
-            });
-            // Optionally trigger onAcceptPayment callback
-            await onAcceptPayment();
-          }
-
-          // Stop polling if link is expired
-          if (linkStatus === 'EXPIRED') {
-            stopPolling();
-            toast.warning('Payment link expired', {
-              description: 'Please create a new payment link',
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Polling error:', error);
-      }
-    }, POLLING_INTERVAL);
-  };
-
-  const stopPolling = () => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-    setIsPolling(false);
-  };
 
   return (
     <>
@@ -355,31 +288,12 @@ export const PaymentModeSelector = ({
         )}
       </div>
 
-      {/* QR Code Modal */}
-      <Dialog open={showQrModal} onOpenChange={setShowQrModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Payment QR Code</DialogTitle>
-            <DialogDescription>
-              {expiryTime && `Expires: ${new Date(expiryTime).toLocaleDateString()}`}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center gap-4 py-4">
-            {qrCode && (
-              <Image
-                src={qrCode}
-                alt="Payment QR Code"
-                width={300}
-                height={300}
-                className="border rounded-lg"
-              />
-            )}
-            <TypographyMuted className="text-center">
-              Scan this QR code to complete payment
-            </TypographyMuted>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <QRModal
+        showQrModal={showQrModal}
+        setShowQrModal={setShowQrModal}
+        qrCode={qrCode}
+        expiryTime={expiryTime}
+      />
     </>
   );
 };

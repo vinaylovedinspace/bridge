@@ -62,7 +62,7 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
   return (
     <SharedPaymentModeSelector
       phoneNumber={formValues.client?.phoneNumber}
-      planId={formValues.plan.id}
+      paymentId={formValues.payment.id}
       customerName={customerName}
       amount={amount}
       buttonText={buttonText}

@@ -21,11 +21,6 @@ import {
   getVehicleRentAmount,
 } from './db';
 import { formatDateToYYYYMMDD, formatTimeString } from '@/lib/date-time-utils';
-import {
-  createPaymentLink,
-  CreatePaymentLinkRequest,
-  PaymentLinkResult,
-} from '@/lib/cashfree/payment-links';
 import { clientSchema } from '@/types/zod/client';
 import { calculateEnrollmentPaymentBreakdown } from '@/lib/payment/calculate';
 import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';

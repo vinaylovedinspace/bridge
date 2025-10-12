@@ -63,7 +63,7 @@ export const PaymentModeSelector = () => {
     <SharedPaymentModeSelector
       phoneNumber={formValues.client?.phoneNumber}
       customerName={customerName}
-      planId={formValues.service?.id}
+      paymentId={formValues.payment.id}
       amount={totalAmountAfterDiscount}
       buttonText="Accept Payment"
       onAcceptPayment={handleAcceptPayment}
