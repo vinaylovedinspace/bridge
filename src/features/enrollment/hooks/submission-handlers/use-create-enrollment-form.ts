@@ -188,8 +188,6 @@ export const useCreateEnrollmentForm = (
 
     const handler = stepHandlers[stepKey];
 
-    console.log(handler);
-
     try {
       const result = await handler();
 
@@ -203,8 +201,6 @@ export const useCreateEnrollmentForm = (
       if (isLastStep) {
         localStorage.removeItem(LAST_ENROLLMENT_CLIENT_ID);
         localStorage.removeItem(LAST_ENROLLMENT_STEP);
-        router.refresh();
-        router.push('/dashboard');
 
         toast.success(result?.message || 'Information saved successfully', {
           position: 'top-right',
