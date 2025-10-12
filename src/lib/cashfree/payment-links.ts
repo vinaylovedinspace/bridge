@@ -94,11 +94,7 @@ export async function createPaymentLink(
       link_auto_reminders: validatedData.sendSms, // Enable auto-reminders if SMS is enabled
     };
 
-    const response: PaymentLinkResponse = await client.createPaymentLink(
-      params,
-      request.id,
-      linkId // Use linkId as idempotency key
-    );
+    const response: PaymentLinkResponse = await client.createPaymentLink(params, validatedData.id);
 
     // Validate response
     if (!response?.link_id || !response?.link_url) {

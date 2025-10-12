@@ -132,7 +132,7 @@ export class CashfreeClient {
         : 'https://sandbox.cashfree.com/pg';
   }
 
-  private getHeaders(requestId?: string, idempotencyKey?: string): Record<string, string> {
+  private getHeaders(requestId?: string): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
@@ -145,10 +145,6 @@ export class CashfreeClient {
       headers['x-request-id'] = requestId;
     }
 
-    if (idempotencyKey) {
-      headers['x-idempotency-key'] = idempotencyKey;
-    }
-
     return headers;
   }
 
@@ -156,7 +152,6 @@ export class CashfreeClient {
     endpoint: string,
     options: RequestInit = {},
     requestId?: string,
-    idempotencyKey?: string,
     retries = 3
   ): Promise<T> {
     let lastError: Error | null = null;
@@ -166,7 +161,7 @@ export class CashfreeClient {
         const response = await fetch(`${this.baseUrl}${endpoint}`, {
           ...options,
           headers: {
-            ...this.getHeaders(requestId, idempotencyKey),
+            ...this.getHeaders(requestId),
             ...options.headers,
           },
         });
@@ -228,8 +223,7 @@ export class CashfreeClient {
 
   async createPaymentLink(
     params: CreatePaymentLinkParams,
-    requestId?: string,
-    idempotencyKey?: string
+    requestId?: string
   ): Promise<PaymentLinkResponse> {
     try {
       // Validate params
@@ -243,8 +237,7 @@ export class CashfreeClient {
           method: 'POST',
           body: JSON.stringify(params),
         },
-        requestId,
-        idempotencyKey || params.link_id // Use link_id as idempotency key by default
+        requestId
       );
     } catch (error) {
       if (error instanceof z.ZodError) {
