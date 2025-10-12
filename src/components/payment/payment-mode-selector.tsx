@@ -11,7 +11,7 @@ import { Loader2, CheckCircle, MessageSquare, Phone } from 'lucide-react';
 import { createPaymentLinkAction } from '@/features/enrollment/server/action';
 
 // Constants
-const SMS_SENT_RESET_TIMEOUT = 45000; // 45 seconds
+const SMS_SENT_RESET_TIMEOUT = 30; // 30 seconds
 
 // Phone number validation
 const isValidPhoneNumber = (phone: string): boolean => {
@@ -44,13 +44,14 @@ export const PaymentModeSelector = ({
   const [isSendingLink, setIsSendingLink] = useState(false);
   const [smsSent, setSmsSent] = useState(false);
   const [isAcceptingPayment, setIsAcceptingPayment] = useState(false);
-  const smsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [countdown, setCountdown] = useState(0);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Cleanup timeout on unmount
+  // Cleanup interval on unmount
   useEffect(() => {
     return () => {
-      if (smsTimeoutRef.current) {
-        clearTimeout(smsTimeoutRef.current);
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
       }
     };
   }, []);
@@ -106,9 +107,10 @@ export const PaymentModeSelector = ({
     setIsSendingLink(true);
     setSmsSent(false);
 
-    // Clear any existing timeout
-    if (smsTimeoutRef.current) {
-      clearTimeout(smsTimeoutRef.current);
+    // Clear any existing interval
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
     }
 
     try {
@@ -122,16 +124,26 @@ export const PaymentModeSelector = ({
 
       if (result.success) {
         setSmsSent(true);
+        setCountdown(SMS_SENT_RESET_TIMEOUT);
         toast.success('Payment link created!', {
           description: `Payment link sent to ${trimmedPhone}`,
           duration: 5000,
         });
 
-        // Reset SMS sent status after timeout
-        smsTimeoutRef.current = setTimeout(() => {
-          setSmsSent(false);
-          smsTimeoutRef.current = null;
-        }, SMS_SENT_RESET_TIMEOUT);
+        // Start countdown interval
+        countdownIntervalRef.current = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+              }
+              setSmsSent(false);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
       } else {
         toast.error('Failed to create payment link', {
           description: result.error || 'Unknown error occurred',
@@ -234,7 +246,7 @@ export const PaymentModeSelector = ({
                   ) : smsSent ? (
                     <>
                       <CheckCircle className="mr-2 h-4 w-4" />
-                      Sent
+                      Sent {countdown > 0 && `(${countdown}s)`}
                     </>
                   ) : (
                     <>

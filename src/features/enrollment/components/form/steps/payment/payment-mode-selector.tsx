@@ -6,7 +6,6 @@ import { updatePaymentAndProcessTransaction } from '@/features/enrollment/server
 import { Enrollment } from '@/server/db/plan';
 import { PaymentModeSelector as SharedPaymentModeSelector } from '@/components/payment/payment-mode-selector';
 import { PaymentMode } from '@/db/schema';
-import { useRouter } from 'next/navigation';
 
 type PaymentModeSelectorProps = {
   existingPayment: NonNullable<Enrollment>['payment'];
@@ -14,7 +13,6 @@ type PaymentModeSelectorProps = {
 
 export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProps) => {
   const { getValues, setValue } = useFormContext<AdmissionFormValues>();
-  const router = useRouter();
 
   // Check if this is installment payment and if 1st installment is paid
   const isFirstInstallmentPaid = useMemo(() => {
