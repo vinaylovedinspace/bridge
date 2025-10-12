@@ -50,3 +50,6 @@ export * from './notifications/relations';
 
 export * from './expenses/columns';
 export * from './expenses/relations';
+
+export * from './message-logs/columns';
+export * from './message-logs/relations';

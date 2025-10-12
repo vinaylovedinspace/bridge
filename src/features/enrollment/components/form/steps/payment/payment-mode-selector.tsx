@@ -10,14 +10,9 @@ import { useFormContext } from 'react-hook-form';
 import { AdmissionFormValues } from '@/features/enrollment/types';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle, MessageSquare, Phone } from 'lucide-react';
-import {
-  createPayment,
-  createPaymentLinkAndSendWhatsApp,
-} from '@/features/enrollment/server/action';
+import { createPayment, createPaymentLinkAction } from '@/features/enrollment/server/action';
 import { useRouter } from 'next/navigation';
 import { Enrollment } from '@/server/db/plan';
-import { useVehicle } from '@/hooks/vehicles';
-import { calculatePaymentBreakdown } from '@/lib/payment/calculate';
 
 type PaymentModeSelectorProps = {
   existingPayment: NonNullable<Enrollment>['payment'];
@@ -26,8 +21,6 @@ type PaymentModeSelectorProps = {
 export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProps) => {
   const { getValues, setValue } = useFormContext<AdmissionFormValues>();
   const router = useRouter();
-  const plan = getValues().plan;
-  const { data: vehicle } = useVehicle(plan?.vehicleId || '');
 
   const [paymentMode, setPaymentMode] =
     useState<(typeof PaymentModeEnum.enumValues)[number]>('PAYMENT_LINK');
@@ -105,57 +98,28 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
       }
 
       const payment = formValues.payment;
-      const plan = formValues.plan;
 
-      // Validate plan information
-      if (!plan?.vehicleId || !plan?.numberOfSessions || !plan?.sessionDurationInMinutes) {
-        toast.error('Missing plan information. Please complete the Plan step first.');
-        return;
-      }
+      // Calculate amount based on payment type
+      let amount = 0;
 
-      // Check if vehicle data is loaded
-      if (!vehicle) {
-        toast.error('Vehicle information not loaded. Please try again.');
-        return;
-      }
-
-      const discount = payment?.discount || 0;
-      const paymentType = payment?.paymentType || 'FULL_PAYMENT';
-
-      const { finalAmount, firstInstallmentAmount } = calculatePaymentBreakdown({
-        sessions: plan.numberOfSessions,
-        duration: plan.sessionDurationInMinutes,
-        rate: vehicle.rent,
-        discount,
-        paymentType,
-      });
-
-      // For installments, use first installment amount, otherwise use final amount
-      const amount = paymentType === 'INSTALLMENTS' ? firstInstallmentAmount : finalAmount;
+      // TODO: Reimplement amount calculation with new schema
+      amount = payment?.totalAmount || 0;
 
       if (amount <= 0) {
-        toast.error('Invalid payment amount. Please check your plan details.');
+        toast.error('Invalid payment amount');
         return;
       }
 
-      const clientId = formValues.clientId;
-
-      if (!clientId) {
-        toast.error('Client information not found. Please complete the Personal Info step first.');
-        return;
-      }
-
-      // Use the combined action that creates payment link AND sends WhatsApp
-      const result = await createPaymentLinkAndSendWhatsApp({
+      // Use the actual payment link creation
+      const result = await createPaymentLinkAction({
         amount,
         customerPhone: phoneNumber,
         customerName: customerName || 'Student',
         planId: formPlanId,
-        clientId: clientId,
         sendSms: true,
       });
 
-      if (result.success && result.data) {
+      if (result.success) {
         setSmsSent(true);
         toast.success('Payment link created!', {
           description: `Payment link sent to ${phoneNumber}`,
