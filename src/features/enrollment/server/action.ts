@@ -149,14 +149,19 @@ export const upsertPlanWithPayment = async (
   unsafePlanData: PlanValues,
   unsafePaymentData: PaymentValues
 ): Promise<{ error: boolean; message: string; planId?: string; paymentId?: string }> => {
-  const { id: branchId } = await getBranchConfig();
+  const branchConfig = await getBranchConfig();
+  const { id: branchId } = branchConfig;
   try {
     // 1. Extract and validate time
     const joiningTime = formatTimeString(unsafePlanData.joiningDate);
     const joiningDate = formatDateToYYYYMMDD(unsafePlanData.joiningDate);
 
-    // 2. Find existing plan (if any)
-    const existingPlan = await findExistingPlanInDB(unsafePlanData.id, unsafePlanData.clientId);
+    // 2. Parallelize independent database queries
+    const [existingPlan, vehicle] = await Promise.all([
+      findExistingPlanInDB(unsafePlanData.id, unsafePlanData.clientId),
+      getVehicleRentAmount(unsafePlanData.vehicleId),
+    ]);
+
     const planCode = existingPlan?.planCode ?? (await getNextPlanCode(branchId));
 
     // 3. Check if plan has changed
@@ -167,8 +172,7 @@ export const upsertPlanWithPayment = async (
       unsafePlanData
     );
 
-    // 4. Get vehicle details for payment calculation
-    const vehicle = await getVehicleRentAmount(unsafePlanData.vehicleId);
+    // 4. Validate vehicle exists
 
     if (!vehicle) {
       return { error: true, message: 'Vehicle not found' };
@@ -236,7 +240,7 @@ export const upsertPlanWithPayment = async (
       );
     }
 
-    // 9. Handle session generation/update
+    // 9. Handle session generation/update (pass branchConfig to avoid duplicate fetch)
     const sessionMessage = await handleSessionGeneration(
       planData.clientId,
       plan.id,
@@ -246,7 +250,8 @@ export const upsertPlanWithPayment = async (
         numberOfSessions: planData.numberOfSessions,
         vehicleId: planData.vehicleId,
       },
-      planTimingChanged
+      planTimingChanged,
+      branchConfig
     );
 
     return {
