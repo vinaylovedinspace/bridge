@@ -18,7 +18,8 @@ const createPaymentLinkSchema = z.object({
     }),
   customerName: z.string().min(1, 'Customer name is required').max(100),
   customerEmail: z.string().email().optional(),
-  id: z.string().min(1, 'Plan ID is required'),
+  paymentId: z.string().min(1, 'Payment ID is required'),
+  type: z.enum(['enrollment', 'rto-service']),
   sendSms: z.boolean().optional().default(true),
   sendEmail: z.boolean().optional().default(false),
   expiryInDays: z.number().int().min(1).max(365).optional(),
@@ -26,18 +27,7 @@ const createPaymentLinkSchema = z.object({
   minimumPartialAmount: z.number().positive().optional(),
 });
 
-export type CreatePaymentLinkRequest = {
-  amount: number;
-  customerPhone: string;
-  customerName: string;
-  customerEmail?: string;
-  id: string;
-  sendSms?: boolean;
-  sendEmail?: boolean;
-  expiryInDays?: number;
-  enablePartialPayments?: boolean;
-  minimumPartialAmount?: number;
-};
+export type CreatePaymentLinkRequest = z.infer<typeof createPaymentLinkSchema>;
 
 export type PaymentLinkResult = {
   success: boolean;
@@ -83,7 +73,8 @@ export async function createPaymentLink(
         send_email: validatedData.sendEmail,
       },
       link_notes: {
-        id: validatedData.id,
+        paymentId: validatedData.paymentId,
+        type: validatedData.type,
       },
       link_meta: {
         notify_url: `https://bridge.welovedinspace.studio/api/webhooks/cashfree`,

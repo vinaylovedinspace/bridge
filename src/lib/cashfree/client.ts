@@ -42,7 +42,10 @@ const createPaymentLinkParamsSchema = z.object({
     send_sms: z.boolean().default(true),
     send_email: z.boolean().default(false).optional(),
   }),
-  link_notes: z.record(z.string()).optional(),
+  link_notes: z.object({
+    paymentId: z.string(),
+    type: z.enum(['enrollment', 'rto-service']),
+  }),
   link_meta: z
     .object({
       notify_url: z.string().url().optional(),
@@ -228,8 +231,6 @@ export class CashfreeClient {
     try {
       // Validate params
       createPaymentLinkParamsSchema.parse(params);
-
-      console.log('Creating payment link with params:', params);
 
       return await this.request<PaymentLinkResponse>(
         '/links',

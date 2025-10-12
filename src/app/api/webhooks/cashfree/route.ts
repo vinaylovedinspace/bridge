@@ -5,7 +5,9 @@ import crypto from 'crypto';
 import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import { TransactionTable } from '@/db/schema/transactions/columns';
-import { PaymentTable, PlanTable } from '@/db/schema';
+import { FullPaymentTable, PaymentTable, InstallmentPaymentTable } from '@/db/schema';
+import { CreatePaymentLinkParams } from '@/lib/cashfree/client';
+import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 
 // Cashfree webhook event types
 type CashfreeWebhookEvent = {
@@ -15,7 +17,7 @@ type CashfreeWebhookEvent = {
   data: {
     cf_link_id: number;
     link_id: string;
-    link_status: 'ACTIVE' | 'INACTIVE' | 'PAID' | 'EXPIRED' | 'PARTIALLY_PAID';
+    link_status: 'ACTIVE' | 'INACTIVE' | 'PAID' | 'EXPIRED' | 'PARTIALLY_PAID' | 'CANCELLED';
     link_currency: string;
     link_amount: string;
     link_amount_paid: string;
@@ -34,13 +36,13 @@ type CashfreeWebhookEvent = {
     };
     link_url: string;
     link_expiry_time?: string;
-    link_notes?: Record<string, string>;
+    link_notes?: CreatePaymentLinkParams['link_notes'];
     link_auto_reminders: boolean;
     link_notify: {
       send_sms: boolean;
       send_email: boolean;
     };
-    order: {
+    order?: {
       order_amount: string;
       order_id: string;
       order_expiry_time: string;
@@ -119,7 +121,6 @@ export async function POST(request: NextRequest) {
     console.log('Webhook summary:', {
       type: webhookEvent.type,
       hasOrder: !!webhookEvent.data.order,
-      hasPayment: !!webhookEvent.data.payment,
       hasCustomer: !!webhookEvent.data.customer_details,
     });
 
@@ -143,28 +144,35 @@ async function handlePaymentLinkEvent(event: CashfreeWebhookEvent) {
 
   try {
     const { data } = event;
-    const planId = data.link_notes?.planId;
+    const paymentId = data.link_notes?.paymentId;
+    const type = data.link_notes?.type as 'enrollment' | 'rto-service' | undefined;
 
     console.log('Payment link event details:', {
       linkId: data.link_id,
       linkStatus: data.link_status,
-      transactionStatus: data.order.transaction_status,
-      orderId: data.order.order_id,
-      transactionId: data.order.transaction_id,
+      transactionStatus: data.order?.transaction_status,
+      orderId: data.order?.order_id,
+      transactionId: data.order?.transaction_id,
       linkAmount: data.link_amount,
       amountPaid: data.link_amount_paid,
       customerPhone: data.customer_details.customer_phone,
       customerName: data.customer_details.customer_name,
-      planId,
+      paymentId,
+      type,
     });
 
-    // Handle based on transaction status
+    // Handle based on transaction status (if order exists)
+    if (!data.order) {
+      console.log('No order data in webhook, link status:', data.link_status);
+      return;
+    }
+
     switch (data.order.transaction_status) {
       case 'SUCCESS':
-        await handleSuccessfulPayment(data, planId);
+        await handleSuccessfulPayment(data, paymentId, type);
         break;
       case 'FAILED':
-        await handleFailedPayment(data, planId);
+        await handleFailedPayment(data, paymentId, type);
         break;
       case 'PENDING':
         console.log('Payment is pending, no action needed');
@@ -177,109 +185,218 @@ async function handlePaymentLinkEvent(event: CashfreeWebhookEvent) {
   }
 }
 
-async function handleSuccessfulPayment(data: CashfreeWebhookEvent['data'], planId?: string) {
+async function handleSuccessfulPayment(
+  data: CashfreeWebhookEvent['data'],
+  paymentId?: string,
+  type?: 'enrollment' | 'rto-service'
+) {
   console.log('Processing successful payment');
 
-  // Check if payment is complete
-  const isFullyPaid = data.link_status === 'PAID';
-  const isPartiallyPaid = data.link_status === 'PARTIALLY_PAID';
-
-  console.log('Payment success details:', {
-    isFullyPaid,
-    isPartiallyPaid,
-    amountPaid: data.link_amount_paid,
-    totalAmount: data.link_amount,
-    planId,
-  });
-
-  if (!planId) {
-    console.error('No planId found in webhook data');
+  if (!paymentId || !data.order) {
+    console.error('Missing required data:', { paymentId, hasOrder: !!data.order });
     return;
   }
 
-  try {
-    // Get the payment record associated with this plan
+  const transactionId = data.order.transaction_id.toString();
+  const orderId = data.order.order_id;
+  const amountPaidInPaise = Math.round(parseFloat(data.link_amount_paid) * 100);
 
-    const plan = await db.query.PlanTable.findFirst({
-      where: eq(PlanTable.id, planId),
-      with: {
-        payment: true,
-      },
+  console.log('Payment success details:', {
+    amountPaid: data.link_amount_paid,
+    totalAmount: data.link_amount,
+    paymentId,
+    transactionId,
+    type,
+  });
+
+  try {
+    // Check for duplicate transaction (idempotency)
+    const existingTransaction = await db.query.TransactionTable.findFirst({
+      where: eq(TransactionTable.txnId, transactionId),
     });
 
-    if (!plan?.payment?.id) {
-      console.error('No payment found for planId:', planId);
+    if (existingTransaction) {
+      console.log('Transaction already processed:', transactionId);
       return;
     }
 
-    const paymentId = plan.payment.id;
-
-    // Create transaction record
-    await db.insert(TransactionTable).values({
-      paymentId,
-      amount: Math.round(parseFloat(data.link_amount_paid) * 100), // Convert to paise
-      paymentMode: 'PAYMENT_LINK',
-      transactionStatus: 'SUCCESS',
-      transactionReference: data.order.order_id,
-      txnId: data.order.transaction_id.toString(),
-      notes: `Cashfree payment link transaction - ${data.link_status}`,
-      gatewayName: 'Cashfree',
+    const payment = await db.query.PaymentTable.findFirst({
+      where: eq(PaymentTable.id, paymentId),
     });
 
-    // Update payment status based on payment completion
-    const newPaymentStatus = isFullyPaid ? 'FULLY_PAID' : 'PARTIALLY_PAID';
+    if (!payment) {
+      console.error('Payment not found:', paymentId);
+      return;
+    }
 
-    await db
-      .update(PaymentTable)
-      .set({
-        paymentStatus: newPaymentStatus,
-        // Update payment flags based on payment type
-        ...(plan.payment.paymentType === 'FULL_PAYMENT' && {
-          fullPaymentPaid: isFullyPaid,
-        }),
-        ...(plan.payment.paymentType === 'INSTALLMENTS' && {
-          firstInstallmentPaid: true, // Payment link payments count as first installment
-        }),
-      })
-      .where(eq(PaymentTable.id, paymentId));
+    const paymentDate = formatDateToYYYYMMDD(new Date());
 
-    // TODO: Send confirmation SMS/email to customer
-    console.log('Payment processing completed for planId:', planId);
+    // Handle based on payment type
+    if (payment.paymentType === 'FULL_PAYMENT') {
+      await db.transaction(async (tx) => {
+        // Create transaction record
+        await tx.insert(TransactionTable).values({
+          paymentId,
+          amount: amountPaidInPaise,
+          paymentMode: 'PAYMENT_LINK',
+          transactionStatus: 'SUCCESS',
+          transactionReference: orderId,
+          txnId: transactionId,
+          notes: `Cashfree payment link - Full payment (${type || 'unknown'})`,
+          gatewayName: 'Cashfree',
+        });
+
+        // Update payment status
+        await tx
+          .update(PaymentTable)
+          .set({ paymentStatus: 'FULLY_PAID' })
+          .where(eq(PaymentTable.id, paymentId));
+
+        // Create full payment record
+        await tx.insert(FullPaymentTable).values({
+          paymentId,
+          isPaid: true,
+          paymentDate,
+          paymentMode: 'PAYMENT_LINK',
+        });
+      });
+
+      console.log('Full payment completed for payment id:', paymentId);
+    } else if (payment.paymentType === 'INSTALLMENTS') {
+      await handleInstallmentPayment(
+        paymentId,
+        amountPaidInPaise,
+        paymentDate,
+        orderId,
+        transactionId,
+        type
+      );
+    } else {
+      console.error('Unsupported payment type:', payment.paymentType);
+    }
+
+    console.log('Payment processing completed for payment id:', paymentId, 'type:', type);
   } catch (error) {
     console.error('Error updating payment status:', error);
+    throw error;
   }
 }
 
-async function handleFailedPayment(data: CashfreeWebhookEvent['data'], planId?: string) {
-  if (!planId) {
-    console.error('No planId found in webhook data');
+async function handleInstallmentPayment(
+  paymentId: string,
+  amountPaidInPaise: number,
+  paymentDate: string,
+  orderId: string,
+  transactionId: string,
+  type?: 'enrollment' | 'rto-service'
+) {
+  const existingInstallments = await db.query.InstallmentPaymentTable.findMany({
+    where: eq(InstallmentPaymentTable.paymentId, paymentId),
+  });
+
+  const firstInstallment = existingInstallments.find((inst) => inst.installmentNumber === 1);
+  const secondInstallment = existingInstallments.find((inst) => inst.installmentNumber === 2);
+
+  // Determine which installment to process
+  const installmentNumber = !firstInstallment?.isPaid ? 1 : 2;
+  const isLastInstallment = installmentNumber === 2;
+  const existingInstallment = installmentNumber === 1 ? firstInstallment : secondInstallment;
+
+  if (installmentNumber === 2 && !firstInstallment?.isPaid) {
+    console.error('Cannot process second installment before first installment is paid');
+    return;
+  }
+
+  if (existingInstallment?.isPaid) {
+    console.log(`Installment ${installmentNumber} already paid, ignoring duplicate`);
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    // Create transaction record
+    await tx.insert(TransactionTable).values({
+      paymentId,
+      amount: amountPaidInPaise,
+      paymentMode: 'PAYMENT_LINK',
+      transactionStatus: 'SUCCESS',
+      transactionReference: orderId,
+      txnId: transactionId,
+      notes: `Cashfree payment link - Installment ${installmentNumber} (${type || 'unknown'})`,
+      gatewayName: 'Cashfree',
+    });
+
+    // Create or update installment
+    if (existingInstallment) {
+      await tx
+        .update(InstallmentPaymentTable)
+        .set({
+          isPaid: true,
+          amount: Math.round(amountPaidInPaise / 100), // Convert paise to rupees
+          paymentMode: 'PAYMENT_LINK',
+          paymentDate,
+        })
+        .where(eq(InstallmentPaymentTable.id, existingInstallment.id));
+    } else {
+      await tx.insert(InstallmentPaymentTable).values({
+        paymentId,
+        installmentNumber,
+        amount: Math.round(amountPaidInPaise / 100), // Convert paise to rupees
+        isPaid: true,
+        paymentMode: 'PAYMENT_LINK',
+        paymentDate,
+      });
+    }
+
+    // Update payment status
+    await tx
+      .update(PaymentTable)
+      .set({
+        paymentStatus: isLastInstallment ? 'FULLY_PAID' : 'PARTIALLY_PAID',
+      })
+      .where(eq(PaymentTable.id, paymentId));
+  });
+
+  console.log(`Installment ${installmentNumber} paid for payment id:`, paymentId);
+}
+
+async function handleFailedPayment(
+  data: CashfreeWebhookEvent['data'],
+  paymentId?: string,
+  type?: 'enrollment' | 'rto-service'
+) {
+  if (!paymentId) {
+    console.error('No paymentId found in webhook data');
+    return;
+  }
+
+  if (!data.order) {
+    console.error('No order data for failed payment');
     return;
   }
 
   try {
-    // Get the payment record associated with this plan
     const payment = await db.query.PaymentTable.findFirst({
-      where: eq(PaymentTable.id, planId),
+      where: eq(PaymentTable.id, paymentId),
     });
 
     if (!payment) {
-      console.error('No payment found for planId:', planId);
+      console.error('Payment not found:', paymentId);
       return;
     }
 
     // Create failed transaction record
     await db.insert(TransactionTable).values({
-      paymentId: payment.id,
+      paymentId,
       amount: Math.round(parseFloat(data.link_amount || '0') * 100), // Convert to paise
       paymentMode: 'PAYMENT_LINK',
       transactionStatus: 'FAILED',
       transactionReference: data.order.order_id,
       txnId: data.order.transaction_id.toString(),
-      notes: `Cashfree payment link transaction failed`,
+      notes: `Cashfree payment link transaction failed (${type || 'unknown'})`,
       gatewayName: 'Cashfree',
     });
 
-    console.log('Recorded failed payment attempt for planId:', planId);
+    console.log('Recorded failed payment attempt for payment id:', paymentId, 'type:', type);
     console.log('Payment status remains as:', payment.paymentStatus);
   } catch (error) {
     console.error('Error handling failed payment:', error);
