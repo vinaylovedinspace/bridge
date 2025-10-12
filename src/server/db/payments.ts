@@ -43,28 +43,19 @@ export type Payment = Awaited<ReturnType<typeof getPayments>>[0];
 
 export const upsertFullPaymentInDB = async (data: typeof FullPaymentTable.$inferInsert) => {
   return await db.transaction(async (tx) => {
-    // Check if full payment already exists
-    const existingFullPayment = await tx.query.FullPaymentTable.findFirst({
-      where: eq(FullPaymentTable.paymentId, data.paymentId),
-    });
-
-    // Update existing payment record
-    if (existingFullPayment) {
-      const [updated] = await tx
-        .update(FullPaymentTable)
-        .set({
+    console.log('upsertFullPaymentInDB', data);
+    const [fullPayment] = await tx
+      .insert(FullPaymentTable)
+      .values(data)
+      .onConflictDoUpdate({
+        target: FullPaymentTable.paymentId,
+        set: {
           paymentMode: data.paymentMode,
           paymentDate: data.paymentDate,
           isPaid: data.isPaid,
-        })
-        .where(eq(FullPaymentTable.paymentId, data.paymentId))
-        .returning();
-
-      return updated;
-    }
-
-    // Create new full payment and update status
-    const [payment] = await tx.insert(FullPaymentTable).values(data).returning();
+        },
+      })
+      .returning();
 
     await tx
       .update(PaymentTable)
@@ -74,6 +65,6 @@ export const upsertFullPaymentInDB = async (data: typeof FullPaymentTable.$infer
       })
       .where(eq(PaymentTable.id, data.paymentId));
 
-    return payment;
+    return fullPayment;
   });
 };

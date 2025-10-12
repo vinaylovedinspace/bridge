@@ -49,7 +49,7 @@ export const FullPaymentTable = pgTable(
   'full_payments',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    paymentId: uuid('payment_id').notNull(),
+    paymentId: uuid('payment_id').notNull().unique(),
     paymentDate: text('payment_date'),
     paymentMode: PaymentModeEnum('payment_mode'),
     isPaid: boolean('is_paid').default(false),
@@ -66,7 +66,7 @@ export const InstallmentPaymentTable = pgTable(
   'installment_payments',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    paymentId: uuid('payment_id').notNull(),
+    paymentId: uuid('payment_id').notNull().unique(),
     installmentNumber: integer('installment_number').notNull(), // 1 or 2
     amount: integer('amount').notNull(),
     paymentMode: PaymentModeEnum('payment_mode'),
