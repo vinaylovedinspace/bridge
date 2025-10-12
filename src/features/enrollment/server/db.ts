@@ -151,7 +151,7 @@ export const upsertPlanAndPaymentInDB = async (
         .returning();
 
       if (plan.paymentId) {
-        await db
+        await tx
           .update(PaymentTable)
           .set({
             branchId: planData.branchId,

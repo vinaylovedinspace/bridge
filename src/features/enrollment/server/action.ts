@@ -157,12 +157,13 @@ export const upsertPlanWithPayment = async (
     const joiningDate = formatDateToYYYYMMDD(unsafePlanData.joiningDate);
 
     // 2. Parallelize independent database queries
-    const [existingPlan, vehicle] = await Promise.all([
+    const [existingPlan, vehicle, planCode] = await Promise.all([
       findExistingPlanInDB(unsafePlanData.id, unsafePlanData.clientId),
       getVehicleRentAmount(unsafePlanData.vehicleId),
+      unsafePlanData.planCode
+        ? Promise.resolve(unsafePlanData.planCode)
+        : getNextPlanCode(branchId),
     ]);
-
-    const planCode = existingPlan?.planCode ?? (await getNextPlanCode(branchId));
 
     // 3. Check if plan has changed
     const planTimingChanged = hasPlanChanged(
@@ -228,19 +229,22 @@ export const upsertPlanWithPayment = async (
     // 7. Persist plan and payment to database in a transaction
     const { plan } = await upsertPlanAndPaymentInDB(planData, paymentData);
 
-    // 8. Process immediate payment transactions
+    // 8 & 9. Process payment and generate sessions in parallel (independent operations)
     const paymentMode = paymentData.paymentMode;
-    if (IMMEDIATE_PAYMENT_MODES.includes(paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])) {
-      await processPaymentTransaction(
-        plan.paymentId!,
-        paymentMode as 'CASH' | 'QR',
-        paymentData.paymentType,
-        paymentData.totalAmount
-      );
-    }
+    const shouldProcessPayment = IMMEDIATE_PAYMENT_MODES.includes(
+      paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number]
+    );
 
-    // 9. Handle session generation/update (pass branchConfig to avoid duplicate fetch)
-    const sessionMessage = await handleSessionGeneration(
+    const paymentPromise = shouldProcessPayment
+      ? processPaymentTransaction(
+          plan.paymentId!,
+          paymentMode as 'CASH' | 'QR',
+          paymentData.paymentType,
+          paymentData.totalAmount
+        )
+      : Promise.resolve();
+
+    const sessionPromise = handleSessionGeneration(
       planData.clientId,
       plan.id,
       {
@@ -253,9 +257,11 @@ export const upsertPlanWithPayment = async (
       branchConfig
     );
 
+    await Promise.all([paymentPromise, sessionPromise]);
+
     return {
       error: false,
-      message: `Plan and payment acknowledged successfully${sessionMessage}`,
+      message: `Plan and payment acknowledged successfully`,
       planId: plan.id,
       paymentId: plan.paymentId!,
     };
