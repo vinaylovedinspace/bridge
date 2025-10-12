@@ -307,21 +307,6 @@ async function processPaymentTransaction(
   }
 }
 
-export async function createPaymentLinkAction(
-  request: CreatePaymentLinkRequest
-): Promise<PaymentLinkResult> {
-  try {
-    const result = await createPaymentLink(request);
-    return result;
-  } catch (error) {
-    console.error('Failed to create payment link:', error);
-    return {
-      success: false,
-      error: 'Failed to create payment link. Please try again.',
-    };
-  }
-}
-
 // Update functions (aliases for the existing upsert functions)
 export const updateClient = async (
   _clientId: string,

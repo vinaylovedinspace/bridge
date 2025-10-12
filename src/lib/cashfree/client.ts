@@ -40,6 +40,7 @@ const createPaymentLinkParamsSchema = z.object({
   link_currency: z.string().default('INR'),
   link_notify: z.object({
     send_sms: z.boolean().default(true),
+    send_email: z.boolean().default(false).optional(),
   }),
   link_notes: z.record(z.string()).optional(),
   link_meta: z
@@ -48,9 +49,14 @@ const createPaymentLinkParamsSchema = z.object({
       return_url: z.string().url().optional(),
     })
     .optional(),
+  link_expiry_time: z.string().optional(),
+  link_partial_payments: z.boolean().optional(),
+  link_minimum_partial_amount: z.number().positive().optional(),
+  link_auto_reminders: z.boolean().optional(),
   customer_details: z.object({
     customer_name: z.string().min(1),
     customer_phone: z.string().min(10),
+    customer_email: z.string().email().optional(),
   }),
 });
 
@@ -87,6 +93,20 @@ export class CashfreeNetworkError extends CashfreeError {
   }
 }
 
+export class CashfreeAuthenticationError extends CashfreeError {
+  constructor(message: string) {
+    super(message, 'AUTHENTICATION_ERROR', 401);
+    this.name = 'CashfreeAuthenticationError';
+  }
+}
+
+export class CashfreeRateLimitError extends CashfreeError {
+  constructor(message: string) {
+    super(message, 'RATE_LIMIT_ERROR', 429);
+    this.name = 'CashfreeRateLimitError';
+  }
+}
+
 const cashfreeConfigSchema = z.object({
   clientId: z.string().min(1, 'Cashfree Client ID is required'),
   clientSecret: z.string().min(1, 'Cashfree Client Secret is required'),
@@ -112,44 +132,120 @@ export class CashfreeClient {
         : 'https://sandbox.cashfree.com/pg';
   }
 
-  private getHeaders(): Record<string, string> {
-    return {
+  private getHeaders(requestId?: string, idempotencyKey?: string): Record<string, string> {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
       'x-api-version': '2025-01-01',
       'x-client-id': this.config.clientId,
       'x-client-secret': this.config.clientSecret,
     };
-  }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers: {
-        ...this.getHeaders(),
-        ...options.headers,
-      },
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || `Cashfree API error: ${response.status}`);
+    if (requestId) {
+      headers['x-request-id'] = requestId;
     }
 
-    return data;
+    if (idempotencyKey) {
+      headers['x-idempotency-key'] = idempotencyKey;
+    }
+
+    return headers;
   }
 
-  async createPaymentLink(params: CreatePaymentLinkParams): Promise<PaymentLinkResponse> {
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    requestId?: string,
+    idempotencyKey?: string,
+    retries = 3
+  ): Promise<T> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(`${this.baseUrl}${endpoint}`, {
+          ...options,
+          headers: {
+            ...this.getHeaders(requestId, idempotencyKey),
+            ...options.headers,
+          },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          // Handle specific error types
+          if (response.status === 401) {
+            throw new CashfreeAuthenticationError(
+              data.message || 'Authentication failed. Please check your credentials.'
+            );
+          }
+
+          if (response.status === 429) {
+            throw new CashfreeRateLimitError(
+              data.message || 'Rate limit exceeded. Please try again later.'
+            );
+          }
+
+          throw new CashfreeError(
+            data.message || `Cashfree API error: ${response.status}`,
+            data.code,
+            response.status,
+            data
+          );
+        }
+
+        return data;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        // Don't retry on validation or auth errors
+        if (
+          error instanceof CashfreeValidationError ||
+          error instanceof CashfreeAuthenticationError
+        ) {
+          throw error;
+        }
+
+        // Retry on network errors or rate limits (with exponential backoff)
+        if (attempt < retries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        // Convert to network error on final retry
+        if (!(error instanceof CashfreeError)) {
+          throw new CashfreeNetworkError('Network request failed', error);
+        }
+
+        throw error;
+      }
+    }
+
+    throw lastError || new CashfreeNetworkError('Request failed after retries');
+  }
+
+  async createPaymentLink(
+    params: CreatePaymentLinkParams,
+    requestId?: string,
+    idempotencyKey?: string
+  ): Promise<PaymentLinkResponse> {
     try {
       // Validate params
       createPaymentLinkParamsSchema.parse(params);
-      console.log('params', params);
 
-      return await this.request<PaymentLinkResponse>('/links', {
-        method: 'POST',
-        body: JSON.stringify(params),
-      });
+      console.log('Creating payment link with params:', params);
+
+      return await this.request<PaymentLinkResponse>(
+        '/links',
+        {
+          method: 'POST',
+          body: JSON.stringify(params),
+        },
+        requestId,
+        idempotencyKey || params.link_id // Use link_id as idempotency key by default
+      );
     } catch (error) {
       if (error instanceof z.ZodError) {
         throw new CashfreeValidationError('Invalid payment link parameters', error.errors);

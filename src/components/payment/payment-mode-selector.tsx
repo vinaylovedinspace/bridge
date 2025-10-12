@@ -5,13 +5,22 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { TypographyMuted } from '@/components/ui/typography';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { PaymentMode, PaymentModeEnum } from '@/db/schema/transactions/columns';
 import { toast } from 'sonner';
-import { Loader2, CheckCircle, MessageSquare, Phone } from 'lucide-react';
-import { createPaymentLinkAction } from '@/features/enrollment/server/action';
+import { Loader2, CheckCircle, MessageSquare, Phone, QrCode } from 'lucide-react';
+import { createPaymentLinkAction, getPaymentLinkStatusAction } from '@/server/action/payments';
+import Image from 'next/image';
 
 // Constants
 const SMS_SENT_RESET_TIMEOUT = 30; // 30 seconds
+const POLLING_INTERVAL = 10000; // 10 seconds
 
 // Phone number validation
 const isValidPhoneNumber = (phone: string): boolean => {
@@ -45,13 +54,23 @@ export const PaymentModeSelector = ({
   const [smsSent, setSmsSent] = useState(false);
   const [isAcceptingPayment, setIsAcceptingPayment] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [expiryTime, setExpiryTime] = useState<string | null>(null);
+  const [linkId, setLinkId] = useState<string | null>(null);
+  const [isPolling, setIsPolling] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Cleanup interval on unmount
+  // Cleanup intervals on unmount
   useEffect(() => {
     return () => {
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
+      }
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
       }
     };
   }, []);
@@ -118,13 +137,23 @@ export const PaymentModeSelector = ({
         amount,
         customerPhone: trimmedPhone,
         customerName: customerName || 'Student',
-        planId: planId,
+        id: planId,
         sendSms: true,
       });
 
       if (result.success) {
         setSmsSent(true);
         setCountdown(SMS_SENT_RESET_TIMEOUT);
+        setPaymentUrl(result.data?.paymentUrl || null);
+        setQrCode(result.data?.qrCode || null);
+        setExpiryTime(result.data?.expiryTime || null);
+        setLinkId(result.data?.linkId || null);
+
+        // Start polling for payment status
+        if (result.data?.linkId) {
+          startPolling(result.data.linkId);
+        }
+
         toast.success('Payment link created!', {
           description: `Payment link sent to ${trimmedPhone}`,
           duration: 5000,
@@ -162,6 +191,54 @@ export const PaymentModeSelector = ({
   };
 
   const isPhoneValid = isValidPhoneNumber(phoneNumber);
+
+  const startPolling = (linkIdToCheck: string) => {
+    // Clear any existing polling
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    setIsPolling(true);
+
+    pollingIntervalRef.current = setInterval(async () => {
+      try {
+        const status = await getPaymentLinkStatusAction(linkIdToCheck);
+
+        if (status.success && status.data) {
+          const { status: linkStatus, amountPaid } = status.data;
+
+          // Stop polling and notify if payment is completed
+          if (linkStatus === 'PAID') {
+            stopPolling();
+            toast.success('Payment received!', {
+              description: `Amount: ₹${amountPaid}`,
+              duration: 7000,
+            });
+            // Optionally trigger onAcceptPayment callback
+            await onAcceptPayment();
+          }
+
+          // Stop polling if link is expired
+          if (linkStatus === 'EXPIRED') {
+            stopPolling();
+            toast.warning('Payment link expired', {
+              description: 'Please create a new payment link',
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
+    }, POLLING_INTERVAL);
+  };
+
+  const stopPolling = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    setIsPolling(false);
+  };
 
   return (
     <>
@@ -230,31 +307,34 @@ export const PaymentModeSelector = ({
                     </Button>
                   </div>
                 )}
-                <Button
-                  onClick={handleSendPaymentLink}
-                  type="button"
-                  className="w-fit"
-                  disabled={isSendingLink || !isPhoneValid || smsSent}
-                  variant={smsSent ? 'secondary' : 'default'}
-                  aria-label={smsSent ? 'Payment link sent' : 'Send payment link'}
-                >
-                  {isSendingLink ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : smsSent ? (
-                    <>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Sent {countdown > 0 && `(${countdown}s)`}
-                    </>
-                  ) : (
-                    <>
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      Send
-                    </>
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={handleSendPaymentLink}
+                    type="button"
+                    disabled={isSendingLink || !isPhoneValid || smsSent}
+                    variant={smsSent ? 'secondary' : 'default'}
+                    isLoading={isSendingLink}
+                  >
+                    {smsSent ? (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Sent {countdown > 0 && `(${countdown}s)`}
+                      </>
+                    ) : (
+                      <>
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        Send Link
+                      </>
+                    )}
+                  </Button>
+
+                  {qrCode && (
+                    <Button variant="outline" onClick={() => setShowQrModal(true)} type="button">
+                      <QrCode className="mr-2 h-4 w-4" />
+                      Show QR
+                    </Button>
                   )}
-                </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -274,6 +354,32 @@ export const PaymentModeSelector = ({
           </div>
         )}
       </div>
+
+      {/* QR Code Modal */}
+      <Dialog open={showQrModal} onOpenChange={setShowQrModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Payment QR Code</DialogTitle>
+            <DialogDescription>
+              {expiryTime && `Expires: ${new Date(expiryTime).toLocaleDateString()}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            {qrCode && (
+              <Image
+                src={qrCode}
+                alt="Payment QR Code"
+                width={300}
+                height={300}
+                className="border rounded-lg"
+              />
+            )}
+            <TypographyMuted className="text-center">
+              Scan this QR code to complete payment
+            </TypographyMuted>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

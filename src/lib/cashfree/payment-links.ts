@@ -5,7 +5,6 @@ import {
 } from './client';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
-import { env } from '@/env';
 import { getBranchConfigWithTenant } from '@/server/db/branch';
 
 const createPaymentLinkSchema = z.object({
@@ -18,16 +17,26 @@ const createPaymentLinkSchema = z.object({
       message: 'Phone number must be exactly 10 digits',
     }),
   customerName: z.string().min(1, 'Customer name is required').max(100),
-  planId: z.string().min(1, 'Plan ID is required'),
+  customerEmail: z.string().email().optional(),
+  id: z.string().min(1, 'Plan ID is required'),
   sendSms: z.boolean().optional().default(true),
+  sendEmail: z.boolean().optional().default(false),
+  expiryInDays: z.number().int().min(1).max(365).optional(),
+  enablePartialPayments: z.boolean().optional().default(false),
+  minimumPartialAmount: z.number().positive().optional(),
 });
 
 export type CreatePaymentLinkRequest = {
   amount: number;
   customerPhone: string;
   customerName: string;
-  planId: string;
+  customerEmail?: string;
+  id: string;
   sendSms?: boolean;
+  sendEmail?: boolean;
+  expiryInDays?: number;
+  enablePartialPayments?: boolean;
+  minimumPartialAmount?: number;
 };
 
 export type PaymentLinkResult = {
@@ -37,6 +46,8 @@ export type PaymentLinkResult = {
     paymentUrl: string;
     qrCode: string;
     expiryTime?: string;
+    status?: 'ACTIVE' | 'INACTIVE' | 'PAID' | 'EXPIRED';
+    amountPaid?: number;
   };
   error?: string;
 };
@@ -53,6 +64,10 @@ export async function createPaymentLink(
 
     const linkId = `${tenant.name.replace(/\s/g, '_')}_${nanoid(8)}`;
 
+    // Calculate expiry time - default to 1 day (24 hours)
+    const expiryDays = validatedData.expiryInDays || 1;
+    const expiryTime = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString();
+
     const params: CreatePaymentLinkParams = {
       link_id: linkId,
       link_amount: validatedData.amount,
@@ -60,20 +75,30 @@ export async function createPaymentLink(
       customer_details: {
         customer_phone: validatedData.customerPhone,
         customer_name: validatedData.customerName,
+        customer_email: validatedData.customerEmail,
       },
       link_purpose: `Payment to ${tenant.name}`,
       link_notify: {
         send_sms: validatedData.sendSms,
+        send_email: validatedData.sendEmail,
       },
       link_notes: {
-        planId: validatedData.planId,
+        id: validatedData.id,
       },
       link_meta: {
-        notify_url: `${env.NEXT_PUBLIC_APP_URL}/api/webhooks/cashfree`,
+        notify_url: `https://bridge.welovedinspace.studio/api/webhooks/cashfree`,
       },
+      link_expiry_time: expiryTime,
+      link_partial_payments: validatedData.enablePartialPayments,
+      link_minimum_partial_amount: validatedData.minimumPartialAmount,
+      link_auto_reminders: validatedData.sendSms, // Enable auto-reminders if SMS is enabled
     };
 
-    const response: PaymentLinkResponse = await client.createPaymentLink(params);
+    const response: PaymentLinkResponse = await client.createPaymentLink(
+      params,
+      request.id,
+      linkId // Use linkId as idempotency key
+    );
 
     // Validate response
     if (!response?.link_id || !response?.link_url) {
@@ -87,6 +112,8 @@ export async function createPaymentLink(
         paymentUrl: response.link_url,
         qrCode: response.link_qrcode || '',
         expiryTime: response.link_expiry_time,
+        status: response.link_status,
+        amountPaid: response.link_amount_paid,
       },
     };
   } catch (error) {
@@ -126,6 +153,8 @@ export async function getPaymentLinkStatus(linkId: string): Promise<PaymentLinkR
         paymentUrl: response.link_url,
         qrCode: response.link_qrcode,
         expiryTime: response.link_expiry_time,
+        status: response.link_status,
+        amountPaid: response.link_amount_paid,
       },
     };
   } catch (error) {
