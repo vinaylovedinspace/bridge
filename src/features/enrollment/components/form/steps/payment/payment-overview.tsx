@@ -98,7 +98,9 @@ export const PaymentOverview = ({ existingPayment, isEditMode = false }: Payment
                     </span>
                   )}
                 </TypographyMuted>
-                <TypographyMuted className="font-semibold">
+                <TypographyMuted
+                  className={`font-semibold ${isFirstInstallmentPaid ? 'text-green-600' : ''}`}
+                >
                   {formatted.secondInstallment}
                 </TypographyMuted>
               </div>

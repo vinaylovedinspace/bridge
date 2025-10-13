@@ -6,12 +6,14 @@ import { updatePaymentAndProcessTransaction } from '@/features/enrollment/server
 import { Enrollment } from '@/server/db/plan';
 import { PaymentModeSelector as SharedPaymentModeSelector } from '@/components/payment/payment-mode-selector';
 import { PaymentMode } from '@/db/schema';
+import { useRouter } from 'next/navigation';
 
 type PaymentModeSelectorProps = {
   existingPayment: NonNullable<Enrollment>['payment'] | null;
 };
 
 export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProps) => {
+  const router = useRouter();
   const { getValues, setValue } = useFormContext<AdmissionFormValues>();
 
   // Check if this is installment payment and if 1st installment is paid
@@ -40,13 +42,21 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
       throw new Error('Client ID not found');
     }
 
-    const result = await updatePaymentAndProcessTransaction(formValues.payment);
+    const { error, message, payment } = await updatePaymentAndProcessTransaction(
+      formValues.payment
+    );
 
-    if (!result.error) {
-      toast.success(result.message || 'Payment processed successfully');
+    if (!error && payment) {
+      const _payment = {
+        ...formValues.payment,
+        ...payment,
+      };
+      setValue('payment', _payment);
+      toast.success(message || 'Payment processed successfully');
+      router.refresh();
     } else {
-      toast.error(result.message || 'Failed to process payment');
-      throw new Error(result.message);
+      toast.error(message || 'Failed to process payment');
+      throw new Error(message);
     }
   };
 

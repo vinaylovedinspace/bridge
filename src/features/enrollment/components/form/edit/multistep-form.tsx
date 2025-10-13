@@ -91,10 +91,18 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
       const stepData = getStepData(currentStepKey);
       const shouldRefresh = currentStepKey === 'plan' || currentStepKey === 'payment';
 
-      const success = await submitStep(currentStepKey, stepData, isLastStep, shouldRefresh);
+      const success = await submitStep(currentStepKey, stepData);
 
       if (success && !isLastStep) {
         goToNext();
+      }
+
+      if (shouldRefresh) {
+        router.refresh();
+      }
+
+      if (isLastStep) {
+        router.push('/enrollments');
       }
     } catch (error) {
       console.error(`Error submitting step ${currentStepKey}:`, error);

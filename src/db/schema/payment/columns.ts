@@ -30,8 +30,8 @@ export const PaymentTable = pgTable(
     discount: integer('discount').notNull().default(0),
     totalAmount: integer('total_amount').notNull(),
     licenseServiceFee: integer('license_service_fee').notNull().default(0),
-    paymentStatus: PaymentStatusEnum('payment_status').default('PENDING'),
-    paymentType: PaymentTypeEnum('payment_type').default('FULL_PAYMENT'),
+    paymentStatus: PaymentStatusEnum('payment_status').default('PENDING').notNull(),
+    paymentType: PaymentTypeEnum('payment_type').default('FULL_PAYMENT').notNull(),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),

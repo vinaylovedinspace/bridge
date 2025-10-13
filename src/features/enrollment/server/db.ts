@@ -115,22 +115,17 @@ export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert) 
       .where(eq(PaymentTable.id, data.id))
       .returning();
 
-    return {
-      payment: updated,
-    };
+    return updated;
   }
 
   const [created] = await db.insert(PaymentTable).values(data).returning();
 
-  return {
-    payment: created,
-  };
+  return created;
 };
 
 export const upsertPlanAndPaymentInDB = async (
-  planData: typeof PlanTable.$inferInsert,
-  paymentData: typeof PaymentTable.$inferInsert,
-  planCode?: string
+  planData: Omit<typeof PlanTable.$inferInsert, 'paymentId'> & { paymentId?: string },
+  paymentData: typeof PaymentTable.$inferInsert
 ) => {
   return await db.transaction(async (tx) => {
     let plan: typeof PlanTable.$inferSelect | undefined;
@@ -164,7 +159,6 @@ export const upsertPlanAndPaymentInDB = async (
         .insert(PlanTable)
         .values({
           ...planData,
-          planCode: planCode ?? planData.planCode,
           paymentId: payment.id,
         })
         .returning();
@@ -231,7 +225,7 @@ export const createInstallmentPaymentsInDB = async (
 
     // Update existing installment
     if (existingInstallment) {
-      const [updated] = await tx
+      await tx
         .update(InstallmentPaymentTable)
         .set({
           amount: data.amount,
@@ -239,8 +233,7 @@ export const createInstallmentPaymentsInDB = async (
           paymentDate: data.paymentDate,
           isPaid: data.isPaid,
         })
-        .where(eq(InstallmentPaymentTable.id, existingInstallment.id))
-        .returning();
+        .where(eq(InstallmentPaymentTable.id, existingInstallment.id));
 
       // Recalculate payment status
       const allInstallments = await tx.query.InstallmentPaymentTable.findMany({
@@ -249,19 +242,20 @@ export const createInstallmentPaymentsInDB = async (
 
       const paidCount = allInstallments.filter((inst) => inst.isPaid).length;
 
-      await tx
+      const [updatedPayment] = await tx
         .update(PaymentTable)
         .set({
           paymentStatus: calculatePaymentStatus(paidCount),
           updatedAt: new Date(),
         })
-        .where(eq(PaymentTable.id, data.paymentId));
+        .where(eq(PaymentTable.id, data.paymentId))
+        .returning();
 
-      return updated;
+      return updatedPayment;
     }
 
     // Create new installment and update status
-    const [created] = await tx.insert(InstallmentPaymentTable).values(data).returning();
+    await tx.insert(InstallmentPaymentTable).values(data);
 
     const allInstallments = await tx.query.InstallmentPaymentTable.findMany({
       where: eq(InstallmentPaymentTable.paymentId, data.paymentId),
@@ -269,15 +263,16 @@ export const createInstallmentPaymentsInDB = async (
 
     const paidCount = allInstallments.filter((inst) => inst.isPaid).length;
 
-    await tx
+    const [updatedPayment] = await tx
       .update(PaymentTable)
       .set({
         paymentStatus: calculatePaymentStatus(paidCount),
         updatedAt: new Date(),
       })
-      .where(eq(PaymentTable.id, data.paymentId));
+      .where(eq(PaymentTable.id, data.paymentId))
+      .returning();
 
-    return created;
+    return updatedPayment;
   });
 };
 
@@ -352,6 +347,9 @@ export const getPlanAndVehicleInDB = async (planId: string) => {
 export const getExistingInstallmentsInDB = async (paymentId: string) => {
   return await db.query.InstallmentPaymentTable.findMany({
     where: eq(InstallmentPaymentTable.paymentId, paymentId),
+    with: {
+      payment: true,
+    },
   });
 };
 

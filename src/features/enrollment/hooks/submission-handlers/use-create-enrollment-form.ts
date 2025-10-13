@@ -12,7 +12,7 @@ import {
   createLearningLicense,
   createDrivingLicense,
   upsertPlanWithPayment,
-  updatePayment,
+  updatePaymentAndProcessTransaction,
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
 import { UseFormGetValues, UseFormSetValue } from 'react-hook-form';
@@ -154,7 +154,7 @@ export const useCreateEnrollmentForm = (
         message: 'Payment information was not saved. Please try again later',
       };
 
-    return await updatePayment(formValues.payment);
+    return await updatePaymentAndProcessTransaction(formValues.payment);
   }, [getValues]);
 
   const submitStep = async (

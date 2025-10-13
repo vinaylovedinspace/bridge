@@ -9,18 +9,17 @@ import {
   getClientForSessionsInDB,
 } from '../server/db';
 import { upsertFullPaymentInDB } from '@/server/db/payments';
-import { PaymentMode } from '@/db/schema';
+import { PaymentMode, PaymentTable } from '@/db/schema';
+import { db } from '@/db';
+import { eq } from 'drizzle-orm';
 
 /**
  * Handle full payment creation
  */
-export const handleFullPayment = async (
-  paymentId: string,
-  paymentMode: PaymentMode
-): Promise<void> => {
+export const handleFullPayment = async (paymentId: string, paymentMode: PaymentMode) => {
   const currentDate = formatDateToYYYYMMDD(new Date());
 
-  await upsertFullPaymentInDB({
+  return await upsertFullPaymentInDB({
     paymentId,
     paymentMode,
     paymentDate: currentDate,
@@ -35,7 +34,7 @@ export const handleInstallmentPayment = async (
   paymentId: string,
   paymentMode: PaymentMode,
   totalAmount: number
-): Promise<void> => {
+) => {
   const currentDate = formatDateToYYYYMMDD(new Date());
 
   // Check if first installment already exists
@@ -47,20 +46,28 @@ export const handleInstallmentPayment = async (
 
   if (firstInstallment?.isPaid) {
     // Check if both installments already paid
-    const secondInstallmentPaid = existingInstallments.some(
-      (installment) => installment.installmentNumber === 2 && installment.isPaid
+    const secondInstallment = existingInstallments.find(
+      (installment) => installment.installmentNumber === 2
     );
 
-    if (secondInstallmentPaid) {
-      // Both installments already paid, nothing to do
-      return;
+    if (secondInstallment && secondInstallment.isPaid) {
+      if (secondInstallment.payment.paymentStatus === 'FULLY_PAID') {
+        return Promise.resolve(secondInstallment.payment);
+      }
+      await db
+        .update(PaymentTable)
+        .set({
+          paymentStatus: 'FULLY_PAID',
+          updatedAt: new Date(),
+        })
+        .where(eq(PaymentTable.id, paymentId));
     }
 
     // Second installment is total minus first installment
     const secondInstallmentAmount = totalAmount - firstInstallment.amount;
 
     // Create/update second installment
-    await createInstallmentPaymentsInDB({
+    return await createInstallmentPaymentsInDB({
       paymentId,
       installmentNumber: 2,
       amount: secondInstallmentAmount,
@@ -72,7 +79,7 @@ export const handleInstallmentPayment = async (
     const firstInstallmentAmount = Math.ceil(totalAmount / 2);
 
     // Create first installment
-    await createInstallmentPaymentsInDB({
+    return await createInstallmentPaymentsInDB({
       paymentId,
       installmentNumber: 1,
       amount: firstInstallmentAmount,

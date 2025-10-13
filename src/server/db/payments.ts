@@ -43,8 +43,7 @@ export type Payment = Awaited<ReturnType<typeof getPayments>>[0];
 
 export const upsertFullPaymentInDB = async (data: typeof FullPaymentTable.$inferInsert) => {
   return await db.transaction(async (tx) => {
-    console.log('upsertFullPaymentInDB', data);
-    const [fullPayment] = await tx
+    await tx
       .insert(FullPaymentTable)
       .values(data)
       .onConflictDoUpdate({
@@ -57,14 +56,15 @@ export const upsertFullPaymentInDB = async (data: typeof FullPaymentTable.$infer
       })
       .returning();
 
-    await tx
+    const updatedPayment = await tx
       .update(PaymentTable)
       .set({
         paymentStatus: 'FULLY_PAID',
         updatedAt: new Date(),
       })
-      .where(eq(PaymentTable.id, data.paymentId));
+      .where(eq(PaymentTable.id, data.paymentId))
+      .returning();
 
-    return fullPayment;
+    return updatedPayment;
   });
 };

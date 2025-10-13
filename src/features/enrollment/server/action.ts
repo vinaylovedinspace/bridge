@@ -224,11 +224,16 @@ export const upsertPlanWithPayment = async (
     };
 
     // 7. Generate plan code if creating new plan (will happen inside transaction)
-    const planCode =
-      unsafePlanData.planCode || (!unsafePlanData.id ? await getNextPlanCode(branchId) : undefined);
+    const planCode = unsafePlanData.planCode ?? (await getNextPlanCode(branchId));
 
     // 8. Persist plan and payment to database in a transaction
-    const { plan } = await upsertPlanAndPaymentInDB(planData, paymentData, planCode);
+    const { plan } = await upsertPlanAndPaymentInDB(
+      {
+        ...planData,
+        planCode,
+      },
+      paymentData
+    );
 
     // 9 & 10. Process payment and generate sessions in parallel (independent operations)
     const paymentMode = paymentData.paymentMode;
@@ -350,11 +355,11 @@ async function processPaymentTransaction({
   paymentMode,
   paymentType,
   totalAmount,
-}: ProcessPaymentTransactionParams): Promise<void> {
+}: ProcessPaymentTransactionParams) {
   if (paymentType === 'FULL_PAYMENT') {
-    await handleFullPayment(paymentId, paymentMode);
+    return await handleFullPayment(paymentId, paymentMode);
   } else if (paymentType === 'INSTALLMENTS') {
-    await handleInstallmentPayment(paymentId, paymentMode, totalAmount);
+    return await handleInstallmentPayment(paymentId, paymentMode, totalAmount);
   }
 }
 
@@ -380,39 +385,9 @@ export const updateDrivingLicense = async (
   return createDrivingLicense(data);
 };
 
-export const updatePayment = async (
-  unsafeData: z.infer<typeof paymentSchema>
-): Promise<{ error: boolean; message: string; paymentId?: string }> => {
-  try {
-    const { id: branchId } = await getBranchConfig();
-    const { success, data, error } = paymentSchema.safeParse({
-      ...unsafeData,
-      branchId,
-    });
-
-    if (!success) {
-      console.log(error);
-      return { error: true, message: 'Invalid payment data' };
-    }
-
-    // 4. Persist payment to database
-    const { payment } = await upsertPaymentInDB(data);
-
-    return {
-      error: false,
-      message: 'Payment acknowledged successfully',
-      paymentId: payment?.id,
-    };
-  } catch (error) {
-    console.error('Error processing payment data:', error);
-    const message = error instanceof Error ? error.message : 'Failed to save payment information';
-    return { error: true, message };
-  }
-};
-
 export const updatePaymentAndProcessTransaction = async (
   unsafeData: z.infer<typeof paymentSchema>
-): Promise<{ error: boolean; message: string; paymentId?: string }> => {
+) => {
   try {
     const { id: branchId } = await getBranchConfig();
     const { success, data, error } = paymentSchema.safeParse({
@@ -422,32 +397,36 @@ export const updatePaymentAndProcessTransaction = async (
 
     if (!success) {
       console.log(error);
-      return { error: true, message: 'Invalid payment data' };
+      return { error: true, message: 'Invalid payment data', payment: null };
     }
 
     // 4. Persist payment to database
-    const { payment } = await upsertPaymentInDB(data);
+    const payment = await upsertPaymentInDB(data);
 
-    if (payment?.id) {
-      // 5. Process immediate payment transactions
-      const paymentMode = data.paymentMode;
+    // 5. Process immediate payment transactions
+    const { paymentMode, paymentType, totalAmount } = data;
 
-      if (
-        IMMEDIATE_PAYMENT_MODES.includes(paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])
-      ) {
-        await processPaymentTransaction({
-          paymentId: payment.id,
-          paymentMode,
-          paymentType: data.paymentType,
-          totalAmount: data.totalAmount,
-        });
+    if (IMMEDIATE_PAYMENT_MODES.includes(paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])) {
+      const result = await processPaymentTransaction({
+        paymentId: payment.id,
+        paymentMode,
+        paymentType,
+        totalAmount,
+      });
+
+      if (result) {
+        return {
+          error: false,
+          message: 'Payment processed successfully',
+          payment,
+        };
       }
     }
 
     return {
       error: false,
       message: 'Payment acknowledged successfully',
-      paymentId: payment?.id,
+      payment,
     };
   } catch (error) {
     console.error('Error processing payment data:', error);

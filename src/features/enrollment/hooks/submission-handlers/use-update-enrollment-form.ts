@@ -1,4 +1,3 @@
-import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { UseFormGetValues } from 'react-hook-form';
@@ -16,7 +15,7 @@ import {
   createDrivingLicense,
   updateLearningLicense,
   updateDrivingLicense,
-  updatePayment,
+  updatePaymentAndProcessTransaction,
   upsertPlanWithPayment,
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
@@ -26,8 +25,6 @@ export const useUpdateEnrollmentForm = (
   enrollment: NonNullable<Enrollment>,
   getValues: UseFormGetValues<AdmissionFormValues>
 ) => {
-  const router = useRouter();
-
   const handlePersonalStep = useCallback(
     async (data: PersonalInfoValues): ActionReturnType => {
       return await updateClient(enrollment.client.id, data);
@@ -113,7 +110,7 @@ export const useUpdateEnrollmentForm = (
 
   const handlePaymentStep = useCallback(async (data: PaymentValues): ActionReturnType => {
     try {
-      const result = await updatePayment(data);
+      const result = await updatePaymentAndProcessTransaction(data);
 
       return result;
     } catch {
@@ -125,12 +122,7 @@ export const useUpdateEnrollmentForm = (
   }, []);
 
   const submitStep = useCallback(
-    async (
-      stepKey: string,
-      stepData: unknown,
-      isLastStep: boolean,
-      shouldRefreshAfter: boolean = false
-    ) => {
+    async (stepKey: string, stepData: unknown) => {
       const stepHandlers = {
         service: () => handlePersonalStep(stepData as PersonalInfoValues),
         personal: () => handlePersonalStep(stepData as PersonalInfoValues),
@@ -157,18 +149,10 @@ export const useUpdateEnrollmentForm = (
           position: 'top-right',
         });
 
-        if (shouldRefreshAfter) {
-          router.refresh();
-        }
-
-        if (isLastStep) {
-          router.push('/enrollments');
-        }
-
         return true;
       }
     },
-    [handlePersonalStep, handleLicenseStep, handlePlanStep, handlePaymentStep, router]
+    [handlePersonalStep, handleLicenseStep, handlePlanStep, handlePaymentStep]
   );
 
   return {
