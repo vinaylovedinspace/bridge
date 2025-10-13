@@ -210,42 +210,6 @@ export const createPaymentEntry = async (
   });
 };
 
-export const upsertPaymentInDB = async (
-  data: typeof PaymentTable.$inferInsert,
-  serviceId: string
-) => {
-  return await db.transaction(async (tx) => {
-    // Fetch plan with associated payment
-    const serviceWithPayment = await tx.query.RTOServicesTable.findFirst({
-      where: eq(RTOServicesTable.id, serviceId),
-      with: { payment: true },
-    });
-
-    const existingPayment = serviceWithPayment?.payment;
-
-    // Update existing payment
-    if (existingPayment) {
-      const [updated] = await tx
-        .update(PaymentTable)
-        .set({ ...data, updatedAt: new Date() })
-        .where(eq(PaymentTable.id, existingPayment.id))
-        .returning();
-
-      return updated;
-    }
-
-    // Create new payment and link to rto-service
-    const [payment] = await tx.insert(PaymentTable).values(data).returning();
-
-    await tx
-      .update(RTOServicesTable)
-      .set({ paymentId: payment.id, updatedAt: new Date() })
-      .where(eq(RTOServicesTable.id, serviceId));
-
-    return payment;
-  });
-};
-
 export const saveRTOServiceAndPaymentInDB = async (
   clientData: typeof ClientTable.$inferInsert,
   serviceData: Omit<typeof RTOServicesTable.$inferInsert, 'clientId' | 'paymentId'> & {

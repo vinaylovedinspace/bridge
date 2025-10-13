@@ -9,6 +9,7 @@ import {
   DEFAULT_STATE,
 } from '@/lib/constants/business';
 import { parseDateStringToDateObject } from '@/lib/date-time-utils';
+import { mapPayment } from '@/lib/payment/map-payment';
 
 // Function to get validation fields for a specific step
 export const getMultistepAdmissionStepValidationFields = (
@@ -166,12 +167,6 @@ const DEFAULT_PLAN_VALUES = {
   serviceType: 'FULL_SERVICE' as const,
 };
 
-const DEFAULT_PAYMENT_VALUES = {
-  discount: 0,
-  paymentMode: 'PAYMENT_LINK' as const,
-  applyDiscount: false,
-};
-
 export const getDefaultValuesForAddEnrollmentForm = (
   existingClient?: Awaited<ReturnType<typeof getClientById>>['data']
 ): AdmissionFormValues => {
@@ -185,10 +180,7 @@ export const getDefaultValuesForAddEnrollmentForm = (
         ...DEFAULT_PLAN_VALUES,
         clientId: existingClient.id,
       },
-      payment: {
-        ...DEFAULT_PAYMENT_VALUES,
-        clientId: existingClient.id,
-      },
+      payment: mapPayment(null, existingClient.id, existingClient.branchId),
     } as AdmissionFormValues;
   }
 
@@ -204,7 +196,7 @@ export const getDefaultValuesForAddEnrollmentForm = (
     learningLicense: {},
     drivingLicense: {},
     plan: DEFAULT_PLAN_VALUES,
-    payment: DEFAULT_PAYMENT_VALUES,
+    payment: mapPayment(null, '', ''),
   } as AdmissionFormValues;
 };
 
@@ -231,29 +223,6 @@ export const getDefaultValuesForEditEnrollmentForm = (
       branchId: enrollment.branchId,
       paymentId: enrollment.paymentId,
     },
-    payment: payment
-      ? {
-          id: payment.id,
-          discount: payment.discount,
-          paymentType: payment.paymentType,
-          paymentStatus: payment.paymentStatus,
-          licenseServiceFee: payment.licenseServiceFee,
-          totalAmount: payment.totalAmount,
-          clientId: payment.clientId,
-          branchId: payment.branchId,
-          paymentMode: 'PAYMENT_LINK' as const,
-          applyDiscount: payment.discount > 0,
-        }
-      : {
-          discount: 0,
-          paymentType: 'FULL_PAYMENT' as const,
-          paymentStatus: 'PENDING' as const,
-          licenseServiceFee: 0,
-          totalAmount: 0,
-          clientId: client.id,
-          branchId: client.branchId,
-          paymentMode: 'PAYMENT_LINK' as const,
-          applyDiscount: false,
-        },
+    payment: mapPayment(payment, client.id, client.branchId),
   };
 };

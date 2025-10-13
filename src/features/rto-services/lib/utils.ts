@@ -3,6 +3,7 @@ import { RTOServiceFormValues } from '../types';
 import { generateFieldPaths } from '@/lib/utils';
 import { getRTOService } from '../server/db';
 import { DEFAULT_STATE } from '@/lib/constants/business';
+import { mapPayment } from '@/lib/payment/map-payment';
 
 // Function to get validation fields for a specific step
 export const getMultistepRTOServiceStepValidationFields = (
@@ -94,29 +95,7 @@ export const getDefaultValuesForRTOServiceForm = (
     return {
       client: mapClientToPersonalInfo(rtoService.client),
       service: mapRTOServiceToServiceInfo(rtoService),
-      payment: rtoService.payment
-        ? {
-            discount: rtoService.payment.discount,
-            paymentType: rtoService.payment.paymentType || 'FULL_PAYMENT',
-            paymentStatus: rtoService.payment.paymentStatus || 'PENDING',
-            licenseServiceFee: rtoService.payment.licenseServiceFee,
-            totalAmount: rtoService.payment.totalAmount,
-            clientId: rtoService.payment.clientId,
-            branchId: rtoService.payment.branchId,
-            paymentMode: 'PAYMENT_LINK' as const,
-            applyDiscount: rtoService.payment.discount > 0,
-          }
-        : {
-            discount: 0,
-            paymentType: 'FULL_PAYMENT' as const,
-            paymentStatus: 'PENDING' as const,
-            licenseServiceFee: 0,
-            totalAmount: 0,
-            clientId: rtoService.clientId,
-            branchId: rtoService.branchId,
-            paymentMode: 'PAYMENT_LINK' as const,
-            applyDiscount: false,
-          },
+      payment: mapPayment(rtoService.payment, rtoService.clientId, rtoService.branchId),
     };
   }
 
@@ -132,14 +111,6 @@ export const getDefaultValuesForRTOServiceForm = (
       type: 'NEW_DRIVING_LICENCE',
       license: {},
     },
-    payment: {
-      discount: 0,
-      paymentType: 'FULL_PAYMENT' as const,
-      paymentStatus: 'PENDING' as const,
-      licenseServiceFee: 0,
-      totalAmount: 0,
-      paymentMode: 'PAYMENT_LINK' as const,
-      applyDiscount: false,
-    },
+    payment: mapPayment(null, '', ''),
   } as Partial<RTOServiceFormValues>;
 };

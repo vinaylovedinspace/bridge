@@ -107,22 +107,6 @@ export const updatePlanInDB = async (data: Partial<typeof PlanTable.$inferInsert
   };
 };
 
-export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert) => {
-  if (data.id) {
-    const [updated] = await db
-      .update(PaymentTable)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(PaymentTable.id, data.id))
-      .returning();
-
-    return updated;
-  }
-
-  const [created] = await db.insert(PaymentTable).values(data).returning();
-
-  return created;
-};
-
 export const upsertPlanAndPaymentInDB = async (
   planData: Omit<typeof PlanTable.$inferInsert, 'paymentId'> & { paymentId?: string },
   paymentData: typeof PaymentTable.$inferInsert
@@ -172,6 +156,35 @@ export const upsertPlanAndPaymentInDB = async (
       plan,
     };
   });
+};
+
+export const upsertPlanWithPaymentIdInDB = async (planData: typeof PlanTable.$inferInsert) => {
+  if (!planData.paymentId) {
+    throw new Error('paymentId is required');
+  }
+
+  // If plan ID is provided (edit mode), update the existing plan
+  if (planData.id) {
+    const [plan] = await db
+      .update(PlanTable)
+      .set({
+        ...planData,
+        updatedAt: new Date(),
+      })
+      .where(eq(PlanTable.id, planData.id))
+      .returning();
+
+    return {
+      plan,
+    };
+  }
+
+  // Create new plan
+  const [plan] = await db.insert(PlanTable).values(planData).returning();
+
+  return {
+    plan,
+  };
 };
 
 export const updatePlanById = async (

@@ -2,11 +2,11 @@ import { useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { AdmissionFormValues } from '@/features/enrollment/types';
 import { toast } from 'sonner';
-import { updatePaymentAndProcessTransaction } from '@/features/enrollment/server/action';
 import { Enrollment } from '@/server/db/plan';
 import { PaymentModeSelector as SharedPaymentModeSelector } from '@/components/payment/payment-mode-selector';
 import { PaymentMode } from '@/db/schema';
 import { useRouter } from 'next/navigation';
+import { upsertPaymentWithOptionalTransaction } from '@/server/action/payments';
 
 type PaymentModeSelectorProps = {
   existingPayment: NonNullable<Enrollment>['payment'] | null;
@@ -14,7 +14,7 @@ type PaymentModeSelectorProps = {
 
 export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProps) => {
   const router = useRouter();
-  const { getValues, setValue } = useFormContext<AdmissionFormValues>();
+  const { getValues, setValue, resetField } = useFormContext<AdmissionFormValues>();
 
   // Check if this is installment payment and if 1st installment is paid
   const isFirstInstallmentPaid = useMemo(() => {
@@ -42,16 +42,19 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
       throw new Error('Client ID not found');
     }
 
-    const { error, message, payment } = await updatePaymentAndProcessTransaction(
-      formValues.payment
-    );
+    const { error, message, payment } = await upsertPaymentWithOptionalTransaction({
+      payment: formValues.payment,
+      processTransaction: true,
+    });
 
     if (!error && payment) {
       const _payment = {
         ...formValues.payment,
         ...payment,
       };
-      setValue('payment', _payment);
+      // Reset the field with new default value to mark as not dirty
+      resetField('payment', { defaultValue: _payment });
+
       toast.success(message || 'Payment processed successfully');
       router.refresh();
     } else {

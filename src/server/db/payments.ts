@@ -68,3 +68,19 @@ export const upsertFullPaymentInDB = async (data: typeof FullPaymentTable.$infer
     return updatedPayment;
   });
 };
+
+export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert) => {
+  if (data.id) {
+    const [updated] = await db
+      .update(PaymentTable)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(PaymentTable.id, data.id))
+      .returning();
+
+    return updated;
+  }
+
+  const [created] = await db.insert(PaymentTable).values(data).returning();
+
+  return created;
+};

@@ -15,11 +15,11 @@ import {
   createDrivingLicense,
   updateLearningLicense,
   updateDrivingLicense,
-  updatePaymentAndProcessTransaction,
   upsertPlanWithPayment,
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
 import { Enrollment } from '@/server/db/plan';
+import { upsertPaymentWithOptionalTransaction } from '@/server/action/payments';
 
 export const useUpdateEnrollmentForm = (
   enrollment: NonNullable<Enrollment>,
@@ -110,7 +110,9 @@ export const useUpdateEnrollmentForm = (
 
   const handlePaymentStep = useCallback(async (data: PaymentValues): ActionReturnType => {
     try {
-      const result = await updatePaymentAndProcessTransaction(data);
+      const result = await upsertPaymentWithOptionalTransaction({
+        payment: data,
+      });
 
       return result;
     } catch {

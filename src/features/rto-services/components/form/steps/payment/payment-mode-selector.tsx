@@ -1,14 +1,14 @@
 import { useFormContext } from 'react-hook-form';
 import { toast } from 'sonner';
 import { RTOServiceFormValues } from '@/features/rto-services/types';
-import { upsertPayment } from '@/features/rto-services/server/action';
 import { useRTOPaymentCalculations } from '@/features/rto-services/hooks/use-rto-payment-calculations';
 import { PaymentModeSelector as SharedPaymentModeSelector } from '@/components/payment/payment-mode-selector';
 import { PaymentMode } from '@/db/schema';
 import { useRouter } from 'next/navigation';
+import { upsertPaymentWithOptionalTransaction } from '@/server/action/payments';
 
 export const PaymentModeSelector = () => {
-  const { getValues, setValue } = useFormContext<RTOServiceFormValues>();
+  const { getValues, setValue, resetField } = useFormContext<RTOServiceFormValues>();
   const { totalAmountAfterDiscount } = useRTOPaymentCalculations();
   const router = useRouter();
 
@@ -37,20 +37,22 @@ export const PaymentModeSelector = () => {
       error,
       message,
       payment: updatedPayment,
-    } = await upsertPayment(
-      {
+    } = await upsertPaymentWithOptionalTransaction({
+      payment: {
         ...payment,
         clientId,
         totalAmount: totalAmountAfterDiscount,
       },
-      rtoServiceId
-    );
+      processTransaction: true,
+    });
 
     if (!error && updatedPayment) {
-      setValue('payment', {
+      const _payment = {
         ...payment,
         ...updatedPayment,
-      });
+      };
+      // Reset the field with new default value to mark as not dirty
+      resetField('payment', { defaultValue: _payment });
 
       toast.success(message || 'Payment processed successfully');
       router.push('/rto-services');
@@ -72,7 +74,7 @@ export const PaymentModeSelector = () => {
     <SharedPaymentModeSelector
       phoneNumber={formValues.client?.phoneNumber}
       customerName={customerName}
-      paymentId={formValues.payment.id}
+      paymentId={formValues.payment?.id}
       amount={totalAmountAfterDiscount}
       buttonText="Accept Payment"
       onAcceptPayment={handleAcceptPayment}

@@ -1,5 +1,13 @@
 'use server';
 
+import { z } from 'zod';
+import { getBranchConfig } from '@/server/action/branch';
+import { paymentSchema } from '@/types/zod/payment';
+import { IMMEDIATE_PAYMENT_MODES } from '@/lib/constants/payment';
+import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
+import { upsertFullPaymentInDB } from '@/server/db/payments';
+import { upsertPaymentInDB } from '@/server/db/payments';
+
 export type PaymentLinkResult = {
   success: boolean;
   data?: {
@@ -45,4 +53,85 @@ export async function getPaymentLinkStatusAction(linkId: string): Promise<Paymen
     success: false,
     error: 'Payment link status check not implemented',
   };
+}
+
+type UpsertPaymentOptions = {
+  payment: z.infer<typeof paymentSchema>;
+  processTransaction?: boolean;
+};
+
+type UpsertPaymentResult = {
+  error: boolean;
+  message: string;
+  payment?: Awaited<ReturnType<typeof upsertPaymentInDB>>;
+};
+
+/**
+ * Shared function to upsert payment with optional transaction processing
+ * Used by both enrollment and RTO services
+ */
+export async function upsertPaymentWithOptionalTransaction({
+  payment: unsafeData,
+  processTransaction = false,
+}: UpsertPaymentOptions): Promise<UpsertPaymentResult> {
+  try {
+    const { id: branchId } = await getBranchConfig();
+    const { success, data, error } = paymentSchema.safeParse({
+      ...unsafeData,
+      branchId,
+    });
+
+    if (!success) {
+      console.error('Payment validation error:', error);
+      return { error: true, message: 'Invalid payment data', payment: undefined };
+    }
+
+    // Persist payment to database
+    const payment = await upsertPaymentInDB(data);
+
+    // Process immediate payment transactions if requested
+    if (
+      processTransaction &&
+      IMMEDIATE_PAYMENT_MODES.includes(data.paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])
+    ) {
+      const currentDate = formatDateToYYYYMMDD(new Date());
+
+      if (data.paymentType === 'FULL_PAYMENT') {
+        await upsertFullPaymentInDB({
+          paymentId: payment.id,
+          paymentMode: data.paymentMode,
+          paymentDate: currentDate,
+          isPaid: true,
+        });
+
+        return {
+          error: false,
+          message: 'Payment processed successfully',
+          payment,
+        };
+      } else if (data.paymentType === 'INSTALLMENTS') {
+        // Import dynamically to avoid circular dependencies
+        const { handleInstallmentPayment } = await import(
+          '@/features/enrollment/lib/payment-helpers'
+        );
+        await handleInstallmentPayment(payment.id, data.paymentMode, data.totalAmount);
+
+        return {
+          error: false,
+          message: 'Payment processed successfully',
+          payment,
+        };
+      }
+    }
+
+    return {
+      error: false,
+      message: 'Payment acknowledged successfully',
+      payment,
+    };
+  } catch (error) {
+    console.error('Error processing payment data:', error);
+    const message = error instanceof Error ? error.message : 'Failed to save payment information';
+    return { error: true, message, payment: undefined };
+  }
 }

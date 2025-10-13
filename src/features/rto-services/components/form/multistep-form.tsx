@@ -20,6 +20,7 @@ import { saveRTOServiceWithPayment } from '../../server/action';
 import { getRTOService } from '../../server/db';
 import { FormNavigation } from '@/components/ui/form-navigation';
 import { cn } from '@/lib/utils';
+import { upsertPaymentWithOptionalTransaction } from '@/server/action/payments';
 
 type RTOServiceMultistepFormProps = {
   rtoService?: Awaited<ReturnType<typeof getRTOService>>;
@@ -103,8 +104,9 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
 
     setIsSubmitting(true);
     try {
-      // Use combined RTO service + payment transaction
-      const result = await saveRTOServiceWithPayment(formData);
+      const result = await upsertPaymentWithOptionalTransaction({
+        payment: formData.payment,
+      });
 
       if (result.error) {
         toast.error(result.message);
