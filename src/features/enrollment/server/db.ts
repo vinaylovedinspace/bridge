@@ -107,9 +107,8 @@ export const updatePlanInDB = async (data: Partial<typeof PlanTable.$inferInsert
   };
 };
 
-export const updatePaymentInDB = async (data: typeof PaymentTable.$inferInsert) => {
+export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert) => {
   if (data.id) {
-    console.log('update payment', data);
     const [updated] = await db
       .update(PaymentTable)
       .set({ ...data, updatedAt: new Date() })
@@ -118,13 +117,13 @@ export const updatePaymentInDB = async (data: typeof PaymentTable.$inferInsert) 
 
     return {
       payment: updated,
-      isExistingPayment: true,
-      paymentId: updated.id,
     };
   }
 
+  const [created] = await db.insert(PaymentTable).values(data).returning();
+
   return {
-    payment: null,
+    payment: created,
   };
 };
 

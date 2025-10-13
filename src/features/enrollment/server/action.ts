@@ -16,7 +16,7 @@ import {
   upsertDrivingLicenseInDB,
   getClientById as getClientByIdFromDB,
   findExistingPlanInDB,
-  updatePaymentInDB,
+  upsertPaymentInDB,
   upsertPlanAndPaymentInDB,
   getVehicleRentAmount,
 } from './db';
@@ -30,6 +30,7 @@ import { paymentSchema } from '@/types/zod/payment';
 import { IMMEDIATE_PAYMENT_MODES } from '@/lib/constants/payment';
 import { getNextPlanCode } from '@/db/utils/plan-code';
 import { getNextClientCode } from '@/db/utils/client-code';
+import { PaymentMode, PaymentTable, PaymentType } from '@/db/schema';
 
 export const createClient = async (
   unsafeData: z.infer<typeof clientSchema>
@@ -236,12 +237,12 @@ export const upsertPlanWithPayment = async (
     );
 
     const paymentPromise = shouldProcessPayment
-      ? processPaymentTransaction(
-          plan.paymentId!,
-          paymentMode as 'CASH' | 'QR',
-          paymentData.paymentType,
-          paymentData.totalAmount
-        )
+      ? processPaymentTransaction({
+          paymentId: plan.paymentId!,
+          paymentMode,
+          paymentType: paymentData.paymentType,
+          totalAmount: paymentData.totalAmount,
+        })
       : Promise.resolve();
 
     const sessionPromise = handleSessionGeneration(
@@ -299,12 +300,19 @@ export const getClientById = async (
   }
 };
 
-async function processPaymentTransaction(
-  paymentId: string,
-  paymentMode: 'CASH' | 'QR',
-  paymentType: string,
-  totalAmount: number
-): Promise<void> {
+type ProcessPaymentTransactionParams = {
+  paymentId: string;
+  paymentMode: PaymentMode;
+  paymentType: PaymentType;
+  totalAmount: number;
+};
+
+async function processPaymentTransaction({
+  paymentId,
+  paymentMode,
+  paymentType,
+  totalAmount,
+}: ProcessPaymentTransactionParams): Promise<void> {
   if (paymentType === 'FULL_PAYMENT') {
     await handleFullPayment(paymentId, paymentMode);
   } else if (paymentType === 'INSTALLMENTS') {
@@ -350,7 +358,7 @@ export const updatePayment = async (
     }
 
     // 4. Persist payment to database
-    const { payment } = await updatePaymentInDB(data);
+    const { payment } = await upsertPaymentInDB(data);
 
     return {
       error: false,
@@ -380,7 +388,7 @@ export const updatePaymentAndProcessTransaction = async (
     }
 
     // 4. Persist payment to database
-    const { payment } = await updatePaymentInDB(data);
+    const { payment } = await upsertPaymentInDB(data);
 
     if (payment?.id) {
       // 5. Process immediate payment transactions
@@ -389,12 +397,12 @@ export const updatePaymentAndProcessTransaction = async (
       if (
         IMMEDIATE_PAYMENT_MODES.includes(paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])
       ) {
-        await processPaymentTransaction(
-          payment.id,
-          paymentMode as 'CASH' | 'QR',
-          data.paymentType,
-          payment.totalAmount
-        );
+        await processPaymentTransaction({
+          paymentId: payment.id,
+          paymentMode,
+          paymentType: data.paymentType,
+          totalAmount: data.totalAmount,
+        });
       }
     }
 

@@ -9,13 +9,14 @@ import {
   getClientForSessionsInDB,
 } from '../server/db';
 import { upsertFullPaymentInDB } from '@/server/db/payments';
+import { PaymentMode } from '@/db/schema';
 
 /**
  * Handle full payment creation
  */
 export const handleFullPayment = async (
   paymentId: string,
-  paymentMode: 'CASH' | 'QR'
+  paymentMode: PaymentMode
 ): Promise<void> => {
   const currentDate = formatDateToYYYYMMDD(new Date());
 
@@ -32,7 +33,7 @@ export const handleFullPayment = async (
  */
 export const handleInstallmentPayment = async (
   paymentId: string,
-  paymentMode: 'CASH' | 'QR',
+  paymentMode: PaymentMode,
   totalAmount: number
 ): Promise<void> => {
   const currentDate = formatDateToYYYYMMDD(new Date());

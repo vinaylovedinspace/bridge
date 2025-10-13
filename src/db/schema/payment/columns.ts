@@ -17,6 +17,7 @@ export const PaymentStatusEnum = pgEnum('payment_status', [
 ]);
 
 export const PaymentTypeEnum = pgEnum('payment_type', ['FULL_PAYMENT', 'INSTALLMENTS']);
+export type PaymentType = (typeof PaymentTypeEnum.enumValues)[number];
 export type PaymentStatus = (typeof PaymentStatusEnum.enumValues)[number];
 
 export const PaymentTable = pgTable(
