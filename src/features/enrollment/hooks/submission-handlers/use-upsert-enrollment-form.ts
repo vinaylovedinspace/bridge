@@ -1,5 +1,6 @@
 import { toast } from 'sonner';
 import { useCallback } from 'react';
+import { UseFormGetValues, UseFormSetValue } from 'react-hook-form';
 import {
   PersonalInfoValues,
   PlanValues,
@@ -8,44 +9,47 @@ import {
   AdmissionFormValues,
 } from '@/features/enrollment/types';
 import {
-  createClient,
-  createLearningLicense,
-  createDrivingLicense,
+  upsertClient,
+  upsertLearningLicense,
+  upsertDrivingLicense,
   upsertPlanWithPayment,
 } from '@/features/enrollment/server/action';
 import { ActionReturnType } from '@/types/actions';
-import { UseFormGetValues, UseFormSetValue } from 'react-hook-form';
 import { LAST_ENROLLMENT_CLIENT_ID, LAST_ENROLLMENT_STEP } from '@/lib/constants/business';
 import { upsertPaymentWithOptionalTransaction } from '@/server/action/payments';
+import { Enrollment } from '@/server/db/plan';
 
-export const useCreateEnrollmentForm = (
-  getValues: UseFormGetValues<AdmissionFormValues>,
-  setValue: UseFormSetValue<AdmissionFormValues>
-) => {
+type UpsertEnrollmentFormParams = {
+  enrollment?: NonNullable<Enrollment>;
+  getValues: UseFormGetValues<AdmissionFormValues>;
+  setValue?: UseFormSetValue<AdmissionFormValues>;
+};
+
+export const useUpsertEnrollmentForm = ({
+  enrollment,
+  getValues,
+  setValue,
+}: UpsertEnrollmentFormParams) => {
+  const isEditMode = !!enrollment;
+
   const handlePersonalStep = useCallback(
     async (data: PersonalInfoValues): ActionReturnType => {
-      const { clientId } = await createClient(data);
+      const result = await upsertClient(data);
 
-      // If the client was created successfully, store the clientId for later steps
-      if (clientId) {
-        setValue('client.id', clientId);
-        setValue('plan.clientId', clientId);
-        setValue('learningLicense.clientId', clientId);
-        setValue('drivingLicense.clientId', clientId);
-        setValue('payment.clientId', clientId);
-      } else {
-        return {
-          error: true,
-          message: 'Failed to create client. Please try again.',
-        };
+      // In create mode, store clientId for later steps
+      if (!isEditMode && setValue && result.clientId) {
+        setValue('client.id', result.clientId);
+        setValue('plan.clientId', result.clientId);
+        setValue('learningLicense.clientId', result.clientId);
+        setValue('drivingLicense.clientId', result.clientId);
+        setValue('payment.clientId', result.clientId);
       }
 
-      return {
-        error: false,
-        message: 'Client created successfully',
-      };
+      return result.error
+        ? { error: true, message: result.message }
+        : { error: false, message: isEditMode ? 'Client updated successfully' : result.message };
     },
-    [setValue]
+    [isEditMode, setValue]
   );
 
   const handleLicenseStep = useCallback(
@@ -65,14 +69,9 @@ export const useCreateEnrollmentForm = (
       const { learningLicense, drivingLicense } = data;
 
       try {
-        let learningResult: Awaited<ActionReturnType> | null = null;
-        let drivingResult: Awaited<ActionReturnType> | null = null;
-
         // Handle learning license if present
         if (learningLicense) {
-          learningResult = await createLearningLicense(learningLicense);
-
-          // If learning license fails, return the learning result
+          const learningResult = await upsertLearningLicense(learningLicense);
           if (learningResult.error) {
             return learningResult;
           }
@@ -80,27 +79,24 @@ export const useCreateEnrollmentForm = (
 
         // Handle driving license if present
         if (drivingLicense) {
-          drivingResult = await createDrivingLicense(drivingLicense);
-
-          // If driving license fails, return its error
+          const drivingResult = await upsertDrivingLicense(drivingLicense);
           if (drivingResult.error) {
             return drivingResult;
           }
         }
 
-        // Return success message based on what was processed
         return {
           error: false,
-          message: 'success',
+          message: isEditMode ? 'License information updated successfully' : 'success',
         };
       } catch {
         return {
           error: true,
-          message: 'Failed to create/update license',
+          message: 'Failed to save license information',
         };
       }
     },
-    [getValues]
+    [getValues, isEditMode]
   );
 
   const handlePlanStep = useCallback(
@@ -117,28 +113,21 @@ export const useCreateEnrollmentForm = (
 
         const paymentInput = getValues('payment');
 
-        // 2. Create plan with payment
         const result = await upsertPlanWithPayment(planInput, paymentInput);
 
-        // 3. Update form state on success
-        if (!result.error) {
+        // Update form state on success (only needed in create mode)
+        if (!result.error && setValue) {
           setValue('plan.id', result.planId);
           setValue('payment.id', result.paymentId);
-        } else {
-          return {
-            error: true,
-            message: 'Failed to create/update plan',
-          };
         }
 
-        return {
-          error: false,
-          message: 'Plan details validated successfully',
-        };
+        return result.error
+          ? { error: true, message: result.message }
+          : { error: false, message: 'Plan details validated successfully' };
       } catch {
         return {
           error: true,
-          message: 'Failed to create/update plan',
+          message: 'Failed to save plan information',
         };
       }
     },
@@ -148,11 +137,12 @@ export const useCreateEnrollmentForm = (
   const handlePaymentStep = useCallback(async (): ActionReturnType => {
     const formValues = getValues();
 
-    if (!formValues.client.id)
+    if (!formValues.client.id) {
       return {
         error: true,
         message: 'Payment information was not saved. Please try again later',
       };
+    }
 
     return await upsertPaymentWithOptionalTransaction({
       payment: formValues.payment,
@@ -162,26 +152,21 @@ export const useCreateEnrollmentForm = (
   const submitStep = async (
     stepKey: string,
     stepData: unknown,
-    isLastStep: boolean
+    isLastStep?: boolean
   ): Promise<boolean> => {
     const stepHandlers: Record<string, () => Promise<{ error: boolean; message: string }>> = {
       service: () => {
         return Promise.resolve({ error: false, message: 'Service details validated successfully' });
       },
-      personal: () => {
-        return handlePersonalStep(stepData as PersonalInfoValues);
-      },
-      license: () => {
-        return handleLicenseStep(
+      personal: () => handlePersonalStep(stepData as PersonalInfoValues),
+      license: () =>
+        handleLicenseStep(
           stepData as {
             learningLicense?: LearningLicenseValues;
             drivingLicense?: DrivingLicenseValues;
           }
-        );
-      },
-      plan: () => {
-        return handlePlanStep(stepData as PlanValues);
-      },
+        ),
+      plan: () => handlePlanStep(stepData as PlanValues),
       payment: () => handlePaymentStep(),
     };
 
@@ -195,12 +180,18 @@ export const useCreateEnrollmentForm = (
         return false;
       }
 
-      localStorage.setItem(LAST_ENROLLMENT_CLIENT_ID, JSON.stringify(getValues('client.id')));
+      // Only manage localStorage in create mode
+      if (!isEditMode) {
+        localStorage.setItem(LAST_ENROLLMENT_CLIENT_ID, JSON.stringify(getValues('client.id')));
 
-      if (isLastStep) {
-        localStorage.removeItem(LAST_ENROLLMENT_CLIENT_ID);
-        localStorage.removeItem(LAST_ENROLLMENT_STEP);
+        if (isLastStep) {
+          localStorage.removeItem(LAST_ENROLLMENT_CLIENT_ID);
+          localStorage.removeItem(LAST_ENROLLMENT_STEP);
+        }
+      }
 
+      // Show success toast for edit mode (create mode shows it only on last step)
+      if (isEditMode || isLastStep) {
         toast.success(result?.message || 'Information saved successfully', {
           position: 'top-right',
         });

@@ -13,14 +13,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAdmissionStepNavigation, ProgressBar } from '../progress-bar/progress-bar';
 import { PaymentContainer } from './steps/payment';
 import { getMultistepAdmissionStepValidationFields } from '../../lib/utils';
-import { useCreateEnrollmentForm } from '../../hooks/submission-handlers/use-create-enrollment-form';
-import { getClientById } from '../../server/action';
+import { useUpsertEnrollmentForm } from '../../hooks/submission-handlers/use-upsert-enrollment-form';
 import { useAddAdmissionForm } from '../../hooks/use-admission-form';
 import { AdmissionFormValues } from '../../types';
 import { FormNavigation } from '@/components/ui/form-navigation';
+import { ClientType } from '../../server/db';
 
 type MultistepFormProps = {
-  existingClient?: Awaited<ReturnType<typeof getClientById>>['data'];
+  existingClient?: ClientType;
 };
 
 export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
@@ -40,7 +40,7 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
   const clientId = watch('client.id');
 
   // Use the enrollment form submissions hook
-  const { submitStep } = useCreateEnrollmentForm(getValues, setValue);
+  const { submitStep } = useUpsertEnrollmentForm({ getValues, setValue });
 
   // Map step keys to components and their corresponding actions
   const stepComponents = React.useMemo(() => {

@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import MultistepForm from '@/features/enrollment/components/form/multistep-form';
-import { getClientById } from '@/features/enrollment/server/action';
+import { getClientById } from '@/features/enrollment/server/db';
 
 export default async function AdmissionPage({
   searchParams,
@@ -12,10 +12,13 @@ export default async function AdmissionPage({
 
   let existingClient = undefined;
   if (clientId) {
-    const result = await getClientById(clientId);
-    if (!result.error && result.data) {
-      existingClient = result.data;
+    const client = await getClientById(clientId);
+
+    if (!client) {
+      return { error: true, message: 'Client not found' };
     }
+
+    existingClient = client;
   }
 
   // If there's no clientId and a step parameter exists, redirect to clear it

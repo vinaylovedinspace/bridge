@@ -212,11 +212,14 @@ export const getClientById = async (clientId: string) => {
       learningLicense: true,
       drivingLicense: true,
       plan: true,
+      rtoServices: true,
     },
   });
 
   return client;
 };
+
+export type ClientType = Awaited<ReturnType<typeof getClientById>>;
 
 const calculatePaymentStatus = (paidCount: number): 'PENDING' | 'PARTIALLY_PAID' | 'FULLY_PAID' => {
   if (paidCount === 0) return 'PENDING';

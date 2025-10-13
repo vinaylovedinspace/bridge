@@ -2,7 +2,6 @@ import { Path } from 'react-hook-form';
 import { AdmissionFormValues } from '../types';
 import { Enrollment } from '@/server/db/plan';
 import { generateFieldPaths } from '@/lib/utils';
-import { getClientById } from '../server/action';
 import {
   DEFAULT_SESSION_DAYS,
   DEFAULT_SESSION_MINUTES,
@@ -10,6 +9,7 @@ import {
 } from '@/lib/constants/business';
 import { parseDateStringToDateObject } from '@/lib/date-time-utils';
 import { mapPayment } from '@/lib/payment/map-payment';
+import { ClientType } from '../server/db';
 
 // Function to get validation fields for a specific step
 export const getMultistepAdmissionStepValidationFields = (
@@ -168,7 +168,7 @@ const DEFAULT_PLAN_VALUES = {
 };
 
 export const getDefaultValuesForAddEnrollmentForm = (
-  existingClient?: Awaited<ReturnType<typeof getClientById>>['data']
+  existingClient?: ClientType
 ): AdmissionFormValues => {
   if (existingClient) {
     return {

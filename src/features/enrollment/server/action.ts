@@ -14,7 +14,6 @@ import {
   upsertClientInDB,
   upsertLearningLicenseInDB,
   upsertDrivingLicenseInDB,
-  getClientById as getClientByIdFromDB,
   findExistingPlanInDB,
   upsertPlanWithPaymentIdInDB,
   getVehicleRentAmount,
@@ -28,7 +27,7 @@ import { getNextPlanCode } from '@/db/utils/plan-code';
 import { getNextClientCode } from '@/db/utils/client-code';
 import { upsertPaymentWithOptionalTransaction } from '@/server/action/payments';
 
-export const createClient = async (
+export const upsertClient = async (
   unsafeData: z.infer<typeof clientSchema>
 ): Promise<{ error: boolean; message: string } & { clientId?: string }> => {
   try {
@@ -66,7 +65,7 @@ export const createClient = async (
   }
 };
 
-export const createLearningLicense = async (
+export const upsertLearningLicense = async (
   unsafeData: LearningLicenseValues
 ): ActionReturnType => {
   try {
@@ -104,7 +103,7 @@ export const createLearningLicense = async (
   }
 };
 
-export const createDrivingLicense = async (unsafeData: DrivingLicenseValues): ActionReturnType => {
+export const upsertDrivingLicense = async (unsafeData: DrivingLicenseValues): ActionReturnType => {
   try {
     // Validate the driving license data
     const { success, data } = drivingLicenseSchema.safeParse(unsafeData);
@@ -261,52 +260,4 @@ export const upsertPlanWithPayment = async (
       error instanceof Error ? error.message : 'Failed to save plan and payment information';
     return { error: true, message };
   }
-};
-
-export const getClientById = async (
-  clientId: string
-): Promise<
-  { error: boolean; message: string } & { data?: Awaited<ReturnType<typeof getClientByIdFromDB>> }
-> => {
-  if (!clientId) {
-    return { error: true, message: 'Client ID is required' };
-  }
-
-  try {
-    const client = await getClientByIdFromDB(clientId);
-
-    if (!client) {
-      return { error: true, message: 'Client not found' };
-    }
-
-    return {
-      error: false,
-      message: 'Client data retrieved successfully',
-      data: client,
-    };
-  } catch {
-    return { error: true, message: 'Failed to fetch client data' };
-  }
-};
-
-// Update functions (aliases for the existing upsert functions)
-export const updateClient = async (
-  _clientId: string,
-  data: z.infer<typeof clientSchema>
-): ActionReturnType => {
-  return createClient(data);
-};
-
-export const updateLearningLicense = async (
-  _licenseId: string,
-  data: LearningLicenseValues
-): ActionReturnType => {
-  return createLearningLicense(data);
-};
-
-export const updateDrivingLicense = async (
-  _licenseId: string,
-  data: DrivingLicenseValues
-): ActionReturnType => {
-  return createDrivingLicense(data);
 };

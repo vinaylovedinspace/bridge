@@ -10,7 +10,7 @@ import {
 } from '@/features/enrollment/components/progress-bar/progress-bar';
 import { getMultistepAdmissionStepValidationFields } from '@/features/enrollment/lib/utils';
 import { useEditAdmissionForm } from '../../../hooks/use-admission-form';
-import { useUpdateEnrollmentForm } from '../../../hooks/submission-handlers/use-update-enrollment-form';
+import { useUpsertEnrollmentForm } from '../../../hooks/submission-handlers/use-upsert-enrollment-form';
 import { useUnsavedChanges } from '../../../hooks/use-unsaved-changes';
 import { EditFormSteps } from './form-steps';
 import { FormNavigation } from '@/components/ui/form-navigation';
@@ -34,7 +34,7 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
     useAdmissionStepNavigation();
-  const { submitStep } = useUpdateEnrollmentForm(enrollment, getValues);
+  const { submitStep } = useUpsertEnrollmentForm({ enrollment, getValues });
 
   const {
     showUnsavedChangesDialog,
