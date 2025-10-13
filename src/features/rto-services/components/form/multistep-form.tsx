@@ -109,7 +109,10 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
     setIsSubmitting(true);
     try {
       const result = await upsertPaymentWithOptionalTransaction({
-        payment: formData.payment,
+        payment: {
+          ...formData.payment,
+          clientId: formData.client.id!,
+        },
       });
 
       if (result.error) {

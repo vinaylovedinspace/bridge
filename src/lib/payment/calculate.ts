@@ -195,12 +195,12 @@ export function calculateOutstandingAmount(
 }
 
 export function calculateAmountDue({
-  existingPayment,
+  payment,
   totalAmount,
   paymentType,
   firstInstallmentAmount = 0,
 }: {
-  existingPayment: PaymentData | null | undefined;
+  payment: PaymentData | null | undefined;
   totalAmount: number;
   paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS';
   firstInstallmentAmount?: number;
@@ -208,8 +208,8 @@ export function calculateAmountDue({
   console.log('calculateAmountDue', {
     totalAmount,
   });
-  if (existingPayment) {
-    return calculateOutstandingAmount(existingPayment, totalAmount);
+  if (payment) {
+    return calculateOutstandingAmount(payment, totalAmount);
   } else {
     // For new enrollments, calculate from form values
     if (paymentType === 'INSTALLMENTS') {

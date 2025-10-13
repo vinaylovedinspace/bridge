@@ -4,25 +4,21 @@ import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
 import { AdmissionFormValues } from '@/features/enrollment/types';
 import { useFormContext } from 'react-hook-form';
-import { Enrollment } from '@/server/db/plan';
+import { EnrollmentPayment } from './types';
 
-type PaymentCheckboxProps = {
-  existingPayment: NonNullable<Enrollment>['payment'] | null;
-};
-
-export const PaymentOptions = ({ existingPayment }: PaymentCheckboxProps) => {
+export const PaymentOptions = ({ payment }: { payment: EnrollmentPayment }) => {
   const { control, setValue, watch } = useFormContext<AdmissionFormValues>();
 
   const discount = watch('payment.discount');
   const paymentType = watch('payment.paymentType');
   const applyDiscount = watch('payment.applyDiscount');
 
-  const hasExistingDiscount = Boolean(existingPayment && existingPayment.discount > 0);
+  const hasExistingDiscount = Boolean(payment && payment.discount > 0);
   const hasExistingInstallments = Boolean(
-    existingPayment &&
-      existingPayment.paymentType === 'INSTALLMENTS' &&
-      existingPayment.installmentPayments &&
-      existingPayment.installmentPayments.length > 0
+    payment &&
+      payment.paymentType === 'INSTALLMENTS' &&
+      payment.installmentPayments &&
+      payment.installmentPayments.length > 0
   );
 
   // Derive checkbox states from form values

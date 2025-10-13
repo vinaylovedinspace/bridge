@@ -56,7 +56,7 @@ export const upsertFullPaymentInDB = async (data: typeof FullPaymentTable.$infer
       })
       .returning();
 
-    const updatedPayment = await tx
+    const [updatedPayment] = await tx
       .update(PaymentTable)
       .set({
         paymentStatus: 'FULLY_PAID',

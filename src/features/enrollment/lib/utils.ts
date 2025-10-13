@@ -1,8 +1,7 @@
 import { Path } from 'react-hook-form';
-import { AdmissionFormValues } from '../types';
+import { AdmissionFormStepKey, AdmissionFormValues } from '../types';
 import { Enrollment } from '@/server/db/plan';
 import { generateFieldPaths } from '@/lib/utils';
-import { getClientById } from '../server/action';
 import {
   DEFAULT_SESSION_DAYS,
   DEFAULT_SESSION_MINUTES,
@@ -10,6 +9,7 @@ import {
 } from '@/lib/constants/business';
 import { parseDateStringToDateObject } from '@/lib/date-time-utils';
 import { mapPayment } from '@/lib/payment/map-payment';
+import { ClientType } from '../server/db';
 
 // Function to get validation fields for a specific step
 export const getMultistepAdmissionStepValidationFields = (
@@ -47,6 +47,29 @@ export const getMultistepAdmissionStepValidationFields = (
       });
     default:
       return [];
+  }
+};
+
+export const getStepData = (
+  stepKey: AdmissionFormStepKey,
+  getValues: (key: Path<AdmissionFormValues>) => unknown
+) => {
+  switch (stepKey) {
+    case 'service':
+      return { serviceType: getValues('serviceType') };
+    case 'personal':
+      return getValues('client');
+    case 'license':
+      return {
+        learningLicense: getValues('learningLicense'),
+        drivingLicense: getValues('drivingLicense'),
+      };
+    case 'plan':
+      return getValues('plan');
+    case 'payment':
+      return getValues('payment');
+    default:
+      return {};
   }
 };
 
@@ -168,7 +191,7 @@ const DEFAULT_PLAN_VALUES = {
 };
 
 export const getDefaultValuesForAddEnrollmentForm = (
-  existingClient?: Awaited<ReturnType<typeof getClientById>>['data']
+  existingClient?: ClientType
 ): AdmissionFormValues => {
   if (existingClient) {
     return {
