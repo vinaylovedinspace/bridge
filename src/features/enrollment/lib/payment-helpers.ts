@@ -56,7 +56,8 @@ export const handleInstallmentPayment = async (
       return;
     }
 
-    const secondInstallmentAmount = Math.ceil(firstInstallment.amount / 2);
+    // Second installment is total minus first installment
+    const secondInstallmentAmount = totalAmount - firstInstallment.amount;
 
     // Create/update second installment
     await createInstallmentPaymentsInDB({

@@ -129,10 +129,8 @@ export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert) 
 
 export const upsertPlanAndPaymentInDB = async (
   planData: typeof PlanTable.$inferInsert,
-  paymentData: {
-    totalAmount: number;
-    licenseServiceFee: number;
-  }
+  paymentData: typeof PaymentTable.$inferInsert,
+  planCode?: string
 ) => {
   return await db.transaction(async (tx) => {
     let plan: typeof PlanTable.$inferSelect | undefined;
@@ -153,29 +151,20 @@ export const upsertPlanAndPaymentInDB = async (
         await tx
           .update(PaymentTable)
           .set({
-            branchId: planData.branchId,
-            clientId: planData.clientId,
-            totalAmount: paymentData.totalAmount,
-            licenseServiceFee: paymentData.licenseServiceFee,
+            ...paymentData,
+            updatedAt: new Date(),
           })
           .where(eq(PaymentTable.id, plan.paymentId));
       }
     } else {
       // Create new Payment
-      const [payment] = await tx
-        .insert(PaymentTable)
-        .values({
-          branchId: planData.branchId,
-          clientId: planData.clientId,
-          totalAmount: paymentData.totalAmount,
-          licenseServiceFee: paymentData.licenseServiceFee,
-        })
-        .returning();
+      const [payment] = await tx.insert(PaymentTable).values(paymentData).returning();
       // Create new plan
       [plan] = await tx
         .insert(PlanTable)
         .values({
           ...planData,
+          planCode: planCode ?? planData.planCode,
           paymentId: payment.id,
         })
         .returning();
@@ -377,7 +366,7 @@ export const getPlanForSessionsInDB = async (planId: string) => {
 
 export const getVehicleRentAmount = async (vehicleId: string) => {
   return await db.query.VehicleTable.findFirst({
-    where: eq(VehicleTable.id, vehicleId),
+    where: and(eq(VehicleTable.id, vehicleId), isNull(VehicleTable.deletedAt)),
     columns: { rent: true },
   });
 };

@@ -7,7 +7,7 @@ import { useFormContext } from 'react-hook-form';
 import { Enrollment } from '@/server/db/plan';
 
 type PaymentCheckboxProps = {
-  existingPayment: NonNullable<Enrollment>['payment'];
+  existingPayment: NonNullable<Enrollment>['payment'] | null;
 };
 
 export const PaymentOptions = ({ existingPayment }: PaymentCheckboxProps) => {

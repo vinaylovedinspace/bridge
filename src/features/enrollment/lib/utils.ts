@@ -229,6 +229,7 @@ export const getDefaultValuesForEditEnrollmentForm = (
       planCode: enrollment.planCode,
       vehicleRentAmount: enrollment.vehicleRentAmount,
       branchId: enrollment.branchId,
+      paymentId: enrollment.paymentId,
     },
     payment: payment
       ? {

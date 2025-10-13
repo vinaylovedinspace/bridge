@@ -30,7 +30,7 @@ import { paymentSchema } from '@/types/zod/payment';
 import { IMMEDIATE_PAYMENT_MODES } from '@/lib/constants/payment';
 import { getNextPlanCode } from '@/db/utils/plan-code';
 import { getNextClientCode } from '@/db/utils/client-code';
-import { PaymentMode, PaymentTable, PaymentType } from '@/db/schema';
+import { PaymentMode, PaymentType } from '@/db/schema';
 
 export const createClient = async (
   unsafeData: z.infer<typeof clientSchema>
@@ -158,12 +158,9 @@ export const upsertPlanWithPayment = async (
     const joiningDate = formatDateToYYYYMMDD(unsafePlanData.joiningDate);
 
     // 2. Parallelize independent database queries
-    const [existingPlan, vehicle, planCode] = await Promise.all([
+    const [existingPlan, vehicle] = await Promise.all([
       findExistingPlanInDB(unsafePlanData.id, unsafePlanData.clientId),
       getVehicleRentAmount(unsafePlanData.vehicleId),
-      unsafePlanData.planCode
-        ? Promise.resolve(unsafePlanData.planCode)
-        : getNextPlanCode(branchId),
     ]);
 
     // 3. Check if plan has changed
@@ -195,7 +192,6 @@ export const upsertPlanWithPayment = async (
       ...unsafePlanData,
       branchId,
       vehicleRentAmount: vehicle.rent,
-      planCode,
     };
 
     const {
@@ -227,10 +223,14 @@ export const upsertPlanWithPayment = async (
       joiningTime,
     };
 
-    // 7. Persist plan and payment to database in a transaction
-    const { plan } = await upsertPlanAndPaymentInDB(planData, paymentData);
+    // 7. Generate plan code if creating new plan (will happen inside transaction)
+    const planCode =
+      unsafePlanData.planCode || (!unsafePlanData.id ? await getNextPlanCode(branchId) : undefined);
 
-    // 8 & 9. Process payment and generate sessions in parallel (independent operations)
+    // 8. Persist plan and payment to database in a transaction
+    const { plan } = await upsertPlanAndPaymentInDB(planData, paymentData, planCode);
+
+    // 9 & 10. Process payment and generate sessions in parallel (independent operations)
     const paymentMode = paymentData.paymentMode;
     const shouldProcessPayment = IMMEDIATE_PAYMENT_MODES.includes(
       paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number]
@@ -258,7 +258,45 @@ export const upsertPlanWithPayment = async (
       branchConfig
     );
 
-    await Promise.all([paymentPromise, sessionPromise]);
+    const [paymentResult, sessionResult] = await Promise.allSettled([
+      paymentPromise,
+      sessionPromise,
+    ]);
+
+    // Check for failures
+    const paymentFailed = paymentResult.status === 'rejected';
+    const sessionFailed = sessionResult.status === 'rejected';
+
+    if (paymentFailed && sessionFailed) {
+      console.error('Payment error:', paymentResult.reason);
+      console.error('Session error:', sessionResult.reason);
+      return {
+        error: true,
+        message: 'Failed to process payment and generate sessions',
+        planId: plan.id,
+        paymentId: plan.paymentId!,
+      };
+    }
+
+    if (paymentFailed) {
+      console.error('Payment error:', paymentResult.reason);
+      return {
+        error: true,
+        message: 'Plan created but payment processing failed',
+        planId: plan.id,
+        paymentId: plan.paymentId!,
+      };
+    }
+
+    if (sessionFailed) {
+      console.error('Session error:', sessionResult.reason);
+      return {
+        error: true,
+        message: 'Plan and payment created but session generation failed',
+        planId: plan.id,
+        paymentId: plan.paymentId!,
+      };
+    }
 
     return {
       error: false,

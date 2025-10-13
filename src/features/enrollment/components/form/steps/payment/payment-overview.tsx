@@ -6,7 +6,7 @@ import { Enrollment } from '@/server/db/plan';
 import { usePaymentCalculations } from '@/features/enrollment/hooks/use-payment-calculations';
 
 type PaymentOverviewProps = {
-  existingPayment: NonNullable<Enrollment>['payment'];
+  existingPayment: NonNullable<Enrollment>['payment'] | null;
   isEditMode?: boolean;
 };
 

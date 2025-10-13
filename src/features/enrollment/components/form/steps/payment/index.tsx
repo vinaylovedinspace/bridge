@@ -8,7 +8,7 @@ import { Enrollment } from '@/server/db/plan';
 export { PaymentOverviewComponent as PaymentOverview };
 
 type PaymentStepProps = {
-  existingPayment: NonNullable<Enrollment>['payment'];
+  existingPayment: NonNullable<Enrollment>['payment'] | null;
 };
 
 export const PaymentStep = ({ existingPayment }: PaymentStepProps) => {

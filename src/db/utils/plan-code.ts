@@ -1,10 +1,21 @@
 import { sql, eq } from 'drizzle-orm';
 import { db } from '../index';
 import { PlanTable } from '../schema';
+import type { ExtractTablesWithRelations } from 'drizzle-orm';
+import type { PgTransaction } from 'drizzle-orm/pg-core';
+import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
 
-export async function getNextPlanCode(branchId: string): Promise<string> {
+type DbTransaction = PgTransaction<
+  PostgresJsQueryResultHKT,
+  Record<string, never>,
+  ExtractTablesWithRelations<Record<string, never>>
+>;
+
+export async function getNextPlanCode(branchId: string, tx?: DbTransaction): Promise<string> {
+  const executor = tx ?? db;
+
   // Get the max plan code for the branch
-  const result = await db
+  const result = await executor
     .select({
       maxCode: sql<number>`COALESCE(MAX(CAST(${PlanTable.planCode} AS INTEGER)), 0)`,
     })

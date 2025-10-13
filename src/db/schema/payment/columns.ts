@@ -68,7 +68,7 @@ export const InstallmentPaymentTable = pgTable(
   'installment_payments',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    paymentId: uuid('payment_id').notNull().unique(),
+    paymentId: uuid('payment_id').notNull(),
     installmentNumber: integer('installment_number').notNull(), // 1 or 2
     amount: integer('amount').notNull(),
     paymentMode: PaymentModeEnum('payment_mode'),
@@ -79,6 +79,11 @@ export const InstallmentPaymentTable = pgTable(
     deletedAt: timestamp('deleted_at'),
   },
   (table) => ({
+    // Composite unique constraint for payment + installment number
+    uniquePaymentInstallment: index('idx_installment_payments_unique').on(
+      table.paymentId,
+      table.installmentNumber
+    ),
     // Dashboard performance index
     paymentNumberIdx: index('idx_installment_payments_payment_number').on(
       table.paymentId,

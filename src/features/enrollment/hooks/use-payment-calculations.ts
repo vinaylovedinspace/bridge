@@ -13,7 +13,7 @@ import { calculateLicenseFees } from '@/lib/constants/rto-fees';
 import { useEffect, useMemo } from 'react';
 
 type UsePaymentCalculationsProps = {
-  existingPayment: NonNullable<Enrollment>['payment'];
+  existingPayment: NonNullable<Enrollment>['payment'] | null;
   isEditMode?: boolean;
 };
 

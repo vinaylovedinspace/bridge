@@ -8,7 +8,7 @@ import { PaymentModeSelector as SharedPaymentModeSelector } from '@/components/p
 import { PaymentMode } from '@/db/schema';
 
 type PaymentModeSelectorProps = {
-  existingPayment: NonNullable<Enrollment>['payment'];
+  existingPayment: NonNullable<Enrollment>['payment'] | null;
 };
 
 export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProps) => {
