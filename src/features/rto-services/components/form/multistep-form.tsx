@@ -7,9 +7,6 @@ import React from 'react';
 import { rtoServicesFormSchema, RTOServiceFormValues } from '../../types';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { PersonalInfoStep } from './steps/personal-info';
-import { LicenseStep } from './steps/service';
-import { PaymentContainer } from './steps/payment';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRTOServiceStepNavigation, RTOServiceProgressBar } from './progress-bar';
 import {
@@ -21,6 +18,7 @@ import { getRTOService } from '../../server/db';
 import { FormNavigation } from '@/components/ui/form-navigation';
 import { cn } from '@/lib/utils';
 import { upsertPaymentWithOptionalTransaction } from '@/server/action/payments';
+import { RTOServiceFormSteps } from './form-steps';
 
 type RTOServiceMultistepFormProps = {
   rtoService?: Awaited<ReturnType<typeof getRTOService>>;
@@ -41,24 +39,6 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
     useRTOServiceStepNavigation();
-
-  // Map step keys to components
-  const stepComponents = React.useMemo(() => {
-    return {
-      personal: {
-        component: <PersonalInfoStep />,
-        getData: () => getValues('client'),
-      },
-      license: {
-        component: <LicenseStep />,
-        getData: () => getValues('service'),
-      },
-      payment: {
-        component: <PaymentContainer existingPayment={rtoService?.payment} />,
-        getData: () => ({}),
-      },
-    };
-  }, [getValues, rtoService?.payment]);
 
   // Step handlers
   const handlePersonalStep = useCallback(async () => {
@@ -95,8 +75,7 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
       });
 
       goToNext();
-    } catch (error) {
-      console.error('Error saving RTO service:', error);
+    } catch {
       toast.error('Failed to save RTO service');
     } finally {
       setIsSubmitting(false);
@@ -125,8 +104,7 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
       });
       router.push('/rto-services');
       router.refresh();
-    } catch (error) {
-      console.error('Error saving RTO service with payment:', error);
+    } catch {
       toast.error('Failed to save RTO service and payment');
     } finally {
       setIsSubmitting(false);
@@ -173,7 +151,9 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
           })}
           ref={scrollRef}
         >
-          <form className="space-y-8 pr-4">{stepComponents[currentStep]?.component}</form>
+          <form className="space-y-8 pr-4">
+            {<RTOServiceFormSteps currentStep={currentStep} rtoService={rtoService} />}
+          </form>
         </ScrollArea>
 
         <FormNavigation

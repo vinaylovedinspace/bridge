@@ -54,6 +54,8 @@ export const getRTOService = async (id: string) => {
   }
 };
 
+export type RTOService = Awaited<ReturnType<typeof getRTOService>>;
+
 export const getRTOServices = async (
   branchId: string,
   filters?: {
