@@ -1,33 +1,48 @@
 'use server';
 
-import { PaymentLinkResult } from '@/lib/cashfree/payment-links';
-import { createPaymentLink, getPaymentLinkStatus } from '@/lib/cashfree/payment-links';
-import { CreatePaymentLinkRequest } from '@/lib/cashfree/payment-links';
+export type PaymentLinkResult = {
+  success: boolean;
+  data?: {
+    linkId: string;
+    paymentUrl: string;
+    qrCode: string;
+    expiryTime?: string;
+    status?: 'ACTIVE' | 'INACTIVE' | 'PAID' | 'EXPIRED';
+    amountPaid?: number;
+  };
+  error?: string;
+};
+
+export type CreatePaymentLinkRequest = {
+  amount: number;
+  customerPhone: string;
+  customerName: string;
+  customerEmail?: string;
+  paymentId: string;
+  type: 'enrollment' | 'rto-service';
+  sendSms?: boolean;
+  sendEmail?: boolean;
+  expiryInDays?: number;
+  enablePartialPayments?: boolean;
+  minimumPartialAmount?: number;
+};
 
 export async function createPaymentLinkAction(
   request: CreatePaymentLinkRequest
 ): Promise<PaymentLinkResult> {
-  try {
-    const result = await createPaymentLink(request);
-    return result;
-  } catch (error) {
-    console.error('Failed to create payment link:', error);
-    return {
-      success: false,
-      error: 'Failed to create payment link. Please try again.',
-    };
-  }
+  // TODO: Implement payment link creation
+  console.log('Payment link creation requested:', request);
+  return {
+    success: false,
+    error: 'Payment link creation not implemented',
+  };
 }
 
 export async function getPaymentLinkStatusAction(linkId: string): Promise<PaymentLinkResult> {
-  try {
-    const result = await getPaymentLinkStatus(linkId);
-    return result;
-  } catch (error) {
-    console.error('Failed to get payment link status:', error);
-    return {
-      success: false,
-      error: 'Failed to get payment link status.',
-    };
-  }
+  // TODO: Implement payment link status check
+  console.log('Payment link status check requested:', linkId);
+  return {
+    success: false,
+    error: 'Payment link status check not implemented',
+  };
 }

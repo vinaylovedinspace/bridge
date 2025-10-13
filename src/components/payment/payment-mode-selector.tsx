@@ -155,8 +155,8 @@ export const PaymentModeSelector = ({
           });
         }, 1000);
       } else {
-        toast.error('Failed to create payment link', {
-          description: result.error || 'Unknown error occurred',
+        toast.error('Payment link not available', {
+          description: result.error || 'Payment link feature is currently not implemented',
           duration: 6000,
         });
       }

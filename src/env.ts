@@ -5,10 +5,6 @@ export const env = createEnv({
   server: {
     POSTGRES_URL: z.string().min(1),
     CLERK_SECRET_KEY: z.string().min(1),
-    // Cashfree Payment Gateway
-    CASHFREE_CLIENT_ID: z.string().min(1),
-    CASHFREE_CLIENT_SECRET: z.string().min(1),
-    CASHFREE_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
     CRON_SECRET: z.string().min(1),
   },
   client: {
