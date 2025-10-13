@@ -24,7 +24,7 @@ import { Enrollment } from '@/server/db/plan';
 type UpsertEnrollmentFormParams = {
   enrollment?: NonNullable<Enrollment>;
   getValues: UseFormGetValues<AdmissionFormValues>;
-  setValue?: UseFormSetValue<AdmissionFormValues>;
+  setValue: UseFormSetValue<AdmissionFormValues>;
 };
 
 export const useUpsertEnrollmentForm = ({
@@ -118,7 +118,7 @@ export const useUpsertEnrollmentForm = ({
         const result = await upsertPlanWithPayment(planInput, paymentInput);
 
         // Update form state on success (only needed in create mode)
-        if (!result.error && setValue) {
+        if (!result.error) {
           setValue('plan.id', result.planId);
           setValue('payment.id', result.paymentId);
         }
