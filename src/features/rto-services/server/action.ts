@@ -121,7 +121,10 @@ export const saveRTOServiceWithPayment = async (
     const { clientId, serviceId, paymentId } = await saveRTOServiceAndPaymentInDB(
       clientInformation,
       serviceData,
-      paymentData
+      {
+        ...paymentData,
+        branchId,
+      }
     );
 
     // Process immediate payment if needed

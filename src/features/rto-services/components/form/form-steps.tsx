@@ -18,5 +18,5 @@ export const RTOServiceFormSteps = ({ currentStep, rtoService }: RTOServiceFormS
     payment: <PaymentContainer existingPayment={rtoService?.payment} />,
   };
 
-  return stepComponents[currentStep];
+  return stepComponents[currentStep] ?? null;
 };

@@ -27,5 +27,5 @@ export const EnrollmentFormSteps = ({ currentStep, enrollment }: EnrollmentFormS
     ),
   };
 
-  return stepComponents[currentStep];
+  return stepComponents[currentStep] ?? null;
 };

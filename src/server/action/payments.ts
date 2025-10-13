@@ -87,7 +87,10 @@ export async function upsertPaymentWithOptionalTransaction({
     }
 
     // Persist payment to database
-    const payment = await upsertPaymentInDB(data);
+    const payment = await upsertPaymentInDB({
+      ...data,
+      branchId: data.branchId!,
+    });
 
     // Process immediate payment transactions if requested
     if (

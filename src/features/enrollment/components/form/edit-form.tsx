@@ -33,12 +33,12 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
   const router = useRouter();
 
   const formMethods = useEditAdmissionForm(enrollment);
-  const { trigger, getValues } = formMethods;
+  const { trigger, getValues, setValue } = formMethods;
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
     useAdmissionStepNavigation();
 
-  const { submitStep } = useUpsertEnrollmentForm({ enrollment, getValues });
+  const { submitStep } = useUpsertEnrollmentForm({ enrollment, getValues, setValue });
 
   const {
     showUnsavedChangesDialog,

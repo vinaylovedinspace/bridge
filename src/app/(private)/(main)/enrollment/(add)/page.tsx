@@ -11,11 +11,12 @@ export default async function AdmissionPage({
   const { clientId, step } = await searchParams;
 
   let existingClient = undefined;
+
   if (clientId) {
     const client = await getClientById(clientId);
 
     if (!client) {
-      return { error: true, message: 'Client not found' };
+      redirect('/enrollment');
     }
 
     existingClient = client;
