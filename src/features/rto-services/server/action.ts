@@ -40,16 +40,16 @@ export async function deleteRTOService(id: string): ActionReturnType {
   }
 }
 
-export const createPayment = async (
+export const upsertPayment = async (
   unsafeData: z.infer<typeof paymentSchema>,
   serviceId: string
-): Promise<{ error: boolean; message: string; paymentId?: string }> => {
+) => {
   try {
     // 1. Get RTO service to get clientId and service charges
     const rtoService = await getRTOService(serviceId);
 
     if (!rtoService) {
-      return { error: true, message: 'RTO service not found' };
+      return { error: true, message: 'RTO service not found', payment: undefined };
     }
 
     // 2. Get branch config for service charge
@@ -74,34 +74,40 @@ export const createPayment = async (
 
     if (!success) {
       console.error('Payment validation error:', error);
-      return { error: true, message: 'Invalid payment data' };
+      return { error: true, message: 'Invalid payment data', payment: undefined };
     }
 
     // 5. Create or update payment
-    const { paymentId } = await upsertPaymentInDB(data, serviceId);
+    const payment = await upsertPaymentInDB(data, serviceId);
 
     const currentDate = formatDateToYYYYMMDD(new Date());
 
     if (
       IMMEDIATE_PAYMENT_MODES.includes(data.paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])
     ) {
-      await upsertFullPaymentInDB({
-        paymentId,
+      const updatedPayment = await upsertFullPaymentInDB({
+        paymentId: payment.id,
         paymentMode: data.paymentMode,
         paymentDate: currentDate,
         isPaid: true,
       });
+
+      return {
+        error: false,
+        message: 'Payment acknowledged successfully',
+        payment: updatedPayment,
+      };
     }
 
     return {
       error: false,
       message: 'Payment acknowledged successfully',
-      paymentId,
+      payment,
     };
   } catch (error) {
     console.error('Error processing payment data:', error);
     const message = error instanceof Error ? error.message : 'Failed to save payment information';
-    return { error: true, message };
+    return { error: true, message, payment: undefined };
   }
 };
 

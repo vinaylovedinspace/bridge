@@ -1,7 +1,7 @@
 import { useFormContext } from 'react-hook-form';
 import { toast } from 'sonner';
 import { RTOServiceFormValues } from '@/features/rto-services/types';
-import { createPayment } from '@/features/rto-services/server/action';
+import { upsertPayment } from '@/features/rto-services/server/action';
 import { useRTOPaymentCalculations } from '@/features/rto-services/hooks/use-rto-payment-calculations';
 import { PaymentModeSelector as SharedPaymentModeSelector } from '@/components/payment/payment-mode-selector';
 import { PaymentMode } from '@/db/schema';
@@ -33,7 +33,11 @@ export const PaymentModeSelector = () => {
       setValue('payment.totalAmount', totalAmountAfterDiscount);
     }
 
-    const result = await createPayment(
+    const {
+      error,
+      message,
+      payment: updatedPayment,
+    } = await upsertPayment(
       {
         ...payment,
         clientId,
@@ -42,12 +46,17 @@ export const PaymentModeSelector = () => {
       rtoServiceId
     );
 
-    if (!result.error) {
-      toast.success(result.message || 'Payment processed successfully');
+    if (!error && updatedPayment) {
+      setValue('payment', {
+        ...payment,
+        ...updatedPayment,
+      });
+
+      toast.success(message || 'Payment processed successfully');
       router.push('/rto-services');
     } else {
-      toast.error(result.message || 'Failed to process payment');
-      throw new Error(result.message);
+      toast.error('Failed to process payment');
+      throw new Error('Failed to process payment');
     }
   };
 

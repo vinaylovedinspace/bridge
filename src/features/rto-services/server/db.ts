@@ -231,11 +231,7 @@ export const upsertPaymentInDB = async (
         .where(eq(PaymentTable.id, existingPayment.id))
         .returning();
 
-      return {
-        payment: updated,
-        isExistingPayment: true,
-        paymentId: updated.id,
-      };
+      return updated;
     }
 
     // Create new payment and link to rto-service
@@ -246,11 +242,7 @@ export const upsertPaymentInDB = async (
       .set({ paymentId: payment.id, updatedAt: new Date() })
       .where(eq(RTOServicesTable.id, serviceId));
 
-    return {
-      payment,
-      isExistingPayment: false,
-      paymentId: payment.id,
-    };
+    return payment;
   });
 };
 
