@@ -40,7 +40,6 @@ export const PaymentModeSelector = () => {
     } = await upsertPaymentWithOptionalTransaction({
       payment: {
         ...payment,
-        clientId,
         totalAmount: totalAmountAfterDiscount,
       },
       processTransaction: true,
@@ -54,7 +53,9 @@ export const PaymentModeSelector = () => {
       // Reset the field with new default value to mark as not dirty
       resetField('payment', { defaultValue: _payment });
 
-      toast.success(message || 'Payment processed successfully');
+      toast.success(message, {
+        position: 'top-right',
+      });
       router.push('/rto-services');
     } else {
       toast.error('Failed to process payment');

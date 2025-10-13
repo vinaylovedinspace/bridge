@@ -81,9 +81,13 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
       // Update form state with IDs if successful
       if (result.clientId) {
         setValue('client.id', result.clientId);
+        setValue('payment.clientId', result.clientId);
       }
       if (result.serviceId) {
         setValue('service.id', result.serviceId);
+      }
+      if (result.paymentId) {
+        setValue('payment.id', result.paymentId);
       }
 
       toast.success(result.message, {
