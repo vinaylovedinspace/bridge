@@ -1,5 +1,5 @@
 import { Path } from 'react-hook-form';
-import { AdmissionFormValues } from '../types';
+import { AdmissionFormStepKey, AdmissionFormValues } from '../types';
 import { Enrollment } from '@/server/db/plan';
 import { generateFieldPaths } from '@/lib/utils';
 import {
@@ -47,6 +47,29 @@ export const getMultistepAdmissionStepValidationFields = (
       });
     default:
       return [];
+  }
+};
+
+export const getStepData = (
+  stepKey: AdmissionFormStepKey,
+  getValues: (key: Path<AdmissionFormValues>) => unknown
+) => {
+  switch (stepKey) {
+    case 'service':
+      return { serviceType: getValues('serviceType') };
+    case 'personal':
+      return getValues('client');
+    case 'license':
+      return {
+        learningLicense: getValues('learningLicense'),
+        drivingLicense: getValues('drivingLicense'),
+      };
+    case 'plan':
+      return getValues('plan');
+    case 'payment':
+      return getValues('payment');
+    default:
+      return {};
   }
 };
 

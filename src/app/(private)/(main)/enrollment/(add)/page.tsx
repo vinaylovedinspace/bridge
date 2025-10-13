@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
-import MultistepForm from '@/features/enrollment/components/form/multistep-form';
+import MultistepForm from '@/features/enrollment/components/form/create-form';
 import { getClientById } from '@/features/enrollment/server/db';
 
 export default async function AdmissionPage({

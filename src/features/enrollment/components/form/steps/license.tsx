@@ -14,11 +14,7 @@ import { useAtomValue } from 'jotai';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useMemo, useEffect } from 'react';
 
-type LicenseStepProps = {
-  isEditMode?: boolean;
-};
-
-export const LicenseStep = ({}: LicenseStepProps) => {
+export const LicenseStep = () => {
   const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
   const { control, watch, getValues, setValue } = useFormContext<AdmissionFormValues>();
 

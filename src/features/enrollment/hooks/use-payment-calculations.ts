@@ -6,16 +6,11 @@ import {
   calculateAmountDue,
   formatCurrency,
 } from '@/lib/payment/calculate';
-import { Enrollment } from '@/server/db/plan';
 import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
 import { useAtomValue } from 'jotai';
 import { calculateLicenseFees } from '@/lib/constants/rto-fees';
 import { useEffect, useMemo } from 'react';
-
-type UsePaymentCalculationsProps = {
-  existingPayment: NonNullable<Enrollment>['payment'] | null;
-  isEditMode?: boolean;
-};
+import { EnrollmentPayment } from '../components/form/steps/payment/types';
 
 type InstallmentPaymentInfo = {
   installmentNumber: number;
@@ -24,7 +19,7 @@ type InstallmentPaymentInfo = {
   paymentMode?: string;
 };
 
-export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculationsProps) => {
+export const usePaymentCalculations = ({ payment }: { payment: EnrollmentPayment }) => {
   const branchServiceCharge = useAtomValue(branchServiceChargeAtom);
   const { watch, setValue } = useFormContext<AdmissionFormValues>();
   const plan = watch('plan');
@@ -83,11 +78,11 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
   });
 
   // Extract installment payment info
-  const firstInstallmentPayment = existingPayment?.installmentPayments?.find(
+  const firstInstallmentPayment = payment?.installmentPayments?.find(
     (installment) => installment.installmentNumber === 1 && installment.isPaid
   );
 
-  const secondInstallmentPayment = existingPayment?.installmentPayments?.find(
+  const secondInstallmentPayment = payment?.installmentPayments?.find(
     (installment) => installment.installmentNumber === 2 && installment.isPaid
   );
 
@@ -96,7 +91,7 @@ export const usePaymentCalculations = ({ existingPayment }: UsePaymentCalculatio
 
   // Calculate amount due using utility function
   const amountDue = calculateAmountDue({
-    existingPayment,
+    payment,
     totalAmount: totalAmountAfterDiscount,
     paymentType,
     firstInstallmentAmount,

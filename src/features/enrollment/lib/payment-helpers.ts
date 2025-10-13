@@ -52,15 +52,20 @@ export const handleInstallmentPayment = async (
 
     if (secondInstallment && secondInstallment.isPaid) {
       if (secondInstallment.payment.paymentStatus === 'FULLY_PAID') {
-        return Promise.resolve(secondInstallment.payment);
+        return Promise.resolve(secondInstallment.payment); // return the main payment object
       }
-      await db
+
+      // Update the main payment object status and return
+      const [updatedPayment] = await db
         .update(PaymentTable)
         .set({
           paymentStatus: 'FULLY_PAID',
           updatedAt: new Date(),
         })
-        .where(eq(PaymentTable.id, paymentId));
+        .where(eq(PaymentTable.id, paymentId))
+        .returning();
+
+      return updatedPayment;
     }
 
     // Second installment is total minus first installment

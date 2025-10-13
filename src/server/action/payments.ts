@@ -97,7 +97,7 @@ export async function upsertPaymentWithOptionalTransaction({
       const currentDate = formatDateToYYYYMMDD(new Date());
 
       if (data.paymentType === 'FULL_PAYMENT') {
-        await upsertFullPaymentInDB({
+        const updatedPayment = await upsertFullPaymentInDB({
           paymentId: payment.id,
           paymentMode: data.paymentMode,
           paymentDate: currentDate,
@@ -107,19 +107,23 @@ export async function upsertPaymentWithOptionalTransaction({
         return {
           error: false,
           message: 'Payment processed successfully',
-          payment,
+          payment: updatedPayment,
         };
       } else if (data.paymentType === 'INSTALLMENTS') {
         // Import dynamically to avoid circular dependencies
         const { handleInstallmentPayment } = await import(
           '@/features/enrollment/lib/payment-helpers'
         );
-        await handleInstallmentPayment(payment.id, data.paymentMode, data.totalAmount);
+        const updatedPayment = await handleInstallmentPayment(
+          payment.id,
+          data.paymentMode,
+          data.totalAmount
+        );
 
         return {
           error: false,
           message: 'Payment processed successfully',
-          payment,
+          payment: updatedPayment,
         };
       }
     }

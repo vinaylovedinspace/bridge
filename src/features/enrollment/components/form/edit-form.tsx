@@ -7,18 +7,21 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   useAdmissionStepNavigation,
   ProgressBar,
+  AdmissionFormStepKey,
 } from '@/features/enrollment/components/progress-bar/progress-bar';
-import { getMultistepAdmissionStepValidationFields } from '@/features/enrollment/lib/utils';
-import { useEditAdmissionForm } from '../../../hooks/use-admission-form';
-import { useUpsertEnrollmentForm } from '../../../hooks/submission-handlers/use-upsert-enrollment-form';
-import { useUnsavedChanges } from '../../../hooks/use-unsaved-changes';
-import { EditFormSteps } from './form-steps';
+import {
+  getMultistepAdmissionStepValidationFields,
+  getStepData,
+} from '@/features/enrollment/lib/utils';
+import { useEditAdmissionForm } from '../../hooks/use-admission-form';
+import { useUpsertEnrollmentForm } from '../../hooks/submission-handlers/use-upsert-enrollment-form';
+import { useUnsavedChanges } from '../../hooks/use-unsaved-changes';
 import { FormNavigation } from '@/components/ui/form-navigation';
 import { UnsavedChangesDialog } from '@/components/ui/unsaved-changes-dialog';
 import { Enrollment } from '@/server/db/plan';
 import { useRouter } from 'next/navigation';
-
-type StepKey = 'service' | 'personal' | 'license' | 'plan' | 'payment';
+import { toast } from 'sonner';
+import { EnrollmentFormSteps } from './form-steps';
 
 type EditAdmissionFormProps = {
   enrollment: NonNullable<Enrollment>;
@@ -29,11 +32,12 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  const methods = useEditAdmissionForm(enrollment);
-  const { trigger, getValues } = methods;
+  const formMethods = useEditAdmissionForm(enrollment);
+  const { trigger, getValues } = formMethods;
 
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
     useAdmissionStepNavigation();
+
   const { submitStep } = useUpsertEnrollmentForm({ enrollment, getValues });
 
   const {
@@ -43,31 +47,10 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
     handleStepNavigation,
     handleConfirmNavigation,
     handleCancelNavigation,
-  } = useUnsavedChanges(enrollment, methods, currentStep);
-
-  const getStepData = (stepKey: StepKey) => {
-    switch (stepKey) {
-      case 'service':
-        return { serviceType: getValues('serviceType') };
-      case 'personal':
-        return getValues('client');
-      case 'license':
-        return {
-          learningLicense: getValues('learningLicense'),
-          drivingLicense: getValues('drivingLicense'),
-        };
-      case 'plan':
-        return getValues('plan');
-      case 'payment':
-        return getValues('payment');
-      default:
-        return {};
-    }
-  };
+  } = useUnsavedChanges(enrollment, formMethods, currentStep);
 
   const handleNext = async () => {
-    const currentStepKey = currentStep as StepKey;
-    const fieldsToValidate = getMultistepAdmissionStepValidationFields(currentStepKey, getValues);
+    const fieldsToValidate = getMultistepAdmissionStepValidationFields(currentStep, getValues);
     const isStepValid = await trigger(fieldsToValidate);
 
     if (!isStepValid) {
@@ -87,49 +70,50 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
 
     // Submit changes
     setIsSubmitting(true);
-    try {
-      const stepData = getStepData(currentStepKey);
-      const shouldRefresh = currentStepKey === 'plan' || currentStepKey === 'payment';
 
-      const success = await submitStep(currentStepKey, stepData);
+    try {
+      const stepData = getStepData(currentStep, getValues);
+
+      const success = await submitStep({
+        currentStep,
+        stepData,
+        isLastStep,
+      });
 
       if (success && !isLastStep) {
         goToNext();
       }
 
-      if (shouldRefresh) {
+      if (success && isLastStep) {
         router.refresh();
-      }
-
-      if (isLastStep) {
         router.push('/enrollments');
       }
-    } catch (error) {
-      console.error(`Error submitting step ${currentStepKey}:`, error);
+    } catch {
+      toast.error('Failed to save your information. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <FormProvider {...methods}>
+    <FormProvider {...formMethods}>
       <div className="h-full flex flex-col gap-10">
         <ProgressBar
           interactive={true}
           currentStep={currentStep}
           onStepChange={goToStep}
           onStepClick={async (step) => {
-            const canNavigate = await handleStepNavigation(step as StepKey);
+            const canNavigate = await handleStepNavigation(step as AdmissionFormStepKey);
             if (canNavigate) {
-              goToStep(step as StepKey);
+              goToStep(step as AdmissionFormStepKey);
             }
             return canNavigate;
           }}
         />
 
         <ScrollArea className="h-[calc(100vh-22rem)] pr-10" ref={scrollRef}>
-          <form className="space-y-8 pr-4">
-            <EditFormSteps currentStep={currentStep as StepKey} enrollment={enrollment} />
+          <form className="pr-1" data-testid="admission-multistep-form">
+            <EnrollmentFormSteps currentStep={currentStep} enrollment={enrollment} />
           </form>
         </ScrollArea>
 

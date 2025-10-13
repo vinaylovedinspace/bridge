@@ -2,30 +2,26 @@ import { useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { AdmissionFormValues } from '@/features/enrollment/types';
 import { toast } from 'sonner';
-import { Enrollment } from '@/server/db/plan';
 import { PaymentModeSelector as SharedPaymentModeSelector } from '@/components/payment/payment-mode-selector';
 import { PaymentMode } from '@/db/schema';
 import { useRouter } from 'next/navigation';
 import { upsertPaymentWithOptionalTransaction } from '@/server/action/payments';
+import { EnrollmentPayment } from './types';
 
-type PaymentModeSelectorProps = {
-  existingPayment: NonNullable<Enrollment>['payment'] | null;
-};
-
-export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProps) => {
+export const PaymentModeSelector = ({ payment }: { payment: EnrollmentPayment }) => {
   const router = useRouter();
-  const { getValues, setValue, resetField } = useFormContext<AdmissionFormValues>();
+  const { getValues, setValue } = useFormContext<AdmissionFormValues>();
 
   // Check if this is installment payment and if 1st installment is paid
   const isFirstInstallmentPaid = useMemo(() => {
-    if (!existingPayment || existingPayment.paymentType !== 'INSTALLMENTS') {
+    if (!payment || payment.paymentType !== 'INSTALLMENTS') {
       return false;
     }
-    const firstInstallment = existingPayment.installmentPayments?.find(
+    const firstInstallment = payment.installmentPayments?.find(
       (inst) => inst.installmentNumber === 1
     );
     return firstInstallment?.isPaid ?? false;
-  }, [existingPayment]);
+  }, [payment]);
 
   const buttonText = useMemo(() => {
     if (isFirstInstallmentPaid) {
@@ -48,14 +44,17 @@ export const PaymentModeSelector = ({ existingPayment }: PaymentModeSelectorProp
     });
 
     if (!error && payment) {
-      const _payment = {
+      const updatedPayment = {
         ...formValues.payment,
         ...payment,
       };
-      // Reset the field with new default value to mark as not dirty
-      resetField('payment', { defaultValue: _payment });
 
-      toast.success(message || 'Payment processed successfully');
+      setValue('payment', updatedPayment);
+
+      toast.success(message, {
+        position: 'top-right',
+      });
+
       router.refresh();
     } else {
       toast.error(message || 'Failed to process payment');

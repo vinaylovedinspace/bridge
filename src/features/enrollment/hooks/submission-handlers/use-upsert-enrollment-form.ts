@@ -7,6 +7,8 @@ import {
   LearningLicenseValues,
   DrivingLicenseValues,
   AdmissionFormValues,
+  AdmissionFormStepKey,
+  PaymentValues,
 } from '@/features/enrollment/types';
 import {
   upsertClient,
@@ -134,27 +136,25 @@ export const useUpsertEnrollmentForm = ({
     [getValues, setValue]
   );
 
-  const handlePaymentStep = useCallback(async (): ActionReturnType => {
-    const formValues = getValues();
-
-    if (!formValues.client.id) {
-      return {
-        error: true,
-        message: 'Payment information was not saved. Please try again later',
-      };
-    }
-
+  const handlePaymentStep = useCallback(async (data: PaymentValues): ActionReturnType => {
     return await upsertPaymentWithOptionalTransaction({
-      payment: formValues.payment,
+      payment: data,
     });
-  }, [getValues]);
+  }, []);
 
-  const submitStep = async (
-    stepKey: string,
-    stepData: unknown,
-    isLastStep?: boolean
-  ): Promise<boolean> => {
-    const stepHandlers: Record<string, () => Promise<{ error: boolean; message: string }>> = {
+  const submitStep = async ({
+    currentStep,
+    stepData,
+    isLastStep,
+  }: {
+    currentStep: AdmissionFormStepKey;
+    stepData: unknown;
+    isLastStep?: boolean;
+  }): Promise<boolean> => {
+    const stepHandlers: Record<
+      AdmissionFormStepKey,
+      () => Promise<{ error: boolean; message: string }>
+    > = {
       service: () => {
         return Promise.resolve({ error: false, message: 'Service details validated successfully' });
       },
@@ -167,10 +167,10 @@ export const useUpsertEnrollmentForm = ({
           }
         ),
       plan: () => handlePlanStep(stepData as PlanValues),
-      payment: () => handlePaymentStep(),
+      payment: () => handlePaymentStep(stepData as PaymentValues),
     };
 
-    const handler = stepHandlers[stepKey];
+    const handler = stepHandlers[currentStep];
 
     try {
       const result = await handler();
