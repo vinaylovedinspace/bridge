@@ -54,6 +54,8 @@ export const getRTOService = async (id: string) => {
   }
 };
 
+export type RTOService = Awaited<ReturnType<typeof getRTOService>>;
+
 export const getRTOServices = async (
   branchId: string,
   filters?: {
@@ -105,19 +107,21 @@ export const getRTOServices = async (
 
 export const deleteRTOService = async (id: string, branchId: string) => {
   try {
-    const [rtoService] = await db
-      .update(RTOServicesTable)
-      .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(
-        and(
-          eq(RTOServicesTable.id, id),
-          eq(RTOServicesTable.branchId, branchId),
-          isNull(RTOServicesTable.deletedAt)
+    return await db.transaction(async (tx) => {
+      const [rtoService] = await tx
+        .update(RTOServicesTable)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(
+          and(
+            eq(RTOServicesTable.id, id),
+            eq(RTOServicesTable.branchId, branchId),
+            isNull(RTOServicesTable.deletedAt)
+          )
         )
-      )
-      .returning();
+        .returning();
 
-    return rtoService;
+      return rtoService;
+    });
   } catch (error) {
     console.log(error);
     throw error;
@@ -208,53 +212,11 @@ export const createPaymentEntry = async (
   });
 };
 
-export const upsertPaymentInDB = async (
-  data: typeof PaymentTable.$inferInsert,
-  serviceId: string
-) => {
-  return await db.transaction(async (tx) => {
-    // Fetch plan with associated payment
-    const serviceWithPayment = await tx.query.RTOServicesTable.findFirst({
-      where: eq(RTOServicesTable.id, serviceId),
-      with: { payment: true },
-    });
-
-    const existingPayment = serviceWithPayment?.payment;
-
-    // Update existing payment
-    if (existingPayment) {
-      const [updated] = await tx
-        .update(PaymentTable)
-        .set({ ...data, updatedAt: new Date() })
-        .where(eq(PaymentTable.id, existingPayment.id))
-        .returning();
-
-      return {
-        payment: updated,
-        isExistingPayment: true,
-        paymentId: updated.id,
-      };
-    }
-
-    // Create new payment and link to rto-service
-    const [payment] = await tx.insert(PaymentTable).values(data).returning();
-
-    await tx
-      .update(RTOServicesTable)
-      .set({ paymentId: payment.id, updatedAt: new Date() })
-      .where(eq(RTOServicesTable.id, serviceId));
-
-    return {
-      payment,
-      isExistingPayment: false,
-      paymentId: payment.id,
-    };
-  });
-};
-
 export const saveRTOServiceAndPaymentInDB = async (
   clientData: typeof ClientTable.$inferInsert,
-  serviceData: Omit<typeof RTOServicesTable.$inferInsert, 'clientId'>,
+  serviceData: Omit<typeof RTOServicesTable.$inferInsert, 'clientId' | 'paymentId'> & {
+    paymentId?: string;
+  },
   paymentData: Omit<typeof PaymentTable.$inferInsert, 'clientId'> & { clientId?: string }
 ) => {
   return await db.transaction(async (tx) => {
@@ -274,60 +236,38 @@ export const saveRTOServiceAndPaymentInDB = async (
 
     // 2. Upsert RTO service
     let rtoService: typeof RTOServicesTable.$inferSelect;
-    let isExistingService = false;
 
-    console.log(serviceData, 'serviceData');
     if (serviceData.id) {
+      // Only update payment if paymentId exists
+      if (serviceData.paymentId) {
+        await tx
+          .update(PaymentTable)
+          .set({ ...paymentData, clientId: client.id, updatedAt: new Date() })
+          .where(eq(PaymentTable.id, serviceData.paymentId))
+          .returning();
+      }
+
       [rtoService] = await tx
         .update(RTOServicesTable)
         .set({ ...serviceData, updatedAt: new Date() })
         .where(eq(RTOServicesTable.id, serviceData.id))
         .returning();
-      isExistingService = true;
     } else {
-      [rtoService] = await tx
-        .insert(RTOServicesTable)
-        .values({ ...serviceData, clientId: client.id })
-        .returning();
-    }
-
-    // 3. Fetch service with associated payment
-    const serviceWithPayment = await tx.query.RTOServicesTable.findFirst({
-      where: eq(RTOServicesTable.id, rtoService.id),
-      with: { payment: true },
-    });
-
-    const existingPayment = serviceWithPayment?.payment;
-
-    // 4. Upsert payment
-    let payment: typeof PaymentTable.$inferSelect;
-    let isExistingPayment = false;
-
-    if (existingPayment) {
-      [payment] = await tx
-        .update(PaymentTable)
-        .set({ ...paymentData, clientId: client.id, updatedAt: new Date() })
-        .where(eq(PaymentTable.id, existingPayment.id))
-        .returning();
-      isExistingPayment = true;
-    } else {
-      [payment] = await tx
+      const [payment] = await tx
         .insert(PaymentTable)
         .values({ ...paymentData, clientId: client.id })
         .returning();
 
-      await tx
-        .update(RTOServicesTable)
-        .set({ paymentId: payment.id, updatedAt: new Date() })
-        .where(eq(RTOServicesTable.id, rtoService.id));
+      [rtoService] = await tx
+        .insert(RTOServicesTable)
+        .values({ ...serviceData, clientId: client.id, paymentId: payment.id })
+        .returning();
     }
 
     return {
       clientId: client.id,
       serviceId: rtoService.id,
-      isExistingService,
-      paymentId: payment.id,
-      isExistingPayment,
+      paymentId: rtoService.paymentId,
     };
   });
 };

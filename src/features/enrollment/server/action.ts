@@ -14,29 +14,20 @@ import {
   upsertClientInDB,
   upsertLearningLicenseInDB,
   upsertDrivingLicenseInDB,
-  getClientById as getClientByIdFromDB,
   findExistingPlanInDB,
-  updatePaymentInDB,
-  upsertPlanAndPaymentInDB,
+  upsertPlanWithPaymentIdInDB,
   getVehicleRentAmount,
 } from './db';
 import { formatDateToYYYYMMDD, formatTimeString } from '@/lib/date-time-utils';
-import {
-  createPaymentLink,
-  CreatePaymentLinkRequest,
-  PaymentLinkResult,
-} from '@/lib/cashfree/payment-links';
 import { clientSchema } from '@/types/zod/client';
 import { calculateEnrollmentPaymentBreakdown } from '@/lib/payment/calculate';
 import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
 import { hasPlanChanged, handleSessionGeneration } from '../lib/plan-helpers';
-import { handleFullPayment, handleInstallmentPayment } from '../lib/payment-helpers';
-import { paymentSchema } from '@/types/zod/payment';
-import { IMMEDIATE_PAYMENT_MODES } from '@/lib/constants/payment';
 import { getNextPlanCode } from '@/db/utils/plan-code';
 import { getNextClientCode } from '@/db/utils/client-code';
+import { upsertPaymentWithOptionalTransaction } from '@/server/action/payments';
 
-export const createClient = async (
+export const upsertClient = async (
   unsafeData: z.infer<typeof clientSchema>
 ): Promise<{ error: boolean; message: string } & { clientId?: string }> => {
   try {
@@ -75,7 +66,7 @@ export const createClient = async (
   }
 };
 
-export const createLearningLicense = async (
+export const upsertLearningLicense = async (
   unsafeData: LearningLicenseValues
 ): ActionReturnType => {
   try {
@@ -113,7 +104,7 @@ export const createLearningLicense = async (
   }
 };
 
-export const createDrivingLicense = async (unsafeData: DrivingLicenseValues): ActionReturnType => {
+export const upsertDrivingLicense = async (unsafeData: DrivingLicenseValues): ActionReturnType => {
   try {
     // Validate the driving license data
     const { success, data } = drivingLicenseSchema.safeParse(unsafeData);
@@ -155,15 +146,18 @@ export const upsertPlanWithPayment = async (
   unsafePlanData: PlanValues,
   unsafePaymentData: PaymentValues
 ): Promise<{ error: boolean; message: string; planId?: string; paymentId?: string }> => {
-  const { id: branchId } = await getBranchConfig();
+  const branchConfig = await getBranchConfig();
+  const { id: branchId } = branchConfig;
   try {
     // 1. Extract and validate time
     const joiningTime = formatTimeString(unsafePlanData.joiningDate);
     const joiningDate = formatDateToYYYYMMDD(unsafePlanData.joiningDate);
 
-    // 2. Find existing plan (if any)
-    const existingPlan = await findExistingPlanInDB(unsafePlanData.id, unsafePlanData.clientId);
-    const planCode = existingPlan?.planCode || (await getNextPlanCode(branchId));
+    // 2. Parallelize independent database queries
+    const [existingPlan, vehicle] = await Promise.all([
+      findExistingPlanInDB(unsafePlanData.id, unsafePlanData.clientId),
+      getVehicleRentAmount(unsafePlanData.vehicleId),
+    ]);
 
     // 3. Check if plan has changed
     const planTimingChanged = hasPlanChanged(
@@ -173,9 +167,7 @@ export const upsertPlanWithPayment = async (
       unsafePlanData
     );
 
-    // 4. Get vehicle details for payment calculation
-    const vehicle = await getVehicleRentAmount(unsafePlanData.vehicleId);
-
+    // 4. Validate vehicle exists
     if (!vehicle) {
       return { error: true, message: 'Vehicle not found' };
     }
@@ -190,13 +182,11 @@ export const upsertPlanWithPayment = async (
       licenseServiceFee: unsafePaymentData.licenseServiceFee || 0,
     });
 
-    // 6. Prepare plan data for database
+    // 6. Prepare and validate plan data
     const _planData = {
       ...unsafePlanData,
-      joiningDate: unsafePlanData.joiningDate,
       branchId,
       vehicleRentAmount: vehicle.rent,
-      planCode,
     };
 
     const {
@@ -205,21 +195,9 @@ export const upsertPlanWithPayment = async (
       error: planError,
     } = planSchema.safeParse(_planData);
 
-    const _paymentData = {
-      ...unsafePaymentData,
-      branchId,
-      totalAmount: totalAmountAfterDiscount,
-    };
-
-    const {
-      success: paymentSuccess,
-      data: paymentData,
-      error: paymentError,
-    } = paymentSchema.safeParse(_paymentData);
-
-    if (!planSuccess || !paymentSuccess) {
-      console.error('Invalid plan or payment data:', planError, paymentError);
-      return { error: true, message: 'Invalid plan or payment data' };
+    if (!planSuccess) {
+      console.error('Invalid plan data:', planError);
+      return { error: true, message: 'Invalid plan data' };
     }
 
     const planData = {
@@ -228,22 +206,37 @@ export const upsertPlanWithPayment = async (
       joiningTime,
     };
 
-    // 7. Persist plan and payment to database in a transaction
-    const { plan } = await upsertPlanAndPaymentInDB(planData, paymentData);
+    // 7. Create/update payment using shared function
+    const paymentResult = await upsertPaymentWithOptionalTransaction({
+      payment: {
+        ...unsafePaymentData,
+        id: existingPlan?.paymentId,
+        clientId: unsafePlanData.clientId,
+        branchId,
+        totalAmount: totalAmountAfterDiscount,
+      },
+      processTransaction: false,
+    });
 
-    // 8. Process immediate payment transactions
-    const paymentMode = paymentData.paymentMode;
-    if (IMMEDIATE_PAYMENT_MODES.includes(paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])) {
-      await processPaymentTransaction(
-        plan.paymentId!,
-        paymentMode as 'CASH' | 'QR',
-        paymentData.paymentType,
-        paymentData.totalAmount
-      );
+    if (paymentResult.error || !paymentResult.payment) {
+      return {
+        error: true,
+        message: paymentResult.message,
+      };
     }
 
-    // 9. Handle session generation/update
-    const sessionMessage = await handleSessionGeneration(
+    // 8. Generate plan code if creating new plan
+    const planCode = unsafePlanData.planCode ?? (await getNextPlanCode(branchId));
+
+    // 9. Create/update plan with paymentId
+    const { plan } = await upsertPlanWithPaymentIdInDB({
+      ...planData,
+      planCode,
+      paymentId: paymentResult.payment.id,
+    });
+
+    // 10. Generate sessions
+    await handleSessionGeneration(
       planData.clientId,
       plan.id,
       {
@@ -252,12 +245,13 @@ export const upsertPlanWithPayment = async (
         numberOfSessions: planData.numberOfSessions,
         vehicleId: planData.vehicleId,
       },
-      planTimingChanged
+      planTimingChanged,
+      branchConfig
     );
 
     return {
       error: false,
-      message: `Plan and payment acknowledged successfully${sessionMessage}`,
+      message: 'Plan and payment processed successfully',
       planId: plan.id,
       paymentId: plan.paymentId!,
     };

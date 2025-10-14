@@ -107,33 +107,9 @@ export const updatePlanInDB = async (data: Partial<typeof PlanTable.$inferInsert
   };
 };
 
-export const updatePaymentInDB = async (data: typeof PaymentTable.$inferInsert) => {
-  if (data.id) {
-    console.log('update payment', data);
-    const [updated] = await db
-      .update(PaymentTable)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(PaymentTable.id, data.id))
-      .returning();
-
-    return {
-      payment: updated,
-      isExistingPayment: true,
-      paymentId: updated.id,
-    };
-  }
-
-  return {
-    payment: null,
-  };
-};
-
 export const upsertPlanAndPaymentInDB = async (
-  planData: typeof PlanTable.$inferInsert,
-  paymentData: {
-    totalAmount: number;
-    licenseServiceFee: number;
-  }
+  planData: Omit<typeof PlanTable.$inferInsert, 'paymentId'> & { paymentId?: string },
+  paymentData: typeof PaymentTable.$inferInsert
 ) => {
   return await db.transaction(async (tx) => {
     let plan: typeof PlanTable.$inferSelect | undefined;
@@ -151,27 +127,17 @@ export const upsertPlanAndPaymentInDB = async (
         .returning();
 
       if (plan.paymentId) {
-        await db
+        await tx
           .update(PaymentTable)
           .set({
-            branchId: planData.branchId,
-            clientId: planData.clientId,
-            totalAmount: paymentData.totalAmount,
-            licenseServiceFee: paymentData.licenseServiceFee,
+            ...paymentData,
+            updatedAt: new Date(),
           })
           .where(eq(PaymentTable.id, plan.paymentId));
       }
     } else {
       // Create new Payment
-      const [payment] = await tx
-        .insert(PaymentTable)
-        .values({
-          branchId: planData.branchId,
-          clientId: planData.clientId,
-          totalAmount: paymentData.totalAmount,
-          licenseServiceFee: paymentData.licenseServiceFee,
-        })
-        .returning();
+      const [payment] = await tx.insert(PaymentTable).values(paymentData).returning();
       // Create new plan
       [plan] = await tx
         .insert(PlanTable)
@@ -190,6 +156,35 @@ export const upsertPlanAndPaymentInDB = async (
       plan,
     };
   });
+};
+
+export const upsertPlanWithPaymentIdInDB = async (planData: typeof PlanTable.$inferInsert) => {
+  if (!planData.paymentId) {
+    throw new Error('paymentId is required');
+  }
+
+  // If plan ID is provided (edit mode), update the existing plan
+  if (planData.id) {
+    const [plan] = await db
+      .update(PlanTable)
+      .set({
+        ...planData,
+        updatedAt: new Date(),
+      })
+      .where(eq(PlanTable.id, planData.id))
+      .returning();
+
+    return {
+      plan,
+    };
+  }
+
+  // Create new plan
+  const [plan] = await db.insert(PlanTable).values(planData).returning();
+
+  return {
+    plan,
+  };
 };
 
 export const updatePlanById = async (
@@ -217,11 +212,14 @@ export const getClientById = async (clientId: string) => {
       learningLicense: true,
       drivingLicense: true,
       plan: true,
+      rtoServices: true,
     },
   });
 
   return client;
 };
+
+export type ClientType = Awaited<ReturnType<typeof getClientById>>;
 
 const calculatePaymentStatus = (paidCount: number): 'PENDING' | 'PARTIALLY_PAID' | 'FULLY_PAID' => {
   if (paidCount === 0) return 'PENDING';
@@ -243,7 +241,7 @@ export const createInstallmentPaymentsInDB = async (
 
     // Update existing installment
     if (existingInstallment) {
-      const [updated] = await tx
+      await tx
         .update(InstallmentPaymentTable)
         .set({
           amount: data.amount,
@@ -251,8 +249,7 @@ export const createInstallmentPaymentsInDB = async (
           paymentDate: data.paymentDate,
           isPaid: data.isPaid,
         })
-        .where(eq(InstallmentPaymentTable.id, existingInstallment.id))
-        .returning();
+        .where(eq(InstallmentPaymentTable.id, existingInstallment.id));
 
       // Recalculate payment status
       const allInstallments = await tx.query.InstallmentPaymentTable.findMany({
@@ -261,19 +258,20 @@ export const createInstallmentPaymentsInDB = async (
 
       const paidCount = allInstallments.filter((inst) => inst.isPaid).length;
 
-      await tx
+      const [updatedPayment] = await tx
         .update(PaymentTable)
         .set({
           paymentStatus: calculatePaymentStatus(paidCount),
           updatedAt: new Date(),
         })
-        .where(eq(PaymentTable.id, data.paymentId));
+        .where(eq(PaymentTable.id, data.paymentId))
+        .returning();
 
-      return updated;
+      return updatedPayment;
     }
 
     // Create new installment and update status
-    const [created] = await tx.insert(InstallmentPaymentTable).values(data).returning();
+    await tx.insert(InstallmentPaymentTable).values(data);
 
     const allInstallments = await tx.query.InstallmentPaymentTable.findMany({
       where: eq(InstallmentPaymentTable.paymentId, data.paymentId),
@@ -281,15 +279,16 @@ export const createInstallmentPaymentsInDB = async (
 
     const paidCount = allInstallments.filter((inst) => inst.isPaid).length;
 
-    await tx
+    const [updatedPayment] = await tx
       .update(PaymentTable)
       .set({
         paymentStatus: calculatePaymentStatus(paidCount),
         updatedAt: new Date(),
       })
-      .where(eq(PaymentTable.id, data.paymentId));
+      .where(eq(PaymentTable.id, data.paymentId))
+      .returning();
 
-    return created;
+    return updatedPayment;
   });
 };
 
@@ -364,6 +363,9 @@ export const getPlanAndVehicleInDB = async (planId: string) => {
 export const getExistingInstallmentsInDB = async (paymentId: string) => {
   return await db.query.InstallmentPaymentTable.findMany({
     where: eq(InstallmentPaymentTable.paymentId, paymentId),
+    with: {
+      payment: true,
+    },
   });
 };
 
@@ -378,7 +380,7 @@ export const getPlanForSessionsInDB = async (planId: string) => {
 
 export const getVehicleRentAmount = async (vehicleId: string) => {
   return await db.query.VehicleTable.findFirst({
-    where: eq(VehicleTable.id, vehicleId),
+    where: and(eq(VehicleTable.id, vehicleId), isNull(VehicleTable.deletedAt)),
     columns: { rent: true },
   });
 };

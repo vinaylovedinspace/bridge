@@ -7,9 +7,6 @@ import React from 'react';
 import { rtoServicesFormSchema, RTOServiceFormValues } from '../../types';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { PersonalInfoStep } from './steps/personal-info';
-import { LicenseStep } from './steps/service';
-import { PaymentContainer } from './steps/payment';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRTOServiceStepNavigation, RTOServiceProgressBar } from './progress-bar';
 import {
@@ -20,6 +17,8 @@ import { saveRTOServiceWithPayment } from '../../server/action';
 import { getRTOService } from '../../server/db';
 import { FormNavigation } from '@/components/ui/form-navigation';
 import { cn } from '@/lib/utils';
+import { upsertPaymentWithOptionalTransaction } from '@/server/action/payments';
+import { RTOServiceFormSteps } from './form-steps';
 
 type RTOServiceMultistepFormProps = {
   rtoService?: Awaited<ReturnType<typeof getRTOService>>;
@@ -41,35 +40,12 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
   const { currentStep, goToNext, goToPrevious, isFirstStep, isLastStep, goToStep } =
     useRTOServiceStepNavigation();
 
-  // Map step keys to components
-  const stepComponents = React.useMemo(() => {
-    return {
-      personal: {
-        component: <PersonalInfoStep />,
-        getData: () => getValues('client'),
-      },
-      license: {
-        component: <LicenseStep />,
-        getData: () => getValues('service'),
-      },
-      payment: {
-        component: <PaymentContainer existingPayment={rtoService?.payment} />,
-        getData: () => ({}),
-      },
-    };
-  }, [getValues, rtoService?.payment]);
-
   // Step handlers
   const handlePersonalStep = useCallback(async () => {
     goToNext();
   }, [goToNext]);
 
   const handleLicenseStep = useCallback(async () => {
-    // Just validate and move to next step - actual service creation happens in payment step
-    goToNext();
-  }, [goToNext]);
-
-  const handlePaymentStep = useCallback(async () => {
     const formData = getValues();
 
     setIsSubmitting(true);
@@ -85,21 +61,55 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
       // Update form state with IDs if successful
       if (result.clientId) {
         setValue('client.id', result.clientId);
+        setValue('payment.clientId', result.clientId);
       }
       if (result.serviceId) {
         setValue('service.id', result.serviceId);
       }
+      if (result.paymentId) {
+        setValue('payment.id', result.paymentId);
+      }
 
-      toast.success(result.message);
+      toast.success(result.message, {
+        position: 'top-right',
+      });
+
+      goToNext();
+    } catch {
+      toast.error('Failed to save RTO service');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [getValues, goToNext, setValue]);
+
+  const handlePaymentStep = useCallback(async () => {
+    const formData = getValues();
+
+    setIsSubmitting(true);
+    try {
+      const result = await upsertPaymentWithOptionalTransaction({
+        payment: {
+          ...formData.payment,
+          clientId: formData.client.id!,
+        },
+      });
+
+      if (result.error) {
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message, {
+        position: 'top-right',
+      });
       router.push('/rto-services');
       router.refresh();
-    } catch (error) {
-      console.error('Error saving RTO service with payment:', error);
+    } catch {
       toast.error('Failed to save RTO service and payment');
     } finally {
       setIsSubmitting(false);
     }
-  }, [getValues, setValue, router]);
+  }, [getValues, router]);
 
   // Map step handlers
   const stepHandlers = React.useMemo(() => {
@@ -141,7 +151,9 @@ export function RTOServiceMultistepForm({ rtoService }: RTOServiceMultistepFormP
           })}
           ref={scrollRef}
         >
-          <form className="space-y-8 pr-4">{stepComponents[currentStep]?.component}</form>
+          <form className="space-y-8 pr-4">
+            {<RTOServiceFormSteps currentStep={currentStep} rtoService={rtoService} />}
+          </form>
         </ScrollArea>
 
         <FormNavigation

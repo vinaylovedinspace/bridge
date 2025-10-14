@@ -1,9 +1,8 @@
 /**
  * Comprehensive date and time utilities for India-only application
- * Handles dates as YYYY-MM-DD strings to avoid timezone conversion issues
+ * All dates and times are in IST (India Standard Time) - no timezone conversions
+ * Handles dates as YYYY-MM-DD strings and times as HH:MM strings
  */
-
-import { format } from 'date-fns';
 
 // ============================================================================
 // Date Formatting
@@ -11,17 +10,23 @@ import { format } from 'date-fns';
 
 /**
  * Format time from Date object to HH:MM string
+ * Preserves the local timezone (doesn't convert to UTC)
  */
 export const formatTimeString = (date: Date): string => {
-  return format(date, 'HH:mm');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
 };
 
 /**
- * Format date to YYYY-MM-DD string using toISOString
+ * Format date to YYYY-MM-DD string (preserves local IST date, no timezone conversion)
  */
 export const formatDateToYYYYMMDD = (date: Date | null): string => {
   if (!date) return '';
-  return format(date, 'yyyy-MM-dd');
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 /**

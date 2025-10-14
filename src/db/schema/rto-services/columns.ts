@@ -39,7 +39,7 @@ export const RTOServicesTable = pgTable(
 
     // Client and branch relationship
     clientId: uuid('client_id').notNull(),
-    paymentId: uuid('payment_id').unique(),
+    paymentId: uuid('payment_id').unique().notNull(),
     branchId: uuid('branch_id').notNull(),
 
     // Service details

@@ -20,5 +20,5 @@ export const ClientDetailSteps = ({ currentStep, client }: ClientDetailStepsProp
     plans: <PlansStep client={client} />,
   };
 
-  return stepComponents[currentStep];
+  return stepComponents[currentStep] ?? null;
 };

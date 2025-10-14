@@ -45,7 +45,8 @@ export const handleSessionGeneration = async (
     numberOfSessions: number;
     vehicleId: string;
   },
-  planTimingChanged: boolean
+  planTimingChanged: boolean,
+  branchConfig?: Awaited<ReturnType<typeof getBranchConfig>>
 ): Promise<string> => {
   const existingSessions = await getSessionsByClientId(clientId);
 
@@ -55,17 +56,18 @@ export const handleSessionGeneration = async (
     return '';
   }
 
-  // Get client details
-  const client = await getClientForSessionsInDB(clientId);
+  // Get client details and branch config in parallel (if not provided)
+  const [client, config] = await Promise.all([
+    getClientForSessionsInDB(clientId),
+    branchConfig ? Promise.resolve(branchConfig) : getBranchConfig(),
+  ]);
 
   if (!client) {
     throw new Error(`Client not found with ID: ${clientId}`);
   }
 
-  const branchConfig = await getBranchConfig();
-
   // Validate branch config has required fields
-  if (!branchConfig.workingDays || branchConfig.workingDays.length === 0) {
+  if (!config.workingDays || config.workingDays.length === 0) {
     throw new Error('Branch working days not configured');
   }
 
@@ -79,7 +81,7 @@ export const handleSessionGeneration = async (
       planId,
     },
     client,
-    branchConfig
+    config
   );
 
   if (sessionsToGenerate.length === 0) {

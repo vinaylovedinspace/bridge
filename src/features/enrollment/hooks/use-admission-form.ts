@@ -6,7 +6,7 @@ import {
   getDefaultValuesForEditEnrollmentForm,
 } from '../lib/utils';
 import { Enrollment } from '@/server/db/plan';
-import { getClientById } from '../server/action';
+import { ClientType } from '../server/db';
 
 export const useEditAdmissionForm = (enrollment: NonNullable<Enrollment>) => {
   const methods = useForm<AdmissionFormValues>({
@@ -18,9 +18,7 @@ export const useEditAdmissionForm = (enrollment: NonNullable<Enrollment>) => {
   return methods;
 };
 
-export const useAddAdmissionForm = (
-  existingClient?: Awaited<ReturnType<typeof getClientById>>['data']
-) => {
+export const useAddAdmissionForm = (existingClient?: ClientType) => {
   const methods = useForm<AdmissionFormValues>({
     resolver: zodResolver(admissionFormSchema),
     defaultValues: getDefaultValuesForAddEnrollmentForm(existingClient),

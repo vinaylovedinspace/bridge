@@ -94,10 +94,11 @@ export const ClientTable = pgTable(
     citizenStatus: CitizenStatusEnum().default('BIRTH'),
 
     branchId: uuid('branch_id').notNull(),
+    tenantId: uuid('tenant_id').notNull(),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
-    tenantId: uuid('tenant_id').notNull(),
+    deletedAt: timestamp('deleted_at'),
   },
   (table) => ({
     phoneNumberTenantUnique: unique('phone_number_tenant_unique').on(
@@ -110,5 +111,11 @@ export const ClientTable = pgTable(
     ),
     // Dashboard performance index
     branchCreatedAtIdx: index('idx_clients_branch_created').on(table.branchId, table.createdAt),
+    // Duplicate check performance indexes (composite with tenantId for scoped lookups)
+    phoneNumberTenantIdx: index('idx_clients_phone_tenant').on(table.phoneNumber, table.tenantId),
+    aadhaarNumberTenantIdx: index('idx_clients_aadhaar_tenant').on(
+      table.aadhaarNumber,
+      table.tenantId
+    ),
   })
 );

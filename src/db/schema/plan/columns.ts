@@ -28,11 +28,12 @@ export const PlanTable = pgTable(
     status: PlanEnum().notNull().default('NOT_STARTED'),
     completedAt: text('completed_at'),
 
-    paymentId: uuid('payment_id').unique(),
+    paymentId: uuid('payment_id').unique().notNull(),
     branchId: uuid('branch_id').notNull(),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
+    deletedAt: timestamp('deleted_at'),
   },
   (table) => ({
     // Dashboard performance indexes

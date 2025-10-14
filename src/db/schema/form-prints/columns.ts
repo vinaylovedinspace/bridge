@@ -8,6 +8,7 @@ export const formPrints = pgTable('form_prints', {
   printedBy: varchar('printed_by', { length: 255 }).notNull(), // Clerk userId
   batchId: uuid('batch_id'), // For bulk operations
   branchId: uuid('branch_id').notNull(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export type FormPrint = typeof formPrints.$inferSelect;

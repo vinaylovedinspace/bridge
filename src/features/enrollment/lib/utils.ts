@@ -1,14 +1,15 @@
 import { Path } from 'react-hook-form';
-import { AdmissionFormValues } from '../types';
+import { AdmissionFormStepKey, AdmissionFormValues } from '../types';
 import { Enrollment } from '@/server/db/plan';
 import { generateFieldPaths } from '@/lib/utils';
-import { getClientById } from '../server/action';
 import {
   DEFAULT_SESSION_DAYS,
   DEFAULT_SESSION_MINUTES,
   DEFAULT_STATE,
 } from '@/lib/constants/business';
 import { parseDateStringToDateObject } from '@/lib/date-time-utils';
+import { mapPayment } from '@/lib/payment/map-payment';
+import { ClientType } from '../server/db';
 
 // Function to get validation fields for a specific step
 export const getMultistepAdmissionStepValidationFields = (
@@ -49,6 +50,29 @@ export const getMultistepAdmissionStepValidationFields = (
   }
 };
 
+export const getStepData = (
+  stepKey: AdmissionFormStepKey,
+  getValues: (key: Path<AdmissionFormValues>) => unknown
+) => {
+  switch (stepKey) {
+    case 'service':
+      return { serviceType: getValues('serviceType') };
+    case 'personal':
+      return getValues('client');
+    case 'license':
+      return {
+        learningLicense: getValues('learningLicense'),
+        drivingLicense: getValues('drivingLicense'),
+      };
+    case 'plan':
+      return getValues('plan');
+    case 'payment':
+      return getValues('payment');
+    default:
+      return {};
+  }
+};
+
 // Helper function to combine date and time strings into a single Date object
 const combineDateAndTime = (dateString: string, timeString: string): Date => {
   const date = new Date(dateString);
@@ -67,35 +91,35 @@ export const mapClientToPersonalInfo = (
     firstName: client.firstName,
     lastName: client.lastName,
     aadhaarNumber: client.aadhaarNumber,
-    guardianFirstName: client.guardianFirstName || '',
-    guardianLastName: client.guardianLastName || '',
-    guardianMiddleName: client.guardianMiddleName || '',
-    guardianRelationship: client.guardianRelationship || 'FATHER',
+    guardianFirstName: client.guardianFirstName ?? '',
+    guardianLastName: client.guardianLastName ?? '',
+    guardianMiddleName: client.guardianMiddleName ?? '',
+    guardianRelationship: client.guardianRelationship ?? 'FATHER',
     birthDate: new Date(client.birthDate),
     bloodGroup: client.bloodGroup,
     gender: client.gender,
-    educationalQualification: client.educationalQualification || 'CLASS_12TH',
+    educationalQualification: client.educationalQualification ?? 'CLASS_12TH',
     phoneNumber: client.phoneNumber,
-    alternativePhoneNumber: client.alternativePhoneNumber || '',
+    alternativePhoneNumber: client.alternativePhoneNumber ?? '',
     addressLine1: client.addressLine1,
     addressLine2: client.addressLine2,
-    addressLine3: client.addressLine3 || '',
+    addressLine3: client.addressLine3 ?? '',
     city: client.city,
     state: client.state,
     pincode: client.pincode,
     isCurrentAddressSameAsPermanentAddress: client.isCurrentAddressSameAsPermanentAddress ?? false,
     permanentAddressLine1: client.permanentAddressLine1,
     permanentAddressLine2: client.permanentAddressLine2,
-    permanentAddressLine3: client.permanentAddressLine3 || '',
+    permanentAddressLine3: client.permanentAddressLine3 ?? '',
     permanentCity: client.permanentCity,
     permanentState: client.permanentState,
     permanentPincode: client.permanentPincode,
-    citizenStatus: client.citizenStatus || 'BIRTH',
+    citizenStatus: client.citizenStatus ?? 'BIRTH',
     branchId: client.branchId,
     tenantId: client.tenantId,
-    middleName: client.middleName || '',
-    email: client.email || '',
-    photoUrl: client.photoUrl || undefined,
+    middleName: client.middleName ?? '',
+    email: client.email ?? '',
+    photoUrl: client.photoUrl ?? undefined,
   };
 };
 
@@ -166,14 +190,8 @@ const DEFAULT_PLAN_VALUES = {
   serviceType: 'FULL_SERVICE' as const,
 };
 
-const DEFAULT_PAYMENT_VALUES = {
-  discount: 0,
-  paymentMode: 'PAYMENT_LINK' as const,
-  applyDiscount: false,
-};
-
 export const getDefaultValuesForAddEnrollmentForm = (
-  existingClient?: Awaited<ReturnType<typeof getClientById>>['data']
+  existingClient?: ClientType
 ): AdmissionFormValues => {
   if (existingClient) {
     return {
@@ -185,10 +203,7 @@ export const getDefaultValuesForAddEnrollmentForm = (
         ...DEFAULT_PLAN_VALUES,
         clientId: existingClient.id,
       },
-      payment: {
-        ...DEFAULT_PAYMENT_VALUES,
-        clientId: existingClient.id,
-      },
+      payment: mapPayment(null, existingClient.id, existingClient.branchId),
     } as AdmissionFormValues;
   }
 
@@ -204,7 +219,7 @@ export const getDefaultValuesForAddEnrollmentForm = (
     learningLicense: {},
     drivingLicense: {},
     plan: DEFAULT_PLAN_VALUES,
-    payment: DEFAULT_PAYMENT_VALUES,
+    payment: mapPayment(null, '', ''),
   } as AdmissionFormValues;
 };
 
@@ -232,30 +247,8 @@ export const getDefaultValuesForEditEnrollmentForm = (
       planCode: enrollment.planCode,
       vehicleRentAmount: enrollment.vehicleRentAmount,
       branchId: enrollment.branchId,
+      paymentId: enrollment.paymentId,
     },
-    payment: payment
-      ? {
-          id: payment.id,
-          discount: payment.discount,
-          paymentType: payment.paymentType || 'FULL_PAYMENT',
-          paymentStatus: payment.paymentStatus || 'PENDING',
-          licenseServiceFee: payment.licenseServiceFee,
-          totalAmount: payment.totalAmount,
-          clientId: payment.clientId,
-          branchId: payment.branchId,
-          paymentMode: 'PAYMENT_LINK' as const,
-          applyDiscount: payment.discount > 0,
-        }
-      : {
-          discount: 0,
-          paymentType: 'FULL_PAYMENT' as const,
-          paymentStatus: 'PENDING' as const,
-          licenseServiceFee: 0,
-          totalAmount: 0,
-          clientId: client.id,
-          branchId: client.branchId,
-          paymentMode: 'PAYMENT_LINK' as const,
-          applyDiscount: false,
-        },
+    payment: mapPayment(payment, client.id, client.branchId),
   };
 };

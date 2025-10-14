@@ -2,15 +2,10 @@ import { TypographyLarge, TypographyMuted } from '@/components/ui/typography';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Info } from 'lucide-react';
-import { Enrollment } from '@/server/db/plan';
+import { EnrollmentPayment } from './types';
 import { usePaymentCalculations } from '@/features/enrollment/hooks/use-payment-calculations';
 
-type PaymentOverviewProps = {
-  existingPayment: NonNullable<Enrollment>['payment'];
-  isEditMode?: boolean;
-};
-
-export const PaymentOverview = ({ existingPayment, isEditMode = false }: PaymentOverviewProps) => {
+export const PaymentOverview = ({ payment }: { payment: EnrollmentPayment }) => {
   const {
     formatted,
     firstInstallmentPayment,
@@ -19,7 +14,7 @@ export const PaymentOverview = ({ existingPayment, isEditMode = false }: Payment
     isSecondInstallmentPaid,
     paymentType,
     licenseFeeBreakdown,
-  } = usePaymentCalculations({ existingPayment, isEditMode });
+  } = usePaymentCalculations({ payment });
 
   return (
     <Card className="p-6 flex flex-col pt-10 min-h-[32rem] h-full">
@@ -98,7 +93,9 @@ export const PaymentOverview = ({ existingPayment, isEditMode = false }: Payment
                     </span>
                   )}
                 </TypographyMuted>
-                <TypographyMuted className="font-semibold">
+                <TypographyMuted
+                  className={`font-semibold ${isFirstInstallmentPaid ? 'text-green-600' : ''}`}
+                >
                   {formatted.secondInstallment}
                 </TypographyMuted>
               </div>
@@ -111,9 +108,9 @@ export const PaymentOverview = ({ existingPayment, isEditMode = false }: Payment
               <div className="flex justify-between mt-2">
                 <TypographyMuted className="flex items-center gap-2">
                   Total Due
-                  {existingPayment?.fullPayment?.paymentMode && (
+                  {payment?.fullPayment?.paymentMode && (
                     <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                      Received via {existingPayment?.fullPayment.paymentMode}
+                      Received via {payment?.fullPayment.paymentMode}
                     </span>
                   )}
                 </TypographyMuted>

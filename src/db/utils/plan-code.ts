@@ -1,16 +1,26 @@
 import { sql, eq } from 'drizzle-orm';
 import { db } from '../index';
-import { PlanTable, ClientTable } from '../schema';
+import { PlanTable } from '../schema';
+import type { ExtractTablesWithRelations } from 'drizzle-orm';
+import type { PgTransaction } from 'drizzle-orm/pg-core';
+import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
 
-export async function getNextPlanCode(tenantId: string): Promise<string> {
-  // Get the max plan code for the tenant by joining with clients
-  const result = await db
+type DbTransaction = PgTransaction<
+  PostgresJsQueryResultHKT,
+  Record<string, never>,
+  ExtractTablesWithRelations<Record<string, never>>
+>;
+
+export async function getNextPlanCode(branchId: string, tx?: DbTransaction): Promise<string> {
+  const executor = tx ?? db;
+
+  // Get the max plan code for the branch
+  const result = await executor
     .select({
       maxCode: sql<number>`COALESCE(MAX(CAST(${PlanTable.planCode} AS INTEGER)), 0)`,
     })
     .from(PlanTable)
-    .innerJoin(ClientTable, eq(PlanTable.clientId, ClientTable.id))
-    .where(eq(ClientTable.tenantId, tenantId))
+    .where(eq(PlanTable.branchId, branchId))
     .execute();
 
   // Return the next code (current max + 1) formatted with leading zeros for numbers < 3 digits

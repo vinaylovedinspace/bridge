@@ -4,9 +4,10 @@ import { formatCurrency, calculateRTOPaymentBreakdown } from '@/lib/payment/calc
 import { getRTOServiceCharges } from '@/lib/constants/rto-fees';
 import { useAtomValue } from 'jotai';
 import { branchServiceChargeAtom } from '@/lib/atoms/branch-config';
+import { useEffect } from 'react';
 
 export const useRTOPaymentCalculations = () => {
-  const { watch } = useFormContext<RTOServiceFormValues>();
+  const { watch, setValue } = useFormContext<RTOServiceFormValues>();
   const serviceType = watch('service.type');
   const discount = watch('payment.discount') ?? 0;
   const shouldApplyDiscount = watch('payment.applyDiscount');
@@ -40,6 +41,16 @@ export const useRTOPaymentCalculations = () => {
   };
 
   const isDiscountApplied = shouldApplyDiscount ?? discount > 0;
+
+  // Update totalAmount in form when it changes
+  useEffect(() => {
+    setValue('payment.totalAmount', totalAmountAfterDiscount);
+  }, [totalAmountAfterDiscount, setValue]);
+
+  // Update form value when fees change
+  useEffect(() => {
+    setValue('payment.licenseServiceFee', branchServiceCharge);
+  }, [branchServiceCharge, setValue]);
 
   return {
     // Raw values

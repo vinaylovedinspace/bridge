@@ -58,6 +58,7 @@ export const notifications = pgTable('notifications', {
   isRead: boolean('is_read').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   readAt: timestamp('read_at'),
+  deletedAt: timestamp('deleted_at'),
 });
 
 export const notificationPreferences = pgTable('notification_preferences', {
@@ -68,6 +69,7 @@ export const notificationPreferences = pgTable('notification_preferences', {
   emailEnabled: boolean('email_enabled').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
 });
 
 export type Notification = typeof notifications.$inferSelect;

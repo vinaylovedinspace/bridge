@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Enrollments } from '@/features/enrollments/components/table/enrollments';
+import { Enrollments } from '@/features/enrollment/components/table/enrollments';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default async function EnrollmentsPage({

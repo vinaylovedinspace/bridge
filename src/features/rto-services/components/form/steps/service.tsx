@@ -18,7 +18,7 @@ export const LicenseStep = () => {
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-12">
         <TypographyH5 className="col-span-3 ">Service Type</TypographyH5>
         <div className="col-span-3">
           <FormField

@@ -17,11 +17,7 @@ import { SlotStatusDisplay } from './slot-status-display';
 import { branchWorkingDaysAtom } from '@/lib/atoms/branch-config';
 import { useAtomValue } from 'jotai';
 
-type PlanStepProps = {
-  currentClientId?: string;
-};
-
-export const PlanStep = ({ currentClientId }: PlanStepProps) => {
+export const PlanStep = () => {
   const { control, watch, setValue } = useFormContext<AdmissionFormValues>();
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const branchWorkingDays = useAtomValue(branchWorkingDaysAtom);
@@ -29,6 +25,7 @@ export const PlanStep = ({ currentClientId }: PlanStepProps) => {
   const selectedVehicleId = watch('plan.vehicleId');
   const selectedDateTime = watch('plan.joiningDate');
   const numberOfSessions = watch('plan.numberOfSessions');
+  const currentClientId = watch('client.id');
 
   const { slotConflict, checkSlotAvailability } = useSlotAvailability(currentClientId);
   const { hasCompletedSessions, isTimeOutsideOperatingHours } = useSessionValidation(
@@ -83,6 +80,7 @@ export const PlanStep = ({ currentClientId }: PlanStepProps) => {
                       selected={field.value}
                       onChange={field.onChange}
                       placeholderText="Select joining date and time"
+                      minDate={new Date()}
                       maxDate={new Date(2100, 0, 1)}
                       disableDateChange={hasCompletedSessions}
                       workingDays={branchWorkingDays}

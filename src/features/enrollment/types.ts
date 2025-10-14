@@ -15,7 +15,12 @@ export const planSchema = createInsertSchema(PlanTable, {
   serviceType: z.enum(ServiceTypeEnum.enumValues, {
     required_error: 'Service type is required',
   }),
-}).omit({ createdAt: true, updatedAt: true });
+})
+  .omit({ createdAt: true, updatedAt: true })
+  .extend({
+    paymentId: z.string().optional(),
+    planCode: z.string().optional(),
+  });
 
 // Function to create plan schema with operating hours validation
 export const createPlanSchema = (operatingHours?: { start: string; end: string }) => {

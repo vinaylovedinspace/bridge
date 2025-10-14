@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { TypographyH4 } from '@/components/ui/typography';
-import { EditAdmissionForm } from '@/features/enrollment/components/form/edit/multistep-form';
+import { EditAdmissionForm } from '@/features/enrollment/components/form/edit-form';
 import { getEnrollmentByPlanId } from '@/server/db/plan';
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {

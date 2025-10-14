@@ -18,6 +18,7 @@ export const paymentSchema = createInsertSchema(PaymentTable, {
     .enum(PaymentStatusEnum.enumValues, { required_error: 'Payment status is required' })
     .default('PENDING'),
   licenseServiceFee: z.number().default(0),
+  branchId: z.string().optional(), // Optional for client-side validation, added server-side
 })
   .omit({ createdAt: true, updatedAt: true })
   .extend({

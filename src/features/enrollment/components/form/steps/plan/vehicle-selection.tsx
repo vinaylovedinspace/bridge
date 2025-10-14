@@ -10,6 +10,8 @@ import {
 } from '@/components/ui/select';
 import { useVehicles } from '@/hooks/vehicles';
 import { TypographyH5 } from '@/components/ui/typography';
+import { useSWRConfig } from 'swr';
+import { getVehicle } from '@/server/action/vehicle';
 
 const VehicleOptions = () => {
   const { data: vehicles, isLoading } = useVehicles();
@@ -31,6 +33,13 @@ const VehicleOptions = () => {
 
 export const VehicleSelection = () => {
   const { control } = useFormContext<AdmissionFormValues>();
+  const { mutate } = useSWRConfig();
+
+  const handleVehicleChange = async (vehicleId: string, onChange: (value: string) => void) => {
+    onChange(vehicleId);
+    // Prefetch vehicle data for payment calculations
+    await mutate(['vehicle', vehicleId], getVehicle(vehicleId));
+  };
 
   return (
     <div className="grid grid-cols-12">
@@ -42,7 +51,10 @@ export const VehicleSelection = () => {
           render={({ field }) => (
             <FormItem>
               <FormLabel required>Vehicle</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select
+                onValueChange={(value) => handleVehicleChange(value, field.onChange)}
+                defaultValue={field.value}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select vehicle" />
