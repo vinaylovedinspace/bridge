@@ -3,6 +3,7 @@ import { SessionTable } from '@/db/schema';
 import { auth } from '@clerk/nextjs/server';
 import { eq, and, ne } from 'drizzle-orm';
 import { getBranchConfig } from '@/server/action/branch';
+import { triggerSessionWorkflow } from '@/lib/upstash/trigger-session-workflow';
 
 const _getSessions = async (branchId: string, vehicleId?: string, clientId?: string) => {
   const conditions = [
@@ -69,6 +70,18 @@ export const createSessions = async (
   }));
 
   const createdSessions = await db.insert(SessionTable).values(sessionsWithMetadata).returning();
+
+  // Trigger workflows for SCHEDULED sessions only (fire and forget)
+  createdSessions
+    .filter((session) => session.status === 'SCHEDULED')
+    .forEach((session) => {
+      triggerSessionWorkflow({
+        sessionId: session.id,
+        sessionDate: session.sessionDate,
+        startTime: session.startTime,
+        endTime: session.endTime,
+      });
+    });
 
   return createdSessions;
 };
@@ -146,7 +159,17 @@ export const assignSessionToSlot = async (
     .where(eq(SessionTable.id, cancelledSession.id))
     .returning();
 
-  return assignedSession[0];
+  const session = assignedSession[0];
+
+  // Trigger workflow for newly scheduled session
+  triggerSessionWorkflow({
+    sessionId: session.id,
+    sessionDate: session.sessionDate,
+    startTime: session.startTime,
+    endTime: session.endTime,
+  });
+
+  return session;
 };
 
 export const getSessionsByClientId = async (clientId: string) => {
@@ -252,7 +275,20 @@ export const updateScheduledSessionsForClient = async (
     }
 
     if (newSessionsToCreate.length > 0) {
-      creates.push(db.insert(SessionTable).values(newSessionsToCreate));
+      const createPromise = db.insert(SessionTable).values(newSessionsToCreate).returning();
+      creates.push(createPromise);
+
+      // Trigger workflows for newly created sessions
+      createPromise.then((createdSessions) => {
+        createdSessions.forEach((session) => {
+          triggerSessionWorkflow({
+            sessionId: session.id,
+            sessionDate: session.sessionDate,
+            startTime: session.startTime,
+            endTime: session.endTime,
+          });
+        });
+      });
     }
   }
 

@@ -8,6 +8,7 @@ export const env = createEnv({
     CRON_SECRET: z.string().min(1),
     SUREPASS_API_TOKEN: z.string().min(1),
     SUREPASS_BASE_URL: z.string().url().default('https://sandbox.surepass.io'),
+    QSTASH_TOKEN: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
