@@ -12,7 +12,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Smartphone, CheckCircle2, AlertCircle } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ParsedAadhaarData } from '@/types/surepass';
 import { useAtomValue } from 'jotai';
@@ -29,16 +30,20 @@ type VerificationStep = 'input' | 'waiting' | 'downloading' | 'success' | 'error
 export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerModalProps) {
   const [mobile, setMobile] = useState('');
   const [clientId, setClientId] = useState<string | null>(null);
+  const [authUrl, setAuthUrl] = useState<string | null>(null);
   const [step, setStep] = useState<VerificationStep>('input');
   const [errorMessage, setErrorMessage] = useState('');
+  const [flowType, setFlowType] = useState<'manager' | 'client'>('manager');
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const branchConfig = useAtomValue(branchConfigAtom)!;
 
   const resetModal = () => {
     setMobile('');
     setClientId(null);
+    setAuthUrl(null);
     setStep('input');
     setErrorMessage('');
+    setFlowType('manager');
     // Clear any active polling
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
@@ -84,6 +89,7 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
       }
 
       setClientId(data.client_id);
+      setAuthUrl(data.url);
       toast.success(data.message || 'SMS sent successfully. Please authorize on your device.');
 
       // Start polling for status
@@ -203,7 +209,29 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
         <div className="space-y-4 py-4">
           {step === 'input' && (
             <>
-              <div className="space-y-2">
+              <div className="space-y-4">
+                <Label>Who will complete the Digilocker flow?</Label>
+                <RadioGroup
+                  value={flowType}
+                  className="space-y-1"
+                  onValueChange={(v) => setFlowType(v as 'manager' | 'client')}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="manager" id="manager" />
+                    <Label htmlFor="manager" className="font-normal cursor-pointer">
+                      I will complete it now
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="client" id="client" />
+                    <Label htmlFor="client" className="font-normal cursor-pointer">
+                      Send SMS to client to complete themselves
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2 pt-2">
                 <Label htmlFor="mobile">Aadhaar Registered Mobile Number</Label>
                 <Input
                   id="mobile"
@@ -214,31 +242,39 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
                   autoFocus
                 />
               </div>
-              <div className="flex items-start gap-2 rounded-md bg-blue-50 p-3 text-sm text-blue-900">
-                <Smartphone className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                <p>
-                  You will receive an SMS with a link to authorize Digilocker access. Click the link
-                  and complete the authorization on your mobile device.
-                </p>
-              </div>
             </>
           )}
 
           {step === 'waiting' && (
-            <div className="space-y-4 py-8 text-center">
+            <div className="space-y-4 py-8">
               <div className="flex justify-center">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 text-center">
                 <h3 className="font-semibold">Waiting for Authorization...</h3>
                 <p className="text-sm text-muted-foreground">
-                  Please check your mobile device for the authorization link and complete the
-                  Digilocker authorization.
+                  {flowType === 'manager'
+                    ? 'Please check your mobile device for the authorization link and complete the Digilocker authorization.'
+                    : 'Please ask the client to check their mobile device for the authorization link and complete the Digilocker authorization.'}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  We&apos;ll automatically download your Aadhaar details once you authorize.
+                  We&apos;ll automatically download the Aadhaar details once authorized.
                 </p>
               </div>
+              {flowType === 'manager' && authUrl && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-center">
+                    Or click the link below to authorize:
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => window.open(authUrl, '_blank')}
+                  >
+                    Open Digilocker Authorization
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 

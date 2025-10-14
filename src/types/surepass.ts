@@ -8,6 +8,7 @@ export type DigilockerInitializeResponse = {
   data?: {
     client_id: string;
     token: string;
+    url: string;
     expiry_seconds: number;
   };
   status_code?: number;

@@ -15,12 +15,19 @@ export const { POST } = serve<DLTestEligibilityPayload>(
   async (context) => {
     const { learningLicenseId, issueDate } = context.requestPayload;
 
-    // Calculate 30 days after LL issue date
+    // Calculate eligibility date (30 days after issue date)
     const issueDateObj = new Date(issueDate);
-    const eligibilityDate = new Date(issueDateObj.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const eligibilityDate = new Date(issueDateObj);
+    eligibilityDate.setDate(eligibilityDate.getDate() + 30);
 
-    // Sleep until 30 days after LL issue
-    await context.sleepUntil('wait-for-eligibility', eligibilityDate.getTime());
+    const now = Date.now();
+    const eligibilityTimestamp = eligibilityDate.getTime();
+
+    // Only wait if eligibility date hasn't been reached yet
+    if (eligibilityTimestamp > now) {
+      await context.sleepUntil('wait-for-eligibility', eligibilityTimestamp);
+    }
+    // If eligibility date has already passed, proceed immediately
 
     // Send eligibility notification
     await context.run('notify-dl-eligibility', async () => {
