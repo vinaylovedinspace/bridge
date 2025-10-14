@@ -10,6 +10,7 @@ import { ClientTable } from '@/db/schema/client/columns';
 import { LearningLicenseTable } from '@/db/schema/learning-licenses/columns';
 import { DrivingLicenseTable } from '@/db/schema/driving-licenses/columns';
 import { eq } from 'drizzle-orm';
+import { triggerDLTestEligibilityWorkflow } from '@/lib/upstash/trigger-dl-test-eligibility';
 
 export const updateClientPersonalInfo = async (
   clientId: string,
@@ -121,15 +122,31 @@ export const updateClientLearningLicense = async (
       where: eq(LearningLicenseTable.clientId, clientId),
     });
 
+    let licenseId: string;
+
     if (existingLicense) {
       // Update existing learning license
-      await db
+      const [updatedLicense] = await db
         .update(LearningLicenseTable)
         .set(learningLicenseData)
-        .where(eq(LearningLicenseTable.clientId, clientId));
+        .where(eq(LearningLicenseTable.clientId, clientId))
+        .returning();
+      licenseId = updatedLicense.id;
     } else {
       // Create new learning license
-      await db.insert(LearningLicenseTable).values(learningLicenseData);
+      const [newLicense] = await db
+        .insert(LearningLicenseTable)
+        .values(learningLicenseData)
+        .returning();
+      licenseId = newLicense.id;
+    }
+
+    // Trigger DL test eligibility workflow when LL issue date is set
+    if (learningLicenseData.issueDate) {
+      await triggerDLTestEligibilityWorkflow({
+        learningLicenseId: licenseId,
+        issueDate: learningLicenseData.issueDate,
+      });
     }
 
     return {

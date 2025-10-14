@@ -9,6 +9,7 @@ import {
 import { LearningLicenseTable } from '@/db/schema/learning-licenses/columns';
 import { DrivingLicenseTable } from '@/db/schema/driving-licenses/columns';
 import { eq, and, isNull } from 'drizzle-orm';
+import { triggerDLTestEligibilityWorkflow } from '@/lib/upstash/trigger-dl-test-eligibility';
 
 export const upsertClientInDB = async (data: typeof ClientTable.$inferInsert) => {
   // If client ID is provided (edit mode), update the existing client by ID
@@ -56,6 +57,14 @@ export const upsertLearningLicenseInDB = async (data: typeof LearningLicenseTabl
       },
     })
     .returning();
+
+  // Trigger DL test eligibility workflow when LL is issued
+  if (license.issueDate) {
+    await triggerDLTestEligibilityWorkflow({
+      learningLicenseId: license.id,
+      issueDate: license.issueDate,
+    });
+  }
 
   return {
     license,
