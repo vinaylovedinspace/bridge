@@ -132,7 +132,7 @@ export const PersonalInfoStep = () => {
               name="client.aadhaarNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>Aadhaar Number</FormLabel>
+                  <FormLabel>Aadhaar Number</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="xxxx xxxx xxxx"

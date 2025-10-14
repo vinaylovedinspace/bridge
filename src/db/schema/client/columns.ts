@@ -54,7 +54,7 @@ export const ClientTable = pgTable(
     lastName: text('last_name').notNull(),
     clientCode: text('client_code').notNull(),
 
-    aadhaarNumber: text('aadhaar_number').notNull(),
+    aadhaarNumber: text('aadhaar_number'),
 
     photoUrl: text('photo_url'),
     signatureUrl: text('signature_url'),
@@ -105,17 +105,9 @@ export const ClientTable = pgTable(
       table.phoneNumber,
       table.tenantId
     ),
-    aadhaarNumberTenantUnique: unique('aadhaar_number_tenant_unique').on(
-      table.aadhaarNumber,
-      table.tenantId
-    ),
     // Dashboard performance index
     branchCreatedAtIdx: index('idx_clients_branch_created').on(table.branchId, table.createdAt),
     // Duplicate check performance indexes (composite with tenantId for scoped lookups)
     phoneNumberTenantIdx: index('idx_clients_phone_tenant').on(table.phoneNumber, table.tenantId),
-    aadhaarNumberTenantIdx: index('idx_clients_aadhaar_tenant').on(
-      table.aadhaarNumber,
-      table.tenantId
-    ),
   })
 );
