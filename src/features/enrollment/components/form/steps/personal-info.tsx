@@ -30,14 +30,18 @@ import {
 } from '@/db/schema/client/columns';
 import { TypographyH5, TypographyP } from '@/components/ui/typography';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Info } from 'lucide-react';
 import { DuplicateClientModal } from '@/components/duplicate-client-modal';
 import { useDuplicateClientCheck } from '@/features/enrollment/hooks/use-duplicate-client-check';
+import { DigilockerModal } from './digilocker-modal';
+import type { ParsedAadhaarData } from '@/types/surepass';
+import { Button } from '@/components/ui/button';
 
 export const PersonalInfoStep = () => {
   const methods = useFormContext<AdmissionFormValues>();
   const { control, setValue, clearErrors } = methods;
+  const [showDigilockerModal, setShowDigilockerModal] = React.useState(false);
 
   // Use custom hook for phone and Aadhaar number validation
   const {
@@ -49,6 +53,47 @@ export const PersonalInfoStep = () => {
     handleUseExisting,
     handleContinueWithNew,
   } = useDuplicateClientCheck(setValue, clearErrors);
+
+  // Handle Digilocker success
+  const handleDigilockerSuccess = (data: ParsedAadhaarData, aadhaarPdfUrl?: string) => {
+    // Auto-fill form fields with Aadhaar data
+    setValue('client.firstName', data.firstName);
+    setValue('client.middleName', data.middleName || '');
+    setValue('client.lastName', data.lastName);
+    setValue('client.birthDate', data.birthDate);
+    setValue('client.gender', data.gender);
+    setValue('client.aadhaarNumber', data.aadhaarNumber || '');
+    setValue('client.addressLine1', data.addressLine1);
+    setValue('client.addressLine2', data.addressLine2);
+    setValue('client.addressLine3', data.addressLine3 || '');
+    setValue('client.city', data.city);
+    setValue('client.state', data.state);
+    setValue('client.pincode', data.pincode);
+    setValue('client.permanentAddressLine1', data.permanentAddressLine1);
+    setValue('client.permanentAddressLine2', data.permanentAddressLine2);
+    setValue('client.permanentAddressLine3', data.permanentAddressLine3 || '');
+    setValue('client.permanentCity', data.permanentCity);
+    setValue('client.permanentState', data.permanentState);
+    setValue('client.permanentPincode', data.permanentPincode);
+    setValue('client.isCurrentAddressSameAsPermanentAddress', true);
+
+    if (data.guardianFirstName) {
+      setValue('client.guardianFirstName', data.guardianFirstName);
+    }
+    if (data.guardianMiddleName) {
+      setValue('client.guardianMiddleName', data.guardianMiddleName);
+    }
+    if (data.guardianLastName) {
+      setValue('client.guardianLastName', data.guardianLastName);
+    }
+
+    if (data.photoUrl) {
+      setValue('client.photoUrl', data.photoUrl);
+    }
+
+    // Clear any validation errors
+    clearErrors();
+  };
 
   // Watch for changes in the checkbox and address fields
   const isSameAddress = useWatch({
@@ -152,6 +197,16 @@ export const PersonalInfoStep = () => {
                 </FormItem>
               )}
             />
+            <div className="flex items-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowDigilockerModal(true)}
+                className="w-full"
+              >
+                Auto-fill via Digilocker
+              </Button>
+            </div>
           </div>
           <FormField
             control={control}
@@ -751,6 +806,13 @@ export const PersonalInfoStep = () => {
         matchedField={existingClient?.matchedField}
         onUseExisting={handleUseExisting}
         onContinueWithNew={handleContinueWithNew}
+      />
+
+      {/* Digilocker Modal */}
+      <DigilockerModal
+        open={showDigilockerModal}
+        onOpenChange={setShowDigilockerModal}
+        onSuccess={handleDigilockerSuccess}
       />
     </div>
   );

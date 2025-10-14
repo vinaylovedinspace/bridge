@@ -6,6 +6,8 @@ export const env = createEnv({
     POSTGRES_URL: z.string().min(1),
     CLERK_SECRET_KEY: z.string().min(1),
     CRON_SECRET: z.string().min(1),
+    SUREPASS_API_TOKEN: z.string().min(1),
+    SUREPASS_BASE_URL: z.string().url().default('https://sandbox.surepass.io'),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),

@@ -50,3 +50,6 @@ export * from './notifications/relations';
 
 export * from './expenses/columns';
 export * from './expenses/relations';
+
+export * from './digilocker-verifications/columns';
+export * from './digilocker-verifications/relations';

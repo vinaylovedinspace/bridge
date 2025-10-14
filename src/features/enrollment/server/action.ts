@@ -54,6 +54,19 @@ export const upsertClient = async (
       birthDate: birthDateString, // Convert to YYYY-MM-DD string
     });
 
+    // If client was created (not updated) and has phone number, check for Aadhaar document
+    if (clientId && !data.id && data.phoneNumber) {
+      try {
+        const aadhaarPdfUrl = await getAadhaarPdfUrlByPhoneNumber(data.phoneNumber, tenantId);
+        if (aadhaarPdfUrl) {
+          await saveAadhaarDocument(clientId, aadhaarPdfUrl);
+        }
+      } catch (docError) {
+        console.error('Error saving Aadhaar document:', docError);
+        // Don't fail the entire operation if document save fails
+      }
+    }
+
     return {
       error: false,
       message: 'Success',
