@@ -48,7 +48,7 @@ export const fillForm5b = async (clientId: string) => {
         form.getTextField(form5bFieldNames.address).setText(fullAddress);
 
         // Aadhaar number
-        form.getTextField(form5bFieldNames.aadhaar_number).setText(client.aadhaarNumber);
+        form.getTextField(form5bFieldNames.aadhaar_number).setText(client.aadhaarNumber ?? '');
 
         // Client code
         form

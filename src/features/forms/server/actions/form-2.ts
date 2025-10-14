@@ -47,7 +47,7 @@ export async function fillForm2Fields(
   });
 
   // Personal details
-  form.getTextField(form2FieldNames.aadhaar_card_number).setText(client.aadhaarNumber);
+  form.getTextField(form2FieldNames.aadhaar_card_number).setText(client.aadhaarNumber ?? '');
   form.getTextField(form2FieldNames.first_name).setText(client.firstName.toUpperCase());
   if (client.middleName)
     form.getTextField(form2FieldNames.middle_name).setText(client.middleName.toUpperCase());

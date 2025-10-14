@@ -236,7 +236,7 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
                   Digilocker authorization.
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  We'll automatically download your Aadhaar details once you authorize.
+                  We&apos;ll automatically download your Aadhaar details once you authorize.
                 </p>
               </div>
             </div>

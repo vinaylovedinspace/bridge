@@ -26,6 +26,8 @@ import { hasPlanChanged, handleSessionGeneration } from '../lib/plan-helpers';
 import { getNextPlanCode } from '@/db/utils/plan-code';
 import { getNextClientCode } from '@/db/utils/client-code';
 import { upsertPaymentWithOptionalTransaction } from '@/server/action/payments';
+import { getAadhaarPdfUrlByPhoneNumber } from '@/server/db/digilocker-verifications';
+import { saveAadhaarDocument } from '@/server/db/client-documents';
 
 export const upsertClient = async (
   unsafeData: z.infer<typeof clientSchema>
