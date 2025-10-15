@@ -17,6 +17,7 @@ import {
   findExistingPlanInDB,
   upsertPlanWithPaymentIdInDB,
   getVehicleRentAmount,
+  deleteClientInDB,
 } from './db';
 import { formatDateToYYYYMMDD, formatTimeString } from '@/lib/date-time-utils';
 import { clientSchema } from '@/types/zod/client';
@@ -274,5 +275,23 @@ export const upsertPlanWithPayment = async (
     const message =
       error instanceof Error ? error.message : 'Failed to save plan and payment information';
     return { error: true, message };
+  }
+};
+
+export const softDeleteClient = async (clientId: string): ActionReturnType => {
+  try {
+    if (!clientId) {
+      return { error: true, message: 'Client ID is required' };
+    }
+
+    await deleteClientInDB(clientId);
+
+    return {
+      error: false,
+      message: 'Enrollment discarded successfully',
+    };
+  } catch (error) {
+    console.error('Error soft deleting client:', error);
+    return { error: true, message: 'Failed to discard enrollment' };
   }
 };

@@ -14,6 +14,7 @@ import { AdmissionFormStepKey } from '../../types';
 import { FormNavigation } from '@/components/ui/form-navigation';
 import { ClientType } from '../../server/db';
 import { EnrollmentFormSteps } from './form-steps';
+import { softDeleteClient } from '../../server/action';
 
 type MultistepFormProps = {
   existingClient?: ClientType;
@@ -70,6 +71,22 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
     }
   };
 
+  const handleDiscard = async () => {
+    const clientId = getValues('client.id');
+    if (clientId) {
+      const result = await softDeleteClient(clientId);
+      if (result.error) {
+        toast.error(result.message);
+      } else {
+        toast.success(result.message);
+      }
+    }
+  };
+
+  const handleSaveAndExit = async () => {
+    router.push('/enrollments');
+  };
+
   return (
     <FormProvider {...formMethods}>
       <div className="h-full flex flex-col gap-10" data-testid={`admission-step-${currentStep}`}>
@@ -89,6 +106,8 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
           onCancel={() => router.back()}
           onPrevious={goToPrevious}
           onNext={handleNext}
+          onDiscard={handleDiscard}
+          onSaveAndExit={handleSaveAndExit}
         />
       </div>
     </FormProvider>

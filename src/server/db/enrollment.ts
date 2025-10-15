@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { PlanTable, ClientTable } from '@/db/schema';
 import { auth } from '@clerk/nextjs/server';
-import { eq, desc, and, or, ilike } from 'drizzle-orm';
+import { eq, desc, and, or, ilike, isNull } from 'drizzle-orm';
 import { getBranchConfig } from '@/server/action/branch';
 import { isPaymentOverdue } from '@/lib/payment/is-payment-overdue';
 
@@ -16,6 +16,7 @@ const _getEnrollments = async (branchId: string, search?: string, paymentStatus?
       .where(
         and(
           eq(ClientTable.branchId, branchId),
+          isNull(ClientTable.deletedAt),
           or(
             ilike(ClientTable.firstName, `%${search}%`),
             ilike(ClientTable.lastName, `%${search}%`),

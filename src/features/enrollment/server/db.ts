@@ -393,3 +393,43 @@ export const getVehicleRentAmount = async (vehicleId: string) => {
     columns: { rent: true },
   });
 };
+
+export const deleteClientInDB = async (clientId: string) => {
+  const now = new Date();
+
+  // Soft delete client
+  await db
+    .update(ClientTable)
+    .set({
+      deletedAt: now,
+      updatedAt: now,
+    })
+    .where(eq(ClientTable.id, clientId));
+
+  // Soft delete learning license if exists
+  await db
+    .update(LearningLicenseTable)
+    .set({
+      deletedAt: now,
+      updatedAt: now,
+    })
+    .where(eq(LearningLicenseTable.clientId, clientId));
+
+  // Soft delete driving license if exists
+  await db
+    .update(DrivingLicenseTable)
+    .set({
+      deletedAt: now,
+      updatedAt: now,
+    })
+    .where(eq(DrivingLicenseTable.clientId, clientId));
+
+  // Soft delete plan if exists
+  await db
+    .update(PlanTable)
+    .set({
+      deletedAt: now,
+      updatedAt: now,
+    })
+    .where(eq(PlanTable.clientId, clientId));
+};
