@@ -1,4 +1,3 @@
-// WhatsApp Cloud API
 export { sendWhatsAppMessage } from './cloud';
 
 // Message generation

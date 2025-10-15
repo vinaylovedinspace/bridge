@@ -1,3 +1,4 @@
+import { TenantTable } from '@/db/schema';
 import { format } from 'date-fns';
 
 export function generateOnboardingMessage(student: {
@@ -14,7 +15,7 @@ export function generateOnboardingMessage(student: {
 
   return `Dear ${student.name},
 
-Welcome to our Driving School! 🚗
+Welcome to ${TenantTable.name} Driving School! 🚗
 
 We're excited to begin your driving journey with us.
 
@@ -24,13 +25,6 @@ We're excited to begin your driving journey with us.
 ${scheduleDetails}${moreSessionsText}
 
 Total Sessions: ${student.totalSessions}
-
-━━━━━━━━━━━━━━━━━━━━━━
-📱 IMPORTANT REMINDERS
-━━━━━━━━━━━━━━━━━━━━━━
-✓ Arrive 10 minutes early
-✓ Bring your learning license
-✓ Wear comfortable footwear
 
 For any questions, reply to this message.
 
@@ -157,6 +151,7 @@ Best regards,
 Your Driving School Team`;
 }
 
+// TODO: Remove this function after testing, we dont need double onboarding message.
 export function generateComprehensiveOnboardingMessage(student: {
   name: string;
   schedule: { date: Date; time: string }[];
@@ -223,7 +218,7 @@ Please complete the payment to confirm your enrollment.`
     : '';
 
   return `━━━━━━━━━━━━━━━━━━━━━━
-🎉 WELCOME TO OUR DRIVING SCHOOL!
+🎉 WELCOME TO ${TenantTable.name} DRIVING SCHOOL!
 ━━━━━━━━━━━━━━━━━━━━━━
 
 Dear ${student.name},
@@ -254,16 +249,6 @@ ${!isPaymentLink ? `Date: ${dateFormatted} at ${timeFormatted}` : ''}
 
 ${!isPaymentLink ? `Status: ${paymentStatus}` : 'Status: ⏳ Payment Pending'}${paymentLinkSection}
 
-━━━━━━━━━━━━━━━━━━━━━━
-📱 IMPORTANT REMINDERS
-━━━━━━━━━━━━━━━━━━━━━━
-✓ Arrive 10 minutes before your session
-✓ Bring your learning license (if applicable)
-✓ Wear comfortable footwear
-✓ Carry a water bottle
-✓ Be punctual for all sessions
-
-━━━━━━━━━━━━━━━━━━━━━━
 
 ❓ Need to reschedule or have questions?
 Reply to this message or call us directly.
