@@ -179,6 +179,7 @@ export async function updateBranchSettings(branchId: string, settings: BranchSet
         operatingHours: validatedSettings.operatingHours,
         defaultRtoOffice: validatedSettings.defaultRtoOffice || null,
         licenseServiceCharge: validatedSettings.licenseServiceCharge || 500,
+        digilockerFlowPreference: validatedSettings.digilockerFlowPreference || 'manager',
         updatedAt: new Date(),
       })
       .where(eq(BranchTable.id, branchId));

@@ -11,6 +11,7 @@ export const _getBranchConfig = async (orgId: string) => {
       operatingHours: true,
       licenseServiceCharge: true,
       defaultRtoOffice: true,
+      digilockerFlowPreference: true,
       tenantId: true,
     },
   });
@@ -29,6 +30,7 @@ export const getBranchConfigWithTenant = async () => {
       operatingHours: true,
       licenseServiceCharge: true,
       defaultRtoOffice: true,
+      digilockerFlowPreference: true,
     },
     with: {
       tenant: true,

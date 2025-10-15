@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Calendar, Clock, MapPin, IndianRupee } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Calendar, Clock, MapPin, IndianRupee, Smartphone } from 'lucide-react';
 import { RTOOfficeSelect } from '@/components/ui/rto-office-select';
 import { toast } from 'sonner';
 import { branchSettingsSchema, type BranchSettings } from '../types';
@@ -38,6 +39,7 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
       operatingHours: initialData?.operatingHours || DEFAULT_OPERATING_HOURS,
       defaultRtoOffice: initialData?.defaultRtoOffice || '',
       licenseServiceCharge: initialData?.licenseServiceCharge || 500,
+      digilockerFlowPreference: initialData?.digilockerFlowPreference || 'manager',
     },
   });
 
@@ -71,6 +73,7 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
           operatingHours: data.operatingHours,
           defaultRtoOffice: data.defaultRtoOffice || null,
           licenseServiceCharge: data.licenseServiceCharge ?? 0,
+          digilockerFlowPreference: data.digilockerFlowPreference || 'manager',
         }));
 
         toast.success(result.message);
@@ -222,6 +225,48 @@ export const SettingsForm = ({ branchId, initialData }: SettingsFormProps) => {
               />
               {errors.licenseServiceCharge && (
                 <p className="text-sm text-destructive">{errors.licenseServiceCharge.message}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Digilocker Flow Preference Configuration */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
+              <Smartphone className="h-5 w-5" />
+              Digilocker Auto-fill Preference
+            </CardTitle>
+            <CardDescription>
+              Set who will complete the Digilocker verification during admission
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-4">
+              <Label>Default Flow Type</Label>
+              <RadioGroup
+                value={watch('digilockerFlowPreference')}
+                onValueChange={(value) =>
+                  setValue('digilockerFlowPreference', value as 'manager' | 'client')
+                }
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="manager" id="manager-flow" />
+                  <Label htmlFor="manager-flow" className="font-normal cursor-pointer">
+                    Manager
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="client" id="client-flow" />
+                  <Label htmlFor="client-flow" className="font-normal cursor-pointer">
+                    Client
+                  </Label>
+                </div>
+              </RadioGroup>
+              {errors.digilockerFlowPreference && (
+                <p className="text-sm text-destructive">
+                  {errors.digilockerFlowPreference.message}
+                </p>
               )}
             </div>
           </CardContent>

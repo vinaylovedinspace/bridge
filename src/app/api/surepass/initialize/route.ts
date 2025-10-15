@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: DigilockerInitializeRequest = await request.json();
-    const { mobile, tenantId, branchId } = body;
+    const { mobile, tenantId, branchId, sendSMS } = body;
 
     if (!mobile || !/^\d{10}$/.test(mobile)) {
       return NextResponse.json(
@@ -38,8 +38,9 @@ export async function POST(request: NextRequest) {
         data: {
           signup_flow: false,
           mobile,
-          send_sms: true,
+          send_sms: sendSMS ?? false,
           aadhaar_xml: true,
+          skip_main_screen: true,
           prefill_options: {
             mobile_number: mobile,
           },
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
       success: true,
       client_id: data.data.client_id,
       token: data.data.token,
+      url: data.data.url,
       expiry_seconds: data.data.expiry_seconds,
       message: data.message || 'SMS sent successfully. Please check your mobile.',
     });

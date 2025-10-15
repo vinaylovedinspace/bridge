@@ -2,6 +2,7 @@ export type DigilockerInitializeRequest = {
   mobile: string;
   tenantId: string;
   branchId: string;
+  sendSMS?: boolean;
 };
 
 export type DigilockerInitializeResponse = {

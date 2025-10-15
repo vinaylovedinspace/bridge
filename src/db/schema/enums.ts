@@ -10,3 +10,8 @@ export const LicenseClassEnum = pgEnum('license_classes', [
   'E_CART',
   'OTHERS',
 ]);
+
+export const DigilockerFlowPreferenceEnum = pgEnum('digilocker_flow_preference', [
+  'manager',
+  'client',
+]);

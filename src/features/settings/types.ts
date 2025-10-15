@@ -8,6 +8,7 @@ export const branchSettingsSchema = z.object({
   }),
   defaultRtoOffice: z.string().optional(),
   licenseServiceCharge: z.number().min(0).max(99999).optional(),
+  digilockerFlowPreference: z.enum(['manager', 'client']).optional(),
 });
 
 export type BranchSettings = z.infer<typeof branchSettingsSchema>;

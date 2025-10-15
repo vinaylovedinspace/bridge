@@ -80,9 +80,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error checking Digilocker status:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', success: false },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error', success: false }, { status: 500 });
   }
 }
