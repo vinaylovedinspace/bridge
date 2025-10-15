@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAdmissionStepNavigation, ProgressBar } from '../progress-bar/progress-bar';
 import { getMultistepAdmissionStepValidationFields, getStepData } from '../../lib/utils';
-import { useUpsertEnrollmentForm } from '../../hooks/submission-handlers/use-upsert-enrollment-form';
+import { useUpsertEnrollmentForm } from '../../hooks/use-upsert-enrollment-form';
 import { useAddAdmissionForm } from '../../hooks/use-admission-form';
 import { AdmissionFormStepKey } from '../../types';
 import { FormNavigation } from '@/components/ui/form-navigation';
@@ -104,7 +104,10 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
           isFirstStep={isFirstStep}
           isLastStep={isLastStep}
           isSubmitting={isSubmitting}
-          onCancel={() => router.back()}
+          onCancel={() => {
+            router.refresh();
+            router.back();
+          }}
           onPrevious={goToPrevious}
           onNext={handleNext}
           onDiscard={handleDiscard}

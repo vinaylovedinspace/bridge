@@ -14,7 +14,7 @@ import {
   getStepData,
 } from '@/features/enrollment/lib/utils';
 import { useEditAdmissionForm } from '../../hooks/use-admission-form';
-import { useUpsertEnrollmentForm } from '../../hooks/submission-handlers/use-upsert-enrollment-form';
+import { useUpsertEnrollmentForm } from '../../hooks/use-upsert-enrollment-form';
 import { useUnsavedChanges } from '../../hooks/use-unsaved-changes';
 import { FormNavigation } from '@/components/ui/form-navigation';
 import { UnsavedChangesDialog } from '@/components/ui/unsaved-changes-dialog';
@@ -121,7 +121,10 @@ export const EditAdmissionForm = ({ enrollment }: EditAdmissionFormProps) => {
           isFirstStep={isFirstStep}
           isLastStep={isLastStep}
           isSubmitting={isSubmitting}
-          onCancel={() => router.back()}
+          onCancel={() => {
+            router.refresh();
+            router.back();
+          }}
           onPrevious={goToPrevious}
           onNext={handleNext}
         />

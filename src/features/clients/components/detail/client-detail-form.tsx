@@ -133,7 +133,10 @@ export const ClientDetailForm = ({ client }: ClientDetailFormProps) => {
           isSubmitting={isSubmitting}
           onPrevious={goToPrevious}
           onNext={handleNext}
-          onCancel={() => router.back()}
+          onCancel={() => {
+            router.refresh();
+            router.back();
+          }}
         />
 
         <UnsavedChangesDialog

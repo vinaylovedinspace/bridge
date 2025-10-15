@@ -22,7 +22,7 @@ import { addVehicle, updateVehicle } from '../server/action';
 import { vehicleFormSchema } from '../schemas/vehicles';
 import { Vehicle } from '@/server/db/vehicle';
 import { DatePicker } from '@/components/ui/date-picker';
-import { formatDateToYYYYMMDD, parseYYYYMMDDToDate } from '@/lib/date-time-utils';
+import { formatDateToYYYYMMDD, parseDate } from '@/lib/date-time-utils';
 import { useRouter } from 'next/navigation';
 
 export function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
@@ -31,11 +31,12 @@ export function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
     defaultValues: {
       name: vehicle?.name || '',
       number: vehicle?.number || '',
-      pucExpiry: vehicle?.pucExpiry,
-      insuranceExpiry: vehicle?.insuranceExpiry,
-      registrationExpiry: vehicle?.registrationExpiry,
+      pucExpiry: parseDate(vehicle?.pucExpiry),
+      insuranceExpiry: parseDate(vehicle?.insuranceExpiry),
+      registrationExpiry: parseDate(vehicle?.registrationExpiry),
       rent: vehicle?.rent || 0,
     },
+    mode: 'onChange',
   });
 
   const [isPending, setIsPending] = useState(false);
@@ -115,16 +116,15 @@ export function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
             <FormField
               control={form.control}
               name="pucExpiry"
-              render={({ field }) => (
+              render={() => (
                 <FormItem>
                   <FormLabel>PUC Expiry</FormLabel>
                   <FormControl>
                     <DatePicker
-                      selected={parseYYYYMMDDToDate(field.value || null)}
-                      onChange={(date) => field.onChange(formatDateToYYYYMMDD(date))}
-                      placeholderText="Select expiry date"
+                      name="pucExpiry"
+                      control={form.control}
+                      minDate={new Date()}
                       maxDate={new Date(2100, 0, 1)}
-                      disabled={undefined}
                     />
                   </FormControl>
                   <FormMessage />
@@ -135,16 +135,15 @@ export function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
             <FormField
               control={form.control}
               name="insuranceExpiry"
-              render={({ field }) => (
+              render={() => (
                 <FormItem>
                   <FormLabel>Insurance Expiry</FormLabel>
                   <FormControl>
                     <DatePicker
-                      selected={parseYYYYMMDDToDate(field.value || null)}
-                      onChange={(date) => field.onChange(formatDateToYYYYMMDD(date))}
-                      placeholderText="Select expiry date"
+                      name="insuranceExpiry"
+                      control={form.control}
+                      minDate={new Date()}
                       maxDate={new Date(2100, 0, 1)}
-                      disabled={undefined}
                     />
                   </FormControl>
                   <FormMessage />
@@ -155,16 +154,15 @@ export function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
             <FormField
               control={form.control}
               name="registrationExpiry"
-              render={({ field }) => (
+              render={() => (
                 <FormItem>
                   <FormLabel>Registration Expiry</FormLabel>
                   <FormControl>
                     <DatePicker
-                      selected={parseYYYYMMDDToDate(field.value || null)}
-                      onChange={(date) => field.onChange(formatDateToYYYYMMDD(date))}
-                      placeholderText="Select expiry date"
+                      name="registrationExpiry"
+                      control={form.control}
+                      minDate={new Date()}
                       maxDate={new Date(2100, 0, 1)}
-                      disabled={undefined}
                     />
                   </FormControl>
                   <FormMessage />

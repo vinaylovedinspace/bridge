@@ -12,10 +12,5 @@ export default async function EditExpensePage({ params }: { params: Promise<{ id
     notFound();
   }
 
-  return (
-    <div>
-      <TypographyH4 className="pb-14">Edit Expense</TypographyH4>
-      <ExpenseForm expense={expense} staff={staff} />
-    </div>
-  );
+  return <ExpenseForm expense={expense} staff={staff} />;
 }

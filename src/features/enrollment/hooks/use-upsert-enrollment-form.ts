@@ -191,10 +191,16 @@ export const useUpsertEnrollmentForm = ({
       }
 
       // Show success toast for edit mode (create mode shows it only on last step)
-      if (isEditMode || isLastStep) {
-        toast.success(result?.message || 'Information saved successfully', {
-          position: 'top-right',
-        });
+      if (isLastStep) {
+        if (isEditMode) {
+          toast.success('Information updated successfully', {
+            position: 'top-center',
+          });
+        } else {
+          toast.success('Admission completed successfully!', {
+            position: 'top-center',
+          });
+        }
       }
 
       return true;

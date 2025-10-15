@@ -6,8 +6,8 @@ import { Plus } from 'lucide-react';
 export default function ExpensesTableLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="space-y-10">
-      <TypographyH4>Expenses</TypographyH4>
-      <div className="flex justify-end items-center">
+      <div className="flex justify-between items-center">
+        <TypographyH4>Expenses</TypographyH4>
         <Link href="/expenses/add" id="add-expense">
           <Button variant="outline">
             <Plus className="h-3 w-3" />
