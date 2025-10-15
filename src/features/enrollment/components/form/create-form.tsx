@@ -79,12 +79,13 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
         toast.error(result.message);
       } else {
         toast.success(result.message);
+        router.back();
       }
     }
   };
 
   const handleSaveAndExit = async () => {
-    router.push('/enrollments');
+    router.back();
   };
 
   return (
