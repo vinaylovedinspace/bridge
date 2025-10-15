@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { format, addDays } from 'date-fns';
+import { format, addDays, isToday } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, X } from 'lucide-react';
@@ -38,6 +38,8 @@ export const SessionAvailabilityModal = ({
   const timeSlots = generateTimeSlots(branchOperatingHours);
 
   const selectedDateStr = format(selectedDate ?? new Date(), 'yyyy-MM-dd');
+  const isSelectedDateToday = selectedDate ? isToday(selectedDate) : false;
+  const currentTime = new Date();
 
   // Get session details for each time slot on the selected date
   const sessionsByTimeSlot = sessions
@@ -213,8 +215,24 @@ export const SessionAvailabilityModal = ({
                   const sessionForSlot = availabilityDetails.conflictingSession;
                   const isCurrentClient = sessionForSlot?.clientId === currentClientId;
 
+                  // Check if this time slot is in the past (only for today's date)
+                  const isPastTimeSlot =
+                    isSelectedDateToday &&
+                    (() => {
+                      const [hours, minutes] = slot.value.split(':').map(Number);
+                      const slotTime = new Date(currentTime);
+                      slotTime.setHours(hours, minutes, 0, 0);
+                      return slotTime < currentTime;
+                    })();
+
                   let bgColor, borderColor, textColor, hoverColor;
-                  if (isFullyAvailable) {
+                  if (isPastTimeSlot) {
+                    // Past time slots - greyed out
+                    bgColor = 'bg-gray-100';
+                    borderColor = 'border-gray-300';
+                    textColor = 'text-gray-400';
+                    hoverColor = '';
+                  } else if (isFullyAvailable) {
                     bgColor = 'bg-green-50';
                     borderColor = 'border-green-200';
                     textColor = 'text-green-800';
@@ -236,7 +254,7 @@ export const SessionAvailabilityModal = ({
                     hoverColor = '';
                   }
 
-                  const canSelect = isFullyAvailable || isPartiallyAvailable;
+                  const canSelect = !isPastTimeSlot && (isFullyAvailable || isPartiallyAvailable);
 
                   return (
                     <div
