@@ -210,6 +210,8 @@ export async function downloadAadhaarData(clientId: string): Promise<DownloadAad
 
     let aadhaarPdfUrl: string | undefined;
 
+    console.log(documentData);
+
     if (documentData.data?.download_url) {
       // Fetch the document from the download URL
       const documentResponse = await fetch(documentData.data.download_url);

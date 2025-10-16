@@ -54,7 +54,7 @@ export const ClientTable = pgTable(
     lastName: text('last_name').notNull(),
     clientCode: text('client_code').notNull(),
 
-    aadhaarNumber: text('aadhaar_number'),
+    aadhaarNumber: text('aadhaar_number').notNull(),
 
     photoUrl: text('photo_url'),
     signatureUrl: text('signature_url'),

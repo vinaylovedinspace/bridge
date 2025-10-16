@@ -206,9 +206,9 @@ export const PersonalInfoStep = () => {
                 type="button"
                 variant="outline"
                 onClick={() => setShowDigilockerModal(true)}
-                className="w-full"
+                className="w-1/2"
               >
-                Auto-fill via Digilocker
+                Auto-fill
               </Button>
             </div>
           </div>

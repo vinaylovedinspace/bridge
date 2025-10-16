@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ParsedAadhaarData } from '@/types/surepass';
@@ -22,6 +21,9 @@ import {
   checkDigilockerStatus,
   downloadAadhaarData,
 } from '@/features/enrollment/server/digilocker-actions';
+import { useFormContext } from 'react-hook-form';
+import type { AdmissionFormValues } from '@/features/enrollment/types';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 type DigilockerModalProps = {
   open: boolean;
@@ -33,7 +35,8 @@ type VerificationStep = 'input' | 'waiting' | 'downloading' | 'success' | 'error
 
 export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerModalProps) {
   const branchConfig = useAtomValue(branchConfigAtom)!;
-  const [mobile, setMobile] = useState('');
+  const { control, watch } = useFormContext<AdmissionFormValues>();
+  const phoneNumber = watch('client.phoneNumber');
   const [clientId, setClientId] = useState<string | null>(null);
   const [step, setStep] = useState<VerificationStep>('input');
   const [errorMessage, setErrorMessage] = useState('');
@@ -43,7 +46,6 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const resetModal = () => {
-    setMobile('');
     setClientId(null);
     setStep('input');
     setErrorMessage('');
@@ -65,7 +67,7 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
   }, []);
 
   const handleInitialize = async () => {
-    if (!mobile || !/^\d{10}$/.test(mobile)) {
+    if (!phoneNumber || !/^\d{10}$/.test(phoneNumber)) {
       toast.error('Please enter a valid 10-digit mobile number');
       return;
     }
@@ -82,7 +84,7 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
     try {
       const result = await initializeDigilocker({
         sendSMS: flowType === 'client',
-        mobile,
+        mobile: phoneNumber,
         tenantId: branchConfig.tenantId,
         branchId: branchConfig.id,
       });
@@ -218,17 +220,28 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
 
         <div className="space-y-4 py-4">
           {step === 'input' && (
-            <div className="space-y-2">
-              <Label htmlFor="mobile">Aadhaar Registered Mobile Number</Label>
-              <Input
-                id="mobile"
-                placeholder="Enter 10-digit mobile number"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                maxLength={10}
-                autoFocus
-              />
-            </div>
+            <FormField
+              control={control}
+              name="client.phoneNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Aadhaar Registered Mobile Number</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter 10-digit mobile number"
+                      value={field.value || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        field.onChange(value);
+                      }}
+                      maxLength={10}
+                      autoFocus
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           )}
 
           {step === 'waiting' && (

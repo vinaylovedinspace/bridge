@@ -31,7 +31,6 @@ export const MultistepForm = () => {
       schoolWhatsappNumber: '',
       branches: [{ name: '' }], // Start with one empty branch
     },
-
     mode: 'onSubmit',
   });
 
