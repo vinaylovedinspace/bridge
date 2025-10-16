@@ -128,14 +128,14 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
       const result = await checkDigilockerStatus(client_id);
 
       if (result.success) {
-        if (result.completed && result.aadhaar_linked) {
+        if (result.completed) {
           // Authorization completed - automatically download data
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current);
             pollingIntervalRef.current = null;
           }
           toast.success('Authorization completed! Downloading your Aadhaar data...');
-          await handleDownload();
+          await handleDownload(client_id);
         } else if (result.failed) {
           // Authorization failed
           if (pollingIntervalRef.current) {
@@ -169,12 +169,7 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
     );
   };
 
-  const handleDownload = async () => {
-    if (!clientId) {
-      toast.error('Client ID not available. Please restart the process.');
-      return;
-    }
-
+  const handleDownload = async (clientId: string) => {
     setStep('downloading');
     setErrorMessage('');
 
@@ -195,7 +190,7 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
 
       // Wait a moment before closing to show success state
       setTimeout(() => {
-        onSuccess(result.data!, result.aadhaarPdfUrl);
+        onSuccess(result.data!);
         onOpenChange(false);
         resetModal();
       }, 1500);

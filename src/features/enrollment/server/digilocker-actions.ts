@@ -104,15 +104,12 @@ export async function checkDigilockerStatus(clientId: string) {
     }
 
     // Call Surepass Status API
-    const response = await fetch(
-      `${env.SUREPASS_BASE_URL}/api/v1/digilocker/status?client_id=${clientId}`,
-      {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${env.SUREPASS_API_TOKEN}`,
-        },
-      }
-    );
+    const response = await fetch(`${env.SUREPASS_BASE_URL}/api/v1/digilocker/status/${clientId}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${env.SUREPASS_API_TOKEN}`,
+      },
+    });
 
     const data = (await response.json()) as DigilockerStatusResponse;
 
@@ -138,6 +135,7 @@ export async function checkDigilockerStatus(clientId: string) {
       completed: data.data?.completed ?? false,
       failed: data.data?.failed ?? false,
       aadhaar_linked: data.data?.aadhaar_linked ?? false,
+      status: data.data?.status ?? 'PENDING',
       message: data.message,
     };
   } catch (error) {
@@ -167,7 +165,7 @@ export async function downloadAadhaarData(clientId: string): Promise<DownloadAad
 
     // Call Surepass Download Aadhaar API
     const response = await fetch(
-      `${env.SUREPASS_BASE_URL}/api/v1/digilocker/download-aadhaar?client_id=${clientId}`,
+      `${env.SUREPASS_BASE_URL}/api/v1/digilocker/download-aadhaar/${clientId}`,
       {
         method: 'GET',
         headers: {
@@ -207,7 +205,6 @@ export async function downloadAadhaarData(clientId: string): Promise<DownloadAad
     return {
       success: true,
       data: parsedData,
-      aadhaarPdfUrl: data.data.xml_url,
     };
   } catch (error) {
     console.error('Error downloading Aadhaar data:', error);
