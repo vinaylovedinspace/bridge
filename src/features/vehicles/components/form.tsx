@@ -22,7 +22,7 @@ import { addVehicle, updateVehicle } from '../server/action';
 import { vehicleFormSchema } from '../schemas/vehicles';
 import { Vehicle } from '@/server/db/vehicle';
 import { DatePicker } from '@/components/ui/date-picker';
-import { formatDateToYYYYMMDD, parseDate } from '@/lib/date-time-utils';
+import { parseDate } from '@/lib/date-time-utils';
 import { useRouter } from 'next/navigation';
 
 export function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {

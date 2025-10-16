@@ -17,6 +17,11 @@ import { toast } from 'sonner';
 import type { ParsedAadhaarData } from '@/types/surepass';
 import { useAtomValue } from 'jotai';
 import { branchConfigAtom } from '@/lib/atoms/branch-config';
+import {
+  initializeDigilocker,
+  checkDigilockerStatus,
+  downloadAadhaarData,
+} from '@/features/enrollment/server/digilocker-actions';
 
 type DigilockerModalProps = {
   open: boolean;
@@ -30,7 +35,6 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
   const branchConfig = useAtomValue(branchConfigAtom)!;
   const [mobile, setMobile] = useState('');
   const [clientId, setClientId] = useState<string | null>(null);
-  const [authUrl, setAuthUrl] = useState<string | null>(null);
   const [step, setStep] = useState<VerificationStep>('input');
   const [errorMessage, setErrorMessage] = useState('');
   const [flowType, setFlowType] = useState<'manager' | 'client'>(
@@ -41,7 +45,6 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
   const resetModal = () => {
     setMobile('');
     setClientId(null);
-    setAuthUrl(null);
     setStep('input');
     setErrorMessage('');
     setFlowType(branchConfig.digilockerFlowPreference || 'manager');
@@ -77,21 +80,15 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
     setErrorMessage('');
 
     try {
-      const response = await fetch('/api/surepass/initialize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sendSMS: flowType === 'client',
-          mobile,
-          tenantId: branchConfig.tenantId,
-          branchId: branchConfig.id,
-        }),
+      const result = await initializeDigilocker({
+        sendSMS: flowType === 'client',
+        mobile,
+        tenantId: branchConfig.tenantId,
+        branchId: branchConfig.id,
       });
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        setErrorMessage(data.error || 'Failed to initialize Digilocker');
+      if (!result.success) {
+        setErrorMessage(result.error || 'Failed to initialize Digilocker');
         setStep('error');
         // Close the blank window if it was opened
         if (newWindow) {
@@ -100,22 +97,21 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
         return;
       }
 
-      setClientId(data.client_id);
-      setAuthUrl(data.url);
+      setClientId(result.client_id!);
 
       // For manager mode, navigate the opened window to Digilocker URL
-      if (flowType === 'manager' && data.url) {
+      if (flowType === 'manager' && result.url) {
         if (newWindow) {
-          newWindow.location.href = data.url;
+          newWindow.location.href = result.url;
         }
         toast.success('Digilocker opened in new tab. Please complete the authorization.');
       } else {
         // For client mode, show SMS sent message
-        toast.success(data.message || 'SMS sent successfully. Please authorize on your device.');
+        toast.success(result.message || 'SMS sent successfully. Please authorize on your device.');
       }
 
       // Start polling for status (both modes)
-      startStatusPolling(data.client_id);
+      startStatusPolling(result.client_id!);
     } catch (error) {
       console.error('Error initializing Digilocker:', error);
       setErrorMessage('Failed to initialize Digilocker. Please try again.');
@@ -129,11 +125,10 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
 
   const checkStatus = async (client_id: string) => {
     try {
-      const response = await fetch(`/api/surepass/status?client_id=${client_id}`);
-      const data = await response.json();
+      const result = await checkDigilockerStatus(client_id);
 
-      if (response.ok && data.success) {
-        if (data.completed && data.status === 'completed') {
+      if (result.success) {
+        if (result.completed && result.aadhaar_linked) {
           // Authorization completed - automatically download data
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current);
@@ -141,7 +136,7 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
           }
           toast.success('Authorization completed! Downloading your Aadhaar data...');
           await handleDownload();
-        } else if (data.failed) {
+        } else if (result.failed) {
           // Authorization failed
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current);
@@ -184,15 +179,9 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
     setErrorMessage('');
 
     try {
-      const response = await fetch('/api/surepass/download-aadhaar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client_id: clientId }),
-      });
+      const result = await downloadAadhaarData(clientId);
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
+      if (!result.success) {
         setErrorMessage(
           result.error ||
             'Failed to download Aadhaar data. Please ensure you have authorized Digilocker access.'
@@ -206,7 +195,7 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
 
       // Wait a moment before closing to show success state
       setTimeout(() => {
-        onSuccess(result.data, result.aadhaarPdfUrl);
+        onSuccess(result.data!, result.aadhaarPdfUrl);
         onOpenChange(false);
         resetModal();
       }, 1500);

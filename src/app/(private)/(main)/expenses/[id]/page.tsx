@@ -1,4 +1,3 @@
-import { TypographyH4 } from '@/components/ui/typography';
 import { ExpenseForm } from '@/features/expenses/components/form';
 import { getExpense } from '@/server/db/expense';
 import { getStaff } from '@/server/db/staff';
