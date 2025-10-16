@@ -35,8 +35,9 @@ export const useUpsertEnrollmentForm = ({
   const isEditMode = !!enrollment;
 
   const handlePersonalStep = useCallback(
-    async (data: PersonalInfoValues): ActionReturnType => {
-      const result = await upsertClient(data);
+    async (data: PersonalInfoValues & { aadhaarPdfUrl?: string }): ActionReturnType => {
+      const { aadhaarPdfUrl, ...clientData } = data;
+      const result = await upsertClient(clientData, aadhaarPdfUrl);
 
       // In create mode, store clientId for later steps
       if (!isEditMode && setValue && result.clientId) {

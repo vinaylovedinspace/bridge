@@ -60,4 +60,7 @@ export const clientSchema = createInsertSchema(ClientTable, {
   // Make clientCode optional - it's auto-generated on create, preserved on update
   clientCode: z.string().optional(),
   id: z.string().optional(),
+}).extend({
+  // Extended field not in database, used for form handling
+  aadhaarPdfUrl: z.string().optional(),
 });

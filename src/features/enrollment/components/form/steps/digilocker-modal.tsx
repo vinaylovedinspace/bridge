@@ -190,7 +190,7 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
 
       // Wait a moment before closing to show success state
       setTimeout(() => {
-        onSuccess(result.data!);
+        onSuccess(result.data!, result.aadhaarPdfUrl);
         onOpenChange(false);
         resetModal();
       }, 1500);

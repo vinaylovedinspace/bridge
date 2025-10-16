@@ -10,8 +10,10 @@ import type {
   DigilockerStatusResponse,
   DigilockerDownloadAadhaarResponse,
   ParsedAadhaarData,
+  DownloadAadhaarDocumentResponse,
 } from '@/types/surepass';
 import { parseAadhaarDataToFormFields } from '@/lib/surepass/parse-aadhaar-data';
+import { put } from '@vercel/blob';
 
 type InitializeDigilockerParams = {
   mobile: string;
@@ -164,7 +166,7 @@ export async function downloadAadhaarData(clientId: string): Promise<DownloadAad
     }
 
     // Call Surepass Download Aadhaar API
-    const response = await fetch(
+    const fetchAadhaarXMLDataPromise = fetch(
       `${env.SUREPASS_BASE_URL}/api/v1/digilocker/download-aadhaar/${clientId}`,
       {
         method: 'GET',
@@ -174,16 +176,25 @@ export async function downloadAadhaarData(clientId: string): Promise<DownloadAad
       }
     );
 
-    const data = (await response.json()) as DigilockerDownloadAadhaarResponse;
+    // Call Surepass Download Aadhaar API
+    const fetchAadhaarDocumentPromise = await fetch(
+      `${env.SUREPASS_BASE_URL}/api/v1/digilocker/download-document/${clientId}/aadhaar`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${env.SUREPASS_API_TOKEN}`,
+        },
+      }
+    );
 
-    if (!response.ok || !data.success) {
-      return {
-        success: false,
-        error: data.message || data.error || 'Failed to download Aadhaar data',
-      };
-    }
+    const [fetchAadhaarXMLDataResponse, fetchAadhaarDocumentResponse] = await Promise.all([
+      fetchAadhaarXMLDataPromise,
+      fetchAadhaarDocumentPromise,
+    ]);
 
-    if (!data.data?.aadhaar_xml_data) {
+    const xmlData = (await fetchAadhaarXMLDataResponse.json()) as DigilockerDownloadAadhaarResponse;
+
+    if (!xmlData.data?.aadhaar_xml_data) {
       return {
         success: false,
         error: 'No Aadhaar data available',
@@ -191,20 +202,44 @@ export async function downloadAadhaarData(clientId: string): Promise<DownloadAad
     }
 
     // Parse the Aadhaar data
-    const parsedData = parseAadhaarDataToFormFields(data.data.aadhaar_xml_data);
+    const parsedData = parseAadhaarDataToFormFields(xmlData.data.aadhaar_xml_data);
 
-    // Update verification status
+    // Fetch and upload the Aadhaar document first
+    const documentData =
+      (await fetchAadhaarDocumentResponse.json()) as DownloadAadhaarDocumentResponse;
+
+    let aadhaarPdfUrl: string | undefined;
+
+    if (documentData.data?.download_url) {
+      // Fetch the document from the download URL
+      const documentResponse = await fetch(documentData.data.download_url);
+      if (documentResponse.ok) {
+        const documentBlob = await documentResponse.blob();
+
+        // Upload to Vercel Blob
+        const blob = await put(`aadhaar/${clientId}.pdf`, documentBlob, {
+          access: 'public',
+          contentType: documentData.data.mime_type || 'application/pdf',
+        });
+
+        aadhaarPdfUrl = blob.url;
+      }
+    }
+
+    // Update verification status with aadhaarPdfUrl
     await db
       .update(DigilockerVerificationTable)
       .set({
         status: 'COMPLETED',
-        aadhaarData: data.data.aadhaar_xml_data,
+        aadhaarData: xmlData.data.aadhaar_xml_data,
+        aadhaarPdfUrl,
       })
       .where(eq(DigilockerVerificationTable.clientId, clientId));
 
     return {
       success: true,
       data: parsedData,
+      aadhaarPdfUrl,
     };
   } catch (error) {
     console.error('Error downloading Aadhaar data:', error);

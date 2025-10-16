@@ -136,3 +136,15 @@ export type ParsedAadhaarData = {
   guardianLastName?: string;
   photoUrl?: string;
 };
+
+export type DownloadAadhaarDocumentResponse = {
+  data?: {
+    download_url: string;
+    mime_type: string;
+  };
+  status_code?: number;
+  success: boolean;
+  message?: string;
+  message_code?: string;
+  error?: string;
+};

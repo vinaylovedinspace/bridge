@@ -31,7 +31,8 @@ import { getAadhaarPdfUrlByPhoneNumber } from '@/server/db/digilocker-verificati
 import { saveAadhaarDocument } from '@/server/db/client-documents';
 
 export const upsertClient = async (
-  unsafeData: z.infer<typeof clientSchema>
+  unsafeData: z.infer<typeof clientSchema>,
+  aadhaarPdfUrl?: string
 ): Promise<{ error: boolean; message: string } & { clientId?: string }> => {
   try {
     const { id: branchId, tenantId } = await getBranchConfig();
@@ -57,12 +58,20 @@ export const upsertClient = async (
       birthDate: birthDateString, // Convert to YYYY-MM-DD string
     });
 
-    // If client was created (not updated) and has phone number, check for Aadhaar document
-    if (clientId && !data.id && data.phoneNumber) {
+    // If client was created (not updated), save Aadhaar document if provided
+    if (clientId && !data.id) {
       try {
-        const aadhaarPdfUrl = await getAadhaarPdfUrlByPhoneNumber(data.phoneNumber, tenantId);
-        if (aadhaarPdfUrl) {
-          await saveAadhaarDocument(clientId, aadhaarPdfUrl);
+        // First priority: use the provided aadhaarPdfUrl from form
+        let urlToSave = aadhaarPdfUrl;
+
+        // Fallback: if not provided in form, check DigilockerVerificationTable by phone
+        if (!urlToSave && data.phoneNumber) {
+          const fetchedUrl = await getAadhaarPdfUrlByPhoneNumber(data.phoneNumber, tenantId);
+          urlToSave = fetchedUrl ?? undefined;
+        }
+
+        if (urlToSave) {
+          await saveAadhaarDocument(clientId, urlToSave);
         }
       } catch (docError) {
         console.error('Error saving Aadhaar document:', docError);
