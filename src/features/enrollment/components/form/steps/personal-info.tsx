@@ -31,7 +31,7 @@ import {
 import { TypographyH5, TypographyP } from '@/components/ui/typography';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import React, { useEffect } from 'react';
-import { Info } from 'lucide-react';
+import { Info, ExternalLink } from 'lucide-react';
 import { DuplicateClientModal } from '@/components/duplicate-client-modal';
 import { useDuplicateClientCheck } from '@/features/enrollment/hooks/use-duplicate-client-check';
 import { DigilockerModal } from './digilocker-modal';
@@ -102,6 +102,12 @@ export const PersonalInfoStep = () => {
     // Clear any validation errors
     clearErrors();
   };
+
+  // Watch for Aadhaar PDF URL
+  const aadhaarPdfUrl = useWatch({
+    control,
+    name: 'client.aadhaarPdfUrl',
+  });
 
   // Watch for changes in the checkbox and address fields
   const isSameAddress = useWatch({
@@ -201,6 +207,7 @@ export const PersonalInfoStep = () => {
                       maxLength={14}
                     />
                   </FormControl>
+
                   <FormMessage />
                 </FormItem>
               )}
@@ -805,6 +812,20 @@ export const PersonalInfoStep = () => {
           />
         </div>
       </div>
+
+      {aadhaarPdfUrl && (
+        <FormDescription>
+          <a
+            href={aadhaarPdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
+          >
+            View Aadhaar PDF
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </FormDescription>
+      )}
 
       {/* Duplicate Client Modal */}
       <DuplicateClientModal

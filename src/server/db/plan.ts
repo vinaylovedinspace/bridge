@@ -10,6 +10,7 @@ export const getEnrollmentByPlanId = async (id: string) => {
         with: {
           drivingLicense: true,
           learningLicense: true,
+          clientDocuments: true,
         },
       },
       vehicle: true,

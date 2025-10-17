@@ -1,5 +1,6 @@
 import { Client } from '@upstash/workflow';
 import { env } from '@/env';
+import { getWorkflowBaseUrl, shouldEnableWorkflows } from './workflow-utils';
 
 type DLTestEligibilityData = {
   learningLicenseId: string;
@@ -12,13 +13,25 @@ type DLTestEligibilityData = {
  * that the client is eligible for their driving test.
  *
  * This function is fire-and-forget - it doesn't wait for the workflow to complete.
+ *
+ * Local Development:
+ * - Requires running: npx @upstash/qstash-cli dev
+ * - Set QSTASH_URL=http://127.0.0.1:8080 in .env.local
  */
 export async function triggerDLTestEligibilityWorkflow(data: DLTestEligibilityData): Promise<void> {
+  if (!shouldEnableWorkflows()) {
+    console.log(
+      `[DEV] Workflows disabled for learning license ${data.learningLicenseId}. Run 'npx @upstash/qstash-cli dev' to enable.`
+    );
+    return;
+  }
+
   try {
     const client = new Client({ token: env.QSTASH_TOKEN });
+    const baseUrl = getWorkflowBaseUrl();
 
     const { workflowRunId } = await client.trigger({
-      url: `${env.NEXT_PUBLIC_APP_URL}/api/workflows/dl-test-eligibility`,
+      url: `${baseUrl}/api/workflows/dl-test-eligibility`,
       body: JSON.stringify(data),
       retries: 3,
     });

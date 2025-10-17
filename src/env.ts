@@ -9,6 +9,9 @@ export const env = createEnv({
     SUREPASS_API_TOKEN: z.string().min(1),
     SUREPASS_BASE_URL: z.string().url().default('https://sandbox.surepass.io'),
     QSTASH_TOKEN: z.string().min(1),
+    QSTASH_URL: z.string().url().optional(),
+    QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
+    QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
     BLOB_READ_WRITE_TOKEN: z.string().min(1),
   },
   client: {

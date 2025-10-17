@@ -7,6 +7,7 @@ import { PlanTable } from '../plan/columns';
 import { formPrints } from '../form-prints/columns';
 import { SessionTable } from '../sessions/columns';
 import { RTOServicesTable } from '../rto-services/columns';
+import { ClientDocumentTable } from '../client-documents/columns';
 
 export const clientRelations = relations(ClientTable, ({ one, many }) => ({
   branch: one(BranchTable, {
@@ -25,4 +26,5 @@ export const clientRelations = relations(ClientTable, ({ one, many }) => ({
   rtoServices: many(RTOServicesTable),
   formPrints: many(formPrints),
   sessions: many(SessionTable),
+  clientDocuments: many(ClientDocumentTable),
 }));

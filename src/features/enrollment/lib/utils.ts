@@ -85,6 +85,9 @@ const combineDateAndTime = (dateString: string, timeString: string): Date => {
 export const mapClientToPersonalInfo = (
   client: NonNullable<Enrollment>['client']
 ): AdmissionFormValues['client'] => {
+  // Find Aadhaar PDF URL from clientDocuments
+  const aadhaarDocument = client.clientDocuments?.find((doc) => doc.type === 'AADHAAR_CARD');
+
   return {
     id: client.id, // Include the client ID for edit mode
     clientCode: client.clientCode,
@@ -120,6 +123,7 @@ export const mapClientToPersonalInfo = (
     middleName: client.middleName ?? '',
     email: client.email ?? '',
     photoUrl: client.photoUrl ?? undefined,
+    aadhaarPdfUrl: aadhaarDocument?.url ?? undefined,
   };
 };
 
