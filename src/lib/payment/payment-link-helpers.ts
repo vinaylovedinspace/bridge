@@ -1,6 +1,17 @@
 import { db } from '@/db';
-import { FullPaymentTable, InstallmentPaymentTable, TransactionTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import * as schema from '@/db/schema';
+import {
+  FullPaymentTable,
+  InstallmentPaymentTable,
+  TransactionTable,
+  PaymentTable,
+} from '@/db/schema';
+import { eq, and, ne } from 'drizzle-orm';
+import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
+import Razorpay from 'razorpay';
+import type { ExtractTablesWithRelations } from 'drizzle-orm';
+import type { PgTransaction } from 'drizzle-orm/pg-core';
+import type { NeonQueryResultHKT } from 'drizzle-orm/neon-serverless';
 
 export type PaymentReferenceResult = {
   referenceId: string;
@@ -153,4 +164,171 @@ export async function createTransactionRecord(params: {
     installmentNumber: params.installmentNumber,
     metadata: params.metadata,
   });
+}
+
+// Type for transaction context
+type TransactionContext = PgTransaction<
+  NeonQueryResultHKT,
+  typeof schema,
+  ExtractTablesWithRelations<typeof schema>
+>;
+
+/**
+ * Finds an existing active or pending transaction for the given reference ID
+ * Excludes cancelled and failed transactions
+ */
+export async function findExistingTransaction(referenceId: string, gateway: 'RAZORPAY' | 'SETU') {
+  return await db.query.TransactionTable.findFirst({
+    where: and(
+      eq(TransactionTable.paymentLinkReferenceId, referenceId),
+      eq(TransactionTable.paymentGateway, gateway),
+      ne(TransactionTable.transactionStatus, 'CANCELLED'),
+      ne(TransactionTable.transactionStatus, 'FAILED')
+    ),
+    orderBy: (transactions, { desc }) => [desc(transactions.createdAt)],
+  });
+}
+
+/**
+ * Updates payment tables when a payment link is paid
+ * Must be called within a transaction
+ */
+export async function markPaymentAsPaidInTransaction(
+  tx: TransactionContext,
+  params: {
+    paymentId: string;
+    paymentType: 'FULL_PAYMENT' | 'INSTALLMENTS';
+    referenceId: string;
+    installmentNumber: number | null;
+  }
+) {
+  const currentDate = formatDateToYYYYMMDD(new Date());
+
+  if (params.paymentType === 'FULL_PAYMENT') {
+    // Update full payment record
+    await tx
+      .update(FullPaymentTable)
+      .set({
+        isPaid: true,
+        paymentMode: 'PAYMENT_LINK',
+        paymentDate: currentDate,
+        updatedAt: new Date(),
+      })
+      .where(eq(FullPaymentTable.id, params.referenceId));
+
+    // Update main payment status
+    await tx
+      .update(PaymentTable)
+      .set({
+        paymentStatus: 'FULLY_PAID',
+        updatedAt: new Date(),
+      })
+      .where(eq(PaymentTable.id, params.paymentId));
+  } else if (params.paymentType === 'INSTALLMENTS') {
+    // Update installment record
+    await tx
+      .update(InstallmentPaymentTable)
+      .set({
+        isPaid: true,
+        paymentMode: 'PAYMENT_LINK',
+        paymentDate: currentDate,
+        updatedAt: new Date(),
+      })
+      .where(eq(InstallmentPaymentTable.id, params.referenceId));
+
+    // Fetch all installments to calculate payment status
+    const allInstallments = await tx.query.InstallmentPaymentTable.findMany({
+      where: eq(InstallmentPaymentTable.paymentId, params.paymentId),
+    });
+
+    const paidCount = allInstallments.filter((inst) => inst.isPaid === true).length;
+    const paymentStatus =
+      paidCount === 0 ? 'PENDING' : paidCount === 1 ? 'PARTIALLY_PAID' : 'FULLY_PAID';
+
+    // Update main payment status
+    await tx
+      .update(PaymentTable)
+      .set({
+        paymentStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(PaymentTable.id, params.paymentId));
+  }
+}
+
+/**
+ * Handles a paid Razorpay payment link
+ * Updates transaction and payment records in a single transaction
+ */
+export async function handlePaidRazorpayLink(params: {
+  transactionId: string;
+  paymentId: string;
+  paymentType: 'FULL_PAYMENT' | 'INSTALLMENTS';
+  referenceId: string;
+  installmentNumber: number | null;
+  razorpayLink: {
+    status: string;
+    payments?: unknown;
+    [key: string]: unknown;
+  };
+}) {
+  await db.transaction(async (tx) => {
+    // Extract Razorpay payment ID from the link
+    // Razorpay returns payments as an array or object depending on the response
+    const payments = Array.isArray(params.razorpayLink.payments)
+      ? params.razorpayLink.payments
+      : params.razorpayLink.payments
+        ? [params.razorpayLink.payments]
+        : [];
+    const razorpayPaymentId = payments[0]?.id;
+    const txnDate = payments[0]?.created_at ? new Date(payments[0].created_at * 1000) : null;
+
+    // Update transaction record
+    await tx
+      .update(TransactionTable)
+      .set({
+        transactionStatus: 'SUCCESS',
+        paymentLinkStatus: params.razorpayLink.status,
+        razorpayPaymentId: razorpayPaymentId,
+        txnId: razorpayPaymentId,
+        txnDate: txnDate,
+        updatedAt: new Date(),
+      })
+      .where(eq(TransactionTable.id, params.transactionId));
+
+    // Update payment tables
+    await markPaymentAsPaidInTransaction(tx, {
+      paymentId: params.paymentId,
+      paymentType: params.paymentType,
+      referenceId: params.referenceId,
+      installmentNumber: params.installmentNumber,
+    });
+  });
+}
+
+/**
+ * Cancels an expired or invalid Razorpay payment link
+ */
+export async function cancelRazorpayLink(
+  instance: Razorpay,
+  transactionId: string,
+  paymentLinkId: string
+) {
+  try {
+    // Try to cancel on Razorpay
+    await instance.paymentLink.cancel(paymentLinkId);
+    console.log(`Cancelled old payment link: ${paymentLinkId}`);
+  } catch (error) {
+    console.warn(`Could not cancel old payment link: ${paymentLinkId}`, error);
+  }
+
+  // Mark as cancelled in DB
+  await db
+    .update(TransactionTable)
+    .set({
+      transactionStatus: 'CANCELLED',
+      paymentLinkStatus: 'CANCELLED',
+      updatedAt: new Date(),
+    })
+    .where(eq(TransactionTable.id, transactionId));
 }

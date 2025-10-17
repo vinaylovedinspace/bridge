@@ -12,6 +12,9 @@ import {
   preparePaymentReference,
   cancelExistingPendingTransaction,
   createTransactionRecord,
+  findExistingTransaction,
+  handlePaidRazorpayLink,
+  cancelRazorpayLink,
 } from '@/lib/payment/payment-link-helpers';
 import Razorpay from 'razorpay';
 import { env } from '@/env';
@@ -55,40 +58,58 @@ export async function createPaymentLinkAction(request: CreatePaymentLinkRequest)
     key_secret: env.RAZORPAY_API_SECRET,
   });
 
-  // Prepare payment reference (handles both full payment and installments)
+  // Step 1: Prepare payment reference (creates FullPayment/Installment records)
   const { referenceId, installmentId, installmentNumber } = await preparePaymentReference(
     request.paymentId,
     request.paymentType,
     request.amount
   );
 
-  // Cancel existing pending transaction if any
-  const existingTransaction = await cancelExistingPendingTransaction(referenceId);
+  // Step 2: Check if an active payment link already exists
+  const existingTransaction = await findExistingTransaction(referenceId, 'RAZORPAY');
 
-  // If an existing pending transaction exists, try to cancel it in Razorpay
   if (existingTransaction?.paymentLinkId) {
     try {
-      // Check payment link status before attempting to cancel
-      const linkStatus = await instance.paymentLink.fetch(existingTransaction.paymentLinkId);
+      // Fetch current status from Razorpay
+      const razorpayLink = await instance.paymentLink.fetch(existingTransaction.paymentLinkId);
 
-      // Only cancel if not already paid
-      if (linkStatus.status !== 'paid') {
-        await instance.paymentLink.cancel(existingTransaction.paymentLinkId);
-        console.log(`Cancelled old payment link: ${existingTransaction.paymentLinkId}`);
-      } else {
-        console.log(
-          `Payment link already paid, cannot cancel: ${existingTransaction.paymentLinkId}`
-        );
+      // Handle paid link - update DB and return
+      if (razorpayLink.status === 'paid') {
+        await handlePaidRazorpayLink({
+          transactionId: existingTransaction.id,
+          paymentId: request.paymentId,
+          paymentType: request.paymentType,
+          referenceId,
+          installmentNumber,
+          razorpayLink,
+        });
+
+        return {
+          success: true,
+          data: razorpayLink,
+          referenceId,
+        };
       }
+
+      // Handle active link - reuse it
+      if (['created', 'issued'].includes(razorpayLink.status)) {
+        console.log(`Reusing existing active payment link: ${razorpayLink.id}`);
+        return {
+          success: true,
+          data: razorpayLink,
+          referenceId,
+        };
+      }
+
+      // Handle expired/cancelled link - cancel it before creating new
+      await cancelRazorpayLink(instance, existingTransaction.id, existingTransaction.paymentLinkId);
     } catch (error) {
-      console.warn(
-        `Could not cancel old payment link: ${existingTransaction.paymentLinkId}`,
-        error
-      );
+      console.warn('Error checking existing payment link:', error);
+      // Continue to create new link
     }
   }
 
-  // Create new payment link with metadata in notes
+  // Step 3: Create new payment link
   const paymentLink = await instance.paymentLink.create({
     amount: request.amount * 100,
     currency: 'INR',
@@ -110,7 +131,7 @@ export async function createPaymentLinkAction(request: CreatePaymentLinkRequest)
     },
   });
 
-  // Create new transaction record to track the payment link
+  // Step 4: Create transaction record to track the payment link
   await createTransactionRecord({
     paymentId: request.paymentId,
     amount: request.amount,
@@ -132,7 +153,7 @@ export async function createPaymentLinkAction(request: CreatePaymentLinkRequest)
   return {
     success: true,
     data: paymentLink,
-    referenceId, // Return reference ID for polling
+    referenceId,
   };
 }
 
