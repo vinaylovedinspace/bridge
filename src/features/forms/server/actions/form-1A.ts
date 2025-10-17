@@ -1,9 +1,7 @@
 'use server';
 
 import { getClient } from '@/server/db/client';
-import { fillAndFlattenPdf } from '@/features/forms/lib/pdf-server-utils';
-import fs from 'fs';
-import path from 'path';
+import { fillAndFlattenPdf, loadPdfTemplate } from '@/features/forms/lib/pdf-server-utils';
 
 export const fillForm1A = async (clientId: string) => {
   try {
@@ -17,8 +15,7 @@ export const fillForm1A = async (clientId: string) => {
     // Full name of the client
     const fullName = `${client.firstName}${client.middleName ? ' ' + client.middleName : ''} ${client.lastName}`;
 
-    const pdfPath = path.join(process.cwd(), 'src', 'assets', 'pdfs', 'form-1A.pdf');
-    const pdfBytes = fs.readFileSync(pdfPath);
+    const pdfBytes = await loadPdfTemplate('form-1A.pdf');
 
     // Fill the PDF form
     const base64Pdf = await fillAndFlattenPdf(pdfBytes, (form) => {

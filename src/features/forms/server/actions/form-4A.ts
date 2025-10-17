@@ -1,11 +1,9 @@
 'use server';
 
 import { getClient } from '@/server/db/client';
-import { fillAndFlattenPdf } from '@/features/forms/lib/pdf-server-utils';
+import { fillAndFlattenPdf, loadPdfTemplate } from '@/features/forms/lib/pdf-server-utils';
 import { form4AFieldNames } from '@/features/forms/lib/field-names/form-4A';
 import { getBranchConfigWithTenant } from '@/server/db/branch';
-import fs from 'fs';
-import path from 'path';
 
 export const fillForm4A = async (clientId: string) => {
   try {
@@ -19,8 +17,7 @@ export const fillForm4A = async (clientId: string) => {
     const branchConfig = await getBranchConfigWithTenant();
     const client = _client;
 
-    const pdfPath = path.join(process.cwd(), 'src', 'assets', 'pdfs', 'form-4A.pdf');
-    const pdfBytes = fs.readFileSync(pdfPath);
+    const pdfBytes = await loadPdfTemplate('form-4A.pdf');
 
     // Fill the PDF form
     const base64Pdf = await fillAndFlattenPdf(pdfBytes, (form) => {

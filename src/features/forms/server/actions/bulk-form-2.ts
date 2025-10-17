@@ -1,7 +1,7 @@
 'use server';
 
 import { getClient } from '@/server/db/client';
-import { mergePdfs, loadPdfWithForm } from '@/features/forms/lib/pdf-server-utils';
+import { mergePdfs, loadPdfWithForm, loadPdfTemplate } from '@/features/forms/lib/pdf-server-utils';
 import { getEnrollmentByPlanId } from '@/server/db/plan';
 import { getBranchConfigWithTenant } from '@/server/db/branch';
 import { PDFDocument } from 'pdf-lib';
@@ -33,8 +33,7 @@ export const bulkFillForm2 = async (clientIds: string[]) => {
         console.error(`Enrollment not found for plan ${latestPlan.id}`);
         continue;
       }
-      const pdfPath = path.join(process.cwd(), 'src', 'assets', 'pdfs', 'form-2.pdf');
-      const pdfBytes = fs.readFileSync(pdfPath);
+      const pdfBytes = await loadPdfTemplate('form-2.pdf');
 
       // Load and fill PDF for this client
       const { pdfDoc, form } = await loadPdfWithForm(pdfBytes);

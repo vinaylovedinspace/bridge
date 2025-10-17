@@ -1,7 +1,7 @@
 'use server';
 
 import { getClient } from '@/server/db/client';
-import { fillAndFlattenPdf } from '@/features/forms/lib/pdf-server-utils';
+import { fillAndFlattenPdf, loadPdfTemplate } from '@/features/forms/lib/pdf-server-utils';
 import { getEnrollmentByPlanId } from '@/server/db/plan';
 import { form2FieldNames } from '@/features/forms/lib/field-names/form-2';
 import { LicenseClassEnum } from '@/db/schema';
@@ -9,8 +9,6 @@ import { getBranchConfigWithTenant } from '@/server/db/branch';
 import { formatDateToDDMMYYYY } from '@/lib/utils';
 import type { PDFForm } from 'pdf-lib';
 import type { Enrollment } from '@/server/db/plan';
-import fs from 'fs';
-import path from 'path';
 
 /**
  * Fills Form 2 fields with client data
@@ -189,8 +187,7 @@ export const fillForm2 = async (clientId: string) => {
 
     const branchConfig = await getBranchConfigWithTenant();
 
-    const pdfPath = path.join(process.cwd(), 'src', 'assets', 'pdfs', 'form-2.pdf');
-    const pdfBytes = fs.readFileSync(pdfPath);
+    const pdfBytes = await loadPdfTemplate('form-2.pdf');
 
     // Fill the PDF form using the extracted helper
     const base64Pdf = await fillAndFlattenPdf(pdfBytes, async (form) => {

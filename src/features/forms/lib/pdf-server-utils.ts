@@ -12,10 +12,10 @@ import { join } from 'path';
  * @param fileName - Name of the PDF file (e.g., 'form-1A.pdf')
  * @returns Loaded PDF document
  */
-export async function loadPdfTemplate(fileName: string): Promise<PDFDocument> {
+export async function loadPdfTemplate(fileName: string) {
   const pdfPath = join(process.cwd(), 'assets', 'pdfs', fileName);
   const pdfBytes = await readFile(pdfPath);
-  return PDFDocument.load(pdfBytes);
+  return pdfBytes;
 }
 
 /**
