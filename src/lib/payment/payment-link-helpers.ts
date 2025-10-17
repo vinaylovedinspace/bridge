@@ -13,6 +13,7 @@ import type { ExtractTablesWithRelations } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 import type { NeonQueryResultHKT } from 'drizzle-orm/neon-serverless';
 import type { PaymentLinks } from 'razorpay/dist/types/paymentLink';
+import { triggerPaymentNotification } from '@/lib/upstash/trigger-payment-notification';
 
 export type PaymentReferenceResult = {
   referenceId: string;
@@ -300,6 +301,11 @@ export async function handlePaidRazorpayLink(params: {
       referenceId: params.referenceId,
       installmentNumber: params.installmentNumber,
     });
+  });
+
+  // Trigger payment notification workflow (fire-and-forget)
+  await triggerPaymentNotification({
+    transactionId: params.transactionId,
   });
 }
 

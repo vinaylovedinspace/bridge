@@ -16,6 +16,7 @@ import {
   handlePaidRazorpayLink,
   cancelRazorpayLink,
 } from '@/lib/payment/payment-link-helpers';
+import { triggerPaymentLinkWorkflow } from '@/lib/upstash/trigger-payment-link-workflow';
 import Razorpay from 'razorpay';
 import { env } from '@/env';
 import { db } from '@/db';
@@ -153,6 +154,19 @@ export async function createPaymentLinkAction(request: CreatePaymentLinkRequest)
       ? new Date(Number(paymentLink.created_at) * 1000)
       : new Date(),
     metadata: paymentLink,
+  });
+
+  // Step 5: Trigger payment link lifecycle workflow
+  // This workflow will sleep until expiry and verify payment status
+  const expiryTime = Number(paymentLink.expire_by) * 1000; // Convert to milliseconds
+
+  await triggerPaymentLinkWorkflow({
+    paymentLinkId: paymentLink.id,
+    referenceId,
+    paymentId: request.paymentId,
+    paymentType: request.paymentType,
+    installmentNumber,
+    expiryTime,
   });
 
   return {

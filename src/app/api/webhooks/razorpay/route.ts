@@ -9,6 +9,7 @@ import {
   TransactionTable,
 } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { triggerPaymentNotification } from '@/lib/upstash/trigger-payment-notification';
 
 /**
  * Razorpay Webhook Handler
@@ -170,6 +171,11 @@ async function handlePaymentLinkPaid(payload: RazorpayWebhookPayload) {
 
     console.log(`Installment payment marked as paid for payment ID: ${paymentId}`);
   }
+
+  // Trigger payment notification workflow (fire-and-forget)
+  await triggerPaymentNotification({
+    transactionId: transaction.id,
+  });
 }
 
 /**
