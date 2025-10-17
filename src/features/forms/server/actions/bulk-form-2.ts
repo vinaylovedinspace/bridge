@@ -1,13 +1,12 @@
 'use server';
 
 import { getClient } from '@/server/db/client';
-import { mergePdfs, loadPdfWithForm, loadPdfTemplate } from '@/features/forms/lib/pdf-server-utils';
+import { mergePdfs, loadPdfWithForm } from '@/features/forms/lib/pdf-server-utils';
 import { getEnrollmentByPlanId } from '@/server/db/plan';
 import { getBranchConfigWithTenant } from '@/server/db/branch';
 import { PDFDocument } from 'pdf-lib';
 import { fillForm2Fields } from './form-2';
-import fs from 'fs';
-import path from 'path';
+import { form2Base64 } from '../../lib/forms-base64/form-2';
 
 export const bulkFillForm2 = async (clientIds: string[]) => {
   try {
@@ -33,7 +32,8 @@ export const bulkFillForm2 = async (clientIds: string[]) => {
         console.error(`Enrollment not found for plan ${latestPlan.id}`);
         continue;
       }
-      const pdfBytes = await loadPdfTemplate('form-2.pdf');
+
+      const pdfBytes = Buffer.from(form2Base64, 'base64');
 
       // Load and fill PDF for this client
       const { pdfDoc, form } = await loadPdfWithForm(pdfBytes);
