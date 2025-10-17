@@ -55,7 +55,10 @@ export const PersonalInfoStep = () => {
   } = useDuplicateClientCheck(setValue, clearErrors);
 
   // Handle Digilocker success
-  const handleDigilockerSuccess = (data: ParsedAadhaarData, aadhaarPdfUrl?: string) => {
+  const handleDigilockerSuccess = (
+    data: ParsedAadhaarData,
+    aadhaarPdfUrl?: string | null | undefined
+  ) => {
     // Auto-fill form fields with Aadhaar data
     setValue('client.firstName', data.firstName);
     setValue('client.middleName', data.middleName || '');
