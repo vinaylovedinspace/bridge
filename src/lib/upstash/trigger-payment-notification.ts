@@ -1,5 +1,5 @@
-import { Client } from '@upstash/workflow';
 import { env } from '@/env';
+import { workflowClient } from './workflow';
 
 type PaymentNotificationData = {
   transactionId: string;
@@ -17,9 +17,7 @@ type PaymentNotificationData = {
  */
 export async function triggerPaymentNotification(data: PaymentNotificationData): Promise<void> {
   try {
-    const client = new Client({ token: env.QSTASH_TOKEN, baseUrl: env.QSTASH_URL });
-
-    const { workflowRunId } = await client.trigger({
+    const { workflowRunId } = await workflowClient.trigger({
       url: `${env.NEXT_PUBLIC_APP_URL}/api/workflows/payment-notification`,
       body: JSON.stringify(data),
       retries: 3,

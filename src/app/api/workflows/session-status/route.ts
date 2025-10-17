@@ -1,10 +1,9 @@
 import { serve } from '@upstash/workflow/nextjs';
-import { Client } from '@upstash/qstash';
 import { db } from '@/db';
 import { SessionTable } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
-import { env } from '@/env';
 import { sendSessionReminder } from '@/lib/whatsapp/send-session-reminder';
+import { workflowClient } from '@/lib/upstash/workflow';
 
 type SessionWorkflowPayload = {
   sessionId: string;
@@ -118,7 +117,7 @@ export const { POST } = serve<SessionWorkflowPayload>(
     });
   },
   {
-    qstashClient: new Client({ token: env.QSTASH_TOKEN, baseUrl: env.QSTASH_URL }),
+    qstashClient: workflowClient,
     verbose: true,
   }
 );

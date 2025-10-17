@@ -1,10 +1,9 @@
 import { serve } from '@upstash/workflow/nextjs';
-import { Client } from '@upstash/qstash';
 import { db } from '@/db';
 import { TransactionTable } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
-import { env } from '@/env';
 import { NotificationService } from '@/lib/notifications/notification-service';
+import { workflowClient } from '@/lib/upstash/workflow';
 
 type PaymentNotificationPayload = {
   transactionId: string;
@@ -62,7 +61,7 @@ export const { POST } = serve<PaymentNotificationPayload>(
     });
   },
   {
-    qstashClient: new Client({ token: env.QSTASH_TOKEN, baseUrl: env.QSTASH_URL }),
+    qstashClient: workflowClient,
     verbose: true,
   }
 );

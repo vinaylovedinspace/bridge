@@ -6,6 +6,7 @@ import { eq, and, isNull } from 'drizzle-orm';
 import { env } from '@/env';
 import Razorpay from 'razorpay';
 import { handlePaidRazorpayLink } from '@/lib/payment/payment-link-helpers';
+import { workflowClient } from '@/lib/upstash/workflow';
 
 type PaymentLinkLifecyclePayload = {
   paymentLinkId: string;
@@ -133,7 +134,7 @@ export const { POST } = serve<PaymentLinkLifecyclePayload>(
     });
   },
   {
-    qstashClient: new Client({ token: env.QSTASH_TOKEN, baseUrl: env.QSTASH_URL }),
+    qstashClient: workflowClient,
     verbose: true,
   }
 );
