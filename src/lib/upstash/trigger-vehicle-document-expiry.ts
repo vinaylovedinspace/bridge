@@ -1,6 +1,6 @@
 import { Client } from '@upstash/workflow';
 import { env } from '@/env';
-import { getWorkflowBaseUrl, shouldEnableWorkflows } from './workflow-utils';
+import { getWorkflowBaseUrl } from './workflow-utils';
 
 type VehicleDocumentExpiryData = {
   vehicleId: string;
@@ -21,13 +21,6 @@ type VehicleDocumentExpiryData = {
 export async function triggerVehicleDocumentExpiryWorkflow(
   data: VehicleDocumentExpiryData
 ): Promise<void> {
-  if (!shouldEnableWorkflows()) {
-    console.log(
-      `[DEV] Workflows disabled for ${data.vehicleId} (${data.documentType}). Run 'npx @upstash/qstash-cli dev' to enable.`
-    );
-    return;
-  }
-
   try {
     const client = new Client({ token: env.QSTASH_TOKEN });
     const baseUrl = getWorkflowBaseUrl();

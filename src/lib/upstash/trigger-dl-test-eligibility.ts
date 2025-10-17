@@ -1,6 +1,6 @@
 import { Client } from '@upstash/workflow';
 import { env } from '@/env';
-import { getWorkflowBaseUrl, shouldEnableWorkflows } from './workflow-utils';
+import { getWorkflowBaseUrl } from './workflow-utils';
 
 type DLTestEligibilityData = {
   learningLicenseId: string;
@@ -19,13 +19,6 @@ type DLTestEligibilityData = {
  * - Set QSTASH_URL=http://127.0.0.1:8080 in .env.local
  */
 export async function triggerDLTestEligibilityWorkflow(data: DLTestEligibilityData): Promise<void> {
-  if (!shouldEnableWorkflows()) {
-    console.log(
-      `[DEV] Workflows disabled for learning license ${data.learningLicenseId}. Run 'npx @upstash/qstash-cli dev' to enable.`
-    );
-    return;
-  }
-
   try {
     const client = new Client({ token: env.QSTASH_TOKEN });
     const baseUrl = getWorkflowBaseUrl();
