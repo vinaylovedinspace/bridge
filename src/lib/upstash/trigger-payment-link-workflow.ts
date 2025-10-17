@@ -28,7 +28,7 @@ type PaymentLinkWorkflowData = {
  */
 export async function triggerPaymentLinkWorkflow(data: PaymentLinkWorkflowData): Promise<void> {
   try {
-    const client = new Client({ token: env.QSTASH_TOKEN });
+    const client = new Client({ token: env.QSTASH_TOKEN, baseUrl: env.QSTASH_URL });
 
     const { workflowRunId } = await client.trigger({
       url: `${env.NEXT_PUBLIC_APP_URL}/api/workflows/payment-link-lifecycle`,
