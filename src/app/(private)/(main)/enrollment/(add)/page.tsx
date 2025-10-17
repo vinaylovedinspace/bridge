@@ -8,7 +8,7 @@ export default async function AdmissionPage({
 }: {
   searchParams: Promise<{ clientId?: string; step?: string }>;
 }) {
-  const { clientId, step } = await searchParams;
+  const { clientId } = await searchParams;
 
   let existingClient = undefined;
 
@@ -20,11 +20,6 @@ export default async function AdmissionPage({
     }
 
     existingClient = client;
-  }
-
-  // If there's no clientId and a step parameter exists, redirect to clear it
-  if (!clientId && step) {
-    redirect('/enrollment');
   }
 
   return (

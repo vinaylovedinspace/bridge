@@ -184,6 +184,7 @@ export const useUpsertEnrollmentForm = ({
       // Only manage localStorage in create mode
       if (!isEditMode) {
         localStorage.setItem(LAST_ENROLLMENT_CLIENT_ID, JSON.stringify(getValues('client.id')));
+        localStorage.setItem(LAST_ENROLLMENT_STEP, JSON.stringify(currentStep));
 
         if (isLastStep) {
           localStorage.removeItem(LAST_ENROLLMENT_CLIENT_ID);

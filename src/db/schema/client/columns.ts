@@ -20,6 +20,7 @@ export const BloodGroupEnum = pgEnum('blood_group', [
   'O-',
 ]);
 export const GenderEnum = pgEnum('gender', ['MALE', 'FEMALE', 'OTHER']);
+export type GenderEnumType = (typeof GenderEnum.enumValues)[number];
 
 export const CitizenStatusEnum = pgEnum('citizen_status', [
   'BIRTH',
@@ -44,6 +45,7 @@ export const GuardianRelationshipEnum = pgEnum('guardian_relationship', [
   'HUSBAND',
   'GUARDIAN',
 ]);
+export type GuardianRelationshipEnumType = (typeof GuardianRelationshipEnum.enumValues)[number];
 
 export const ClientTable = pgTable(
   'clients',

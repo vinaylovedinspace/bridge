@@ -28,7 +28,7 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 type DigilockerModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: (data: ParsedAadhaarData, aadhaarPdfUrl?: string) => void;
+  onSuccess: (data: ParsedAadhaarData, aadhaarPdfUrl?: string | null) => void;
 };
 
 type VerificationStep = 'input' | 'waiting' | 'downloading' | 'success' | 'error';
@@ -37,7 +37,6 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
   const branchConfig = useAtomValue(branchConfigAtom)!;
   const { control, watch } = useFormContext<AdmissionFormValues>();
   const phoneNumber = watch('client.phoneNumber');
-  const [clientId, setClientId] = useState<string | null>(null);
   const [step, setStep] = useState<VerificationStep>('input');
   const [errorMessage, setErrorMessage] = useState('');
   const [flowType, setFlowType] = useState<'manager' | 'client'>(
@@ -46,10 +45,9 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const resetModal = () => {
-    setClientId(null);
     setStep('input');
     setErrorMessage('');
-    setFlowType(branchConfig.digilockerFlowPreference || 'manager');
+    setFlowType(branchConfig.digilockerFlowPreference);
     // Clear any active polling
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
@@ -67,11 +65,6 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
   }, []);
 
   const handleInitialize = async () => {
-    if (!phoneNumber || !/^\d{10}$/.test(phoneNumber)) {
-      toast.error('Please enter a valid 10-digit mobile number');
-      return;
-    }
-
     // For manager mode, open a blank window immediately to avoid popup blocker
     let newWindow: Window | null = null;
     if (flowType === 'manager') {
@@ -99,14 +92,11 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
         return;
       }
 
-      setClientId(result.client_id!);
-
       // For manager mode, navigate the opened window to Digilocker URL
       if (flowType === 'manager' && result.url) {
         if (newWindow) {
           newWindow.location.href = result.url;
         }
-        toast.success('Digilocker opened in new tab. Please complete the authorization.');
       } else {
         // For client mode, show SMS sent message
         toast.success(result.message || 'SMS sent successfully. Please authorize on your device.');
@@ -136,7 +126,6 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
             clearInterval(pollingIntervalRef.current);
             pollingIntervalRef.current = null;
           }
-          toast.success('Authorization completed! Downloading your Aadhaar data...');
           await handleDownload(client_id);
         } else if (result.failed) {
           // Authorization failed
@@ -176,7 +165,7 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
     setErrorMessage('');
 
     try {
-      const result = await downloadAadhaarData(clientId);
+      const result = await downloadAadhaarData(clientId, phoneNumber);
 
       if (!result.success) {
         setErrorMessage(
@@ -189,13 +178,7 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
 
       setStep('success');
       toast.success('Aadhaar data retrieved successfully!');
-
-      // Wait a moment before closing to show success state
-      setTimeout(() => {
-        onSuccess(result.data!, result.aadhaarPdfUrl);
-        onOpenChange(false);
-        resetModal();
-      }, 1500);
+      onSuccess(result.data!, result.aadhaarUrl);
     } catch (error) {
       console.error('Error downloading Aadhaar data:', error);
       setErrorMessage('Failed to download Aadhaar data. Please try again.');

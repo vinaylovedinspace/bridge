@@ -77,6 +77,11 @@ export const PersonalInfoStep = () => {
     setValue('client.permanentPincode', data.permanentPincode);
     setValue('client.isCurrentAddressSameAsPermanentAddress', true);
 
+    // Store the Aadhaar PDF URL if available
+    if (aadhaarPdfUrl) {
+      setValue('client.aadhaarPdfUrl', aadhaarPdfUrl);
+    }
+
     if (data.guardianFirstName) {
       setValue('client.guardianFirstName', data.guardianFirstName);
     }
@@ -86,13 +91,12 @@ export const PersonalInfoStep = () => {
     if (data.guardianLastName) {
       setValue('client.guardianLastName', data.guardianLastName);
     }
+    if (data.guardianRelationship) {
+      setValue('client.guardianRelationship', data.guardianRelationship);
+    }
 
     if (data.photoUrl) {
       setValue('client.photoUrl', data.photoUrl);
-    }
-
-    if (aadhaarPdfUrl) {
-      setValue('client.aadhaarPdfUrl', aadhaarPdfUrl);
     }
 
     // Clear any validation errors
