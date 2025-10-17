@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { VehicleTable } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { NotificationService } from '@/lib/notifications/notification-service';
-import { workflowClient } from '@/lib/upstash/workflow';
+import { qstashClient } from '@/lib/upstash/workflow';
 
 type VehicleDocumentExpiryPayload = {
   vehicleId: string;
@@ -45,7 +45,7 @@ export const { POST } = serve<VehicleDocumentExpiryPayload>(
     });
   },
   {
-    qstashClient: workflowClient,
+    qstashClient,
     verbose: true,
   }
 );

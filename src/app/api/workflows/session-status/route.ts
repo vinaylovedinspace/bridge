@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { SessionTable } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { sendSessionReminder } from '@/lib/whatsapp/send-session-reminder';
-import { workflowClient } from '@/lib/upstash/workflow';
+import { qstashClient } from '@/lib/upstash/workflow';
 
 type SessionWorkflowPayload = {
   sessionId: string;
@@ -117,7 +117,7 @@ export const { POST } = serve<SessionWorkflowPayload>(
     });
   },
   {
-    qstashClient: workflowClient,
+    qstashClient,
     verbose: true,
   }
 );

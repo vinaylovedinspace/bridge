@@ -1,12 +1,11 @@
 import { serve } from '@upstash/workflow/nextjs';
-import { Client } from '@upstash/qstash';
 import { db } from '@/db';
 import { TransactionTable } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { env } from '@/env';
 import Razorpay from 'razorpay';
 import { handlePaidRazorpayLink } from '@/lib/payment/payment-link-helpers';
-import { workflowClient } from '@/lib/upstash/workflow';
+import { qstashClient } from '@/lib/upstash/workflow';
 
 type PaymentLinkLifecyclePayload = {
   paymentLinkId: string;
@@ -134,7 +133,7 @@ export const { POST } = serve<PaymentLinkLifecyclePayload>(
     });
   },
   {
-    qstashClient: workflowClient,
+    qstashClient,
     verbose: true,
   }
 );

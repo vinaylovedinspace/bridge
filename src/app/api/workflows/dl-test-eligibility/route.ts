@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { LearningLicenseTable, DrivingLicenseTable } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { NotificationService } from '@/lib/notifications/notification-service';
-import { workflowClient } from '@/lib/upstash/workflow';
+import { qstashClient } from '@/lib/upstash/workflow';
 
 type DLTestEligibilityPayload = {
   learningLicenseId: string;
@@ -86,7 +86,7 @@ export const { POST } = serve<DLTestEligibilityPayload>(
     });
   },
   {
-    qstashClient: workflowClient,
+    qstashClient,
     verbose: true,
   }
 );

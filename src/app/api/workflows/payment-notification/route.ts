@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { TransactionTable } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { NotificationService } from '@/lib/notifications/notification-service';
-import { workflowClient } from '@/lib/upstash/workflow';
+import { qstashClient } from '@/lib/upstash/workflow';
 
 type PaymentNotificationPayload = {
   transactionId: string;
@@ -61,7 +61,7 @@ export const { POST } = serve<PaymentNotificationPayload>(
     });
   },
   {
-    qstashClient: workflowClient,
+    qstashClient,
     verbose: true,
   }
 );
