@@ -73,11 +73,10 @@ function verifyWebhookSignature(body: string, signature: string, secret: string)
 async function handlePaymentLinkPaid(payload: RazorpayWebhookPayload) {
   const paymentLinkData = payload.payload.payment_link.entity;
   const paymentData = payload.payload.payment?.entity;
-  const referenceId = paymentLinkData.reference_id;
   const notes = paymentLinkData.notes;
   const amountPaid = paymentLinkData.amount_paid / 100; // Convert paise to rupees
 
-  console.log(`Payment link paid for reference ID: ${referenceId}, amount: ${amountPaid}`);
+  console.log(`Payment link paid: ${paymentLinkData.id}, amount: ${amountPaid}`);
 
   // Extract metadata from notes
   const paymentId = notes?.payment_id;
@@ -88,6 +87,17 @@ async function handlePaymentLinkPaid(payload: RazorpayWebhookPayload) {
     return;
   }
 
+  // Get the transaction record to find the original referenceId
+  const transaction = await db.query.TransactionTable.findFirst({
+    where: eq(TransactionTable.paymentLinkId, paymentLinkData.id),
+  });
+
+  if (!transaction || !transaction.paymentLinkReferenceId) {
+    console.error('Transaction or referenceId not found for payment link:', paymentLinkData.id);
+    return;
+  }
+
+  const referenceId = transaction.paymentLinkReferenceId;
   const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, '');
 
   // Update transaction record
@@ -101,12 +111,12 @@ async function handlePaymentLinkPaid(payload: RazorpayWebhookPayload) {
       txnDate: paymentData?.created_at ? new Date(paymentData.created_at * 1000) : null,
       updatedAt: new Date(),
     })
-    .where(eq(TransactionTable.paymentLinkId, paymentLinkData.id));
+    .where(eq(TransactionTable.id, transaction.id));
 
   // Update payment status based on payment type
   if (paymentType === 'FULL_PAYMENT') {
-    // For full payment, reference_id is the full_payment.id
-    // Update the full payment record using the reference_id
+    // For full payment, referenceId is the full_payment.id from our DB
+    // Update the full payment record using the referenceId
     await db
       .update(FullPaymentTable)
       .set({

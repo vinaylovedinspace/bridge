@@ -110,10 +110,14 @@ export async function createPaymentLinkAction(request: CreatePaymentLinkRequest)
   }
 
   // Step 3: Create new payment link
+  // Use a unique reference_id with timestamp suffix to avoid conflicts
+  // This handles edge cases where a link exists on Razorpay but not in our DB
+  const uniqueReferenceId = `${referenceId}-${Date.now()}`;
+
   const paymentLink = await instance.paymentLink.create({
     amount: request.amount * 100,
     currency: 'INR',
-    reference_id: referenceId,
+    reference_id: uniqueReferenceId,
     description: `Payment for ${request.type}`,
     notes: {
       payment_id: request.paymentId,
@@ -132,11 +136,12 @@ export async function createPaymentLinkAction(request: CreatePaymentLinkRequest)
   });
 
   // Step 4: Create transaction record to track the payment link
+  // Store the original referenceId for matching with FullPayment/Installment records
   await createTransactionRecord({
     paymentId: request.paymentId,
     amount: request.amount,
     paymentGateway: 'RAZORPAY',
-    referenceId,
+    referenceId, // Original reference (FullPayment.id or Installment.id)
     installmentNumber,
     paymentLinkId: paymentLink.id,
     paymentLinkUrl: paymentLink.short_url,
@@ -153,7 +158,7 @@ export async function createPaymentLinkAction(request: CreatePaymentLinkRequest)
   return {
     success: true,
     data: paymentLink,
-    referenceId,
+    referenceId, // Return original referenceId for polling
   };
 }
 
