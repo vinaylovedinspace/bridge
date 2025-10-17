@@ -12,6 +12,7 @@ import Razorpay from 'razorpay';
 import type { ExtractTablesWithRelations } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 import type { NeonQueryResultHKT } from 'drizzle-orm/neon-serverless';
+import type { PaymentLinks } from 'razorpay/dist/types/paymentLink';
 
 export type PaymentReferenceResult = {
   referenceId: string;
@@ -266,11 +267,7 @@ export async function handlePaidRazorpayLink(params: {
   paymentType: 'FULL_PAYMENT' | 'INSTALLMENTS';
   referenceId: string;
   installmentNumber: number | null;
-  razorpayLink: {
-    status: string;
-    payments?: unknown;
-    [key: string]: unknown;
-  };
+  razorpayLink: PaymentLinks.RazorpayPaymentLink;
 }) {
   await db.transaction(async (tx) => {
     // Extract Razorpay payment ID from the link
