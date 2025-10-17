@@ -7,6 +7,7 @@ import { PopConfirm } from '@/components/ui/pop-confirm';
 import { MoreHorizontal, Trash2 } from 'lucide-react';
 import { deleteVehicle } from '../../server/action';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
@@ -28,6 +29,14 @@ export const columns: ColumnDef<Vehicle>[] = [
   {
     accessorKey: 'number',
     header: 'Number',
+    cell: ({ row }) => {
+      const vehicle = row.original;
+
+      if (vehicle.number) {
+        return <Badge variant="outline">{vehicle.number}</Badge>;
+      }
+      return <span className="text-muted-foreground">-</span>;
+    },
   },
   {
     accessorKey: 'rent',
