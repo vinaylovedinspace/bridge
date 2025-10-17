@@ -111,14 +111,13 @@ export async function createPaymentLinkAction(request: CreatePaymentLinkRequest)
   }
 
   // Step 3: Create new payment link
-  // Use a unique reference_id with timestamp suffix to avoid conflicts
   // This handles edge cases where a link exists on Razorpay but not in our DB
-  const uniqueReferenceId = `${referenceId}-${Date.now()}`;
+  // Keep under 40 chars (Razorpay limit): UUID (36) + dash (1) + suffix (3) = 40 chars
 
   const paymentLink = await instance.paymentLink.create({
     amount: request.amount * 100,
     currency: 'INR',
-    reference_id: uniqueReferenceId,
+    reference_id: referenceId,
     description: `Payment for ${request.type}`,
     notes: {
       payment_id: request.paymentId,
