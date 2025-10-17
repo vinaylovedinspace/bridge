@@ -6,6 +6,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { TypographyMuted } from '@/components/ui/typography';
+import Image from 'next/image';
 
 type QRModalProps = {
   showQrModal: boolean;
@@ -26,7 +27,7 @@ export const QRModal = ({ showQrModal, setShowQrModal, qrCode, expiryTime }: QRM
         </DialogHeader>
         <div className="flex flex-col items-center gap-4 py-4">
           {qrCode && (
-            <img
+            <Image
               src={qrCode}
               alt="Payment QR Code"
               width={300}

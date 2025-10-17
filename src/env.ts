@@ -18,6 +18,7 @@ export const env = createEnv({
     RAZORPAY_WEBHOOK_SECRET: z.string().min(1),
     SETU_API_KEY: z.string().min(1),
     SETU_API_SECRET: z.string().min(1),
+    SETU_URL: z.string().url().default('https://umap-uat-core.setu.co'),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),

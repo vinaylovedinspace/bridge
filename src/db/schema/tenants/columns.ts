@@ -8,6 +8,7 @@ export const TenantTable = pgTable('tenant', {
   licenceNumber: text('licence_number'),
   address: text('address'),
   licenseIssueDate: text('license_issue_date'),
+  merchantId: text('merchant_id'),
 
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().notNull(),

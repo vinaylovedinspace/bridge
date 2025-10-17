@@ -1,22 +1,24 @@
 'use server';
 
 import { z } from 'zod';
+import { unstable_cache } from 'next/cache';
 import { getBranchConfig } from '@/server/action/branch';
 import { paymentSchema } from '@/types/zod/payment';
 import { IMMEDIATE_PAYMENT_MODES } from '@/lib/constants/payment';
 import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 import { upsertFullPaymentInDB } from '@/server/db/payments';
 import { upsertPaymentInDB } from '@/server/db/payments';
+import {
+  preparePaymentReference,
+  cancelExistingPendingTransaction,
+  createTransactionRecord,
+} from '@/lib/payment/payment-link-helpers';
 import Razorpay from 'razorpay';
 import { env } from '@/env';
 import { db } from '@/db';
-import {
-  FullPaymentTable,
-  InstallmentPaymentTable,
-  TransactionTable,
-  PaymentTable,
-} from '@/db/schema';
+import { TransactionTable } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { SetuCreateDQRResponse, SetuGetDQRResponse } from '@/types/setu';
 
 export type PaymentLinkResult = {
   success: boolean;
@@ -53,111 +55,37 @@ export async function createPaymentLinkAction(request: CreatePaymentLinkRequest)
     key_secret: env.RAZORPAY_API_SECRET,
   });
 
-  let referenceId = request.paymentId;
-  let installmentId: string | undefined;
-  let installmentNumber: number | null = null;
+  // Prepare payment reference (handles both full payment and installments)
+  const { referenceId, installmentId, installmentNumber } = await preparePaymentReference(
+    request.paymentId,
+    request.paymentType,
+    request.amount
+  );
 
-  // For FULL_PAYMENT, create the full payment entry first and use its ID as reference
-  if (request.paymentType === 'FULL_PAYMENT') {
-    const [fullPaymentEntry] = await db
-      .insert(FullPaymentTable)
-      .values({
-        paymentId: request.paymentId,
-        isPaid: false,
-      })
-      .onConflictDoUpdate({
-        target: FullPaymentTable.paymentId,
-        set: {
-          isPaid: false,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+  // Cancel existing pending transaction if any
+  const existingTransaction = await cancelExistingPendingTransaction(referenceId);
 
-    referenceId = fullPaymentEntry.id;
-  } else if (request.paymentType === 'INSTALLMENTS') {
-    // For INSTALLMENTS, find the first unpaid installment and use its ID as reference
-    const installments = await db.query.InstallmentPaymentTable.findMany({
-      where: eq(InstallmentPaymentTable.paymentId, request.paymentId),
-    });
-
-    let unpaidInstallment = installments.find((inst) => !inst.isPaid);
-
-    // If no unpaid installment exists, we need to create one
-    if (!unpaidInstallment) {
-      const paidCount = installments.filter((inst) => inst.isPaid).length;
-
-      if (paidCount === 0) {
-        // Create first installment (50% of total amount)
-        const firstInstallmentAmount = Math.ceil(request.amount / 2);
-        const [newInstallment] = await db
-          .insert(InstallmentPaymentTable)
-          .values({
-            paymentId: request.paymentId,
-            installmentNumber: 1,
-            amount: firstInstallmentAmount,
-            isPaid: false,
-          })
-          .returning();
-
-        unpaidInstallment = newInstallment;
-      } else if (paidCount === 1) {
-        // First installment is paid, create second installment
-        const firstInstallment = installments[0];
-        const secondInstallmentAmount = request.amount - firstInstallment.amount;
-        const [newInstallment] = await db
-          .insert(InstallmentPaymentTable)
-          .values({
-            paymentId: request.paymentId,
-            installmentNumber: 2,
-            amount: secondInstallmentAmount,
-            isPaid: false,
-          })
-          .returning();
-
-        unpaidInstallment = newInstallment;
-      } else {
-        throw new Error('All installments are already paid');
-      }
-    }
-
-    referenceId = unpaidInstallment.id;
-    installmentId = unpaidInstallment.id;
-    installmentNumber = unpaidInstallment.installmentNumber;
-  }
-
-  // Check for existing pending transaction with same reference ID
-  // This handles the case where a payment link is resent
-  const existingTransaction = await db.query.TransactionTable.findFirst({
-    where: and(
-      eq(TransactionTable.paymentLinkReferenceId, referenceId),
-      eq(TransactionTable.transactionStatus, 'PENDING')
-    ),
-  });
-
-  // If an existing pending transaction exists, cancel/expire the old payment link in Razorpay
+  // If an existing pending transaction exists, try to cancel it in Razorpay
   if (existingTransaction?.paymentLinkId) {
     try {
-      // Attempt to cancel the old payment link in Razorpay
-      await instance.paymentLink.cancel(existingTransaction.paymentLinkId);
-      console.log(`Cancelled old payment link: ${existingTransaction.paymentLinkId}`);
+      // Check payment link status before attempting to cancel
+      const linkStatus = await instance.paymentLink.fetch(existingTransaction.paymentLinkId);
+
+      // Only cancel if not already paid
+      if (linkStatus.status !== 'paid') {
+        await instance.paymentLink.cancel(existingTransaction.paymentLinkId);
+        console.log(`Cancelled old payment link: ${existingTransaction.paymentLinkId}`);
+      } else {
+        console.log(
+          `Payment link already paid, cannot cancel: ${existingTransaction.paymentLinkId}`
+        );
+      }
     } catch (error) {
-      // If cancellation fails (link already paid/expired), just log it
       console.warn(
         `Could not cancel old payment link: ${existingTransaction.paymentLinkId}`,
         error
       );
     }
-
-    // Mark the old transaction as cancelled in our database
-    await db
-      .update(TransactionTable)
-      .set({
-        transactionStatus: 'CANCELLED',
-        paymentLinkStatus: 'CANCELLED',
-        updatedAt: new Date(),
-      })
-      .where(eq(TransactionTable.id, existingTransaction.id));
   }
 
   // Create new payment link with metadata in notes
@@ -183,15 +111,14 @@ export async function createPaymentLinkAction(request: CreatePaymentLinkRequest)
   });
 
   // Create new transaction record to track the payment link
-  await db.insert(TransactionTable).values({
+  await createTransactionRecord({
     paymentId: request.paymentId,
     amount: request.amount,
-    paymentMode: 'PAYMENT_LINK',
     paymentGateway: 'RAZORPAY',
-    transactionStatus: 'PENDING',
+    referenceId,
+    installmentNumber,
     paymentLinkId: paymentLink.id,
     paymentLinkUrl: paymentLink.short_url,
-    paymentLinkReferenceId: referenceId,
     paymentLinkStatus: paymentLink.status,
     paymentLinkExpiresAt: paymentLink.expire_by
       ? new Date(Number(paymentLink.expire_by) * 1000)
@@ -199,7 +126,6 @@ export async function createPaymentLinkAction(request: CreatePaymentLinkRequest)
     paymentLinkCreatedAt: paymentLink.created_at
       ? new Date(Number(paymentLink.created_at) * 1000)
       : new Date(),
-    installmentNumber,
     metadata: paymentLink,
   });
 
@@ -261,15 +187,6 @@ export async function checkPaymentLinkStatusAction(paymentLinkReferenceId: strin
       error: 'Failed to check payment link status',
     };
   }
-}
-
-export async function getPaymentLinkStatusAction(linkId: string): Promise<PaymentLinkResult> {
-  // TODO: Implement payment link status check
-  console.log('Payment link status check requested:', linkId);
-  return {
-    success: false,
-    error: 'Payment link status check not implemented',
-  };
 }
 
 type UpsertPaymentOptions = {
@@ -360,7 +277,8 @@ export async function upsertPaymentWithOptionalTransaction({
   }
 }
 
-export const createSetuPaymentLinkAction = async (request: CreatePaymentLinkRequest) => {
+// Cached Setu access token fetcher with Next.js unstable_cache
+const _getCachedSetuAccessToken = async () => {
   const authorizationResponse = await fetch('https://accountservice.setu.co/v1/users/login', {
     method: 'POST',
     headers: {
@@ -378,42 +296,88 @@ export const createSetuPaymentLinkAction = async (request: CreatePaymentLinkRequ
     access_token: string;
   };
 
-  const response = await fetch('https://umap-uat-core.setu.co/api/v1/merchants/dqr', {
+  return access_token;
+};
+
+export const getSetuAccessTokenAction = unstable_cache(
+  _getCachedSetuAccessToken,
+  ['setu-access-token'],
+  {
+    tags: ['setu-access-token'],
+    revalidate: 280,
+  }
+);
+
+export const createSetuPaymentLinkAction = async (request: CreatePaymentLinkRequest) => {
+  const accessToken = await getSetuAccessTokenAction();
+
+  // Prepare payment reference (handles both full payment and installments)
+  const { referenceId, installmentNumber } = await preparePaymentReference(
+    request.paymentId,
+    request.paymentType,
+    request.amount
+  );
+
+  // Cancel existing pending transaction if any
+  await cancelExistingPendingTransaction(referenceId);
+
+  const response = await fetch(`${env.SETU_URL}/api/v1/merchants/dqr`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${access_token}`,
+      Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
       Merchantid: '01K4VTE5HPZEB81F0CJ2B4NZ79',
     },
     body: JSON.stringify({
       amount: request.amount,
       merchantVpa: 'setu.bridge24304@setuaxis',
-      referenceId: request.paymentId,
+      referenceId,
       metadata: {
         paymentId: request.paymentId,
+        paymentType: request.paymentType,
+        type: request.type,
       },
-      transactionNote: 'testpay',
+      transactionNote: `Payment for ${request.type}`,
     }),
   });
 
-  const data = (await response.json()) as {
-    id: string;
-    merchantId: string;
-    referenceId: string;
-    refId: string;
-    shortLink: string;
-    intentLink: string;
-    qrCode: string;
-    merchantVpa: string;
-    amount: number;
-    transactionNote: string;
-    metadata: {
-      paymentId: string;
-    };
-    status: string;
-    createdAt: string;
-    expiryDate: string;
+  const data = (await response.json()) as SetuCreateDQRResponse;
+
+  // Create transaction record to track the payment link
+  await createTransactionRecord({
+    paymentId: request.paymentId,
+    amount: request.amount,
+    paymentGateway: 'SETU',
+    referenceId,
+    installmentNumber,
+    paymentLinkId: data.id,
+    paymentLinkUrl: data.shortLink,
+    paymentLinkStatus: data.status,
+    paymentLinkExpiresAt: new Date(data.expiryDate),
+    paymentLinkCreatedAt: new Date(data.createdAt),
+    metadata: data,
+  });
+
+  return {
+    success: true,
+    data,
+    referenceId,
   };
+};
+
+export const checkSetuPaymentLinkStatusAction = async (referenceId: string) => {
+  const accessToken = await getSetuAccessTokenAction();
+
+  const response = await fetch(`${env.SETU_URL}/api/v1/merchants/dqr/${referenceId}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      Merchantid: '01K4VTE5HPZEB81F0CJ2B4NZ79',
+    },
+  });
+
+  const data = (await response.json()) as SetuGetDQRResponse;
 
   return {
     success: true,
