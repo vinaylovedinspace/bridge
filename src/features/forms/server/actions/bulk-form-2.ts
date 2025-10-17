@@ -6,6 +6,8 @@ import { getEnrollmentByPlanId } from '@/server/db/plan';
 import { getBranchConfigWithTenant } from '@/server/db/branch';
 import { PDFDocument } from 'pdf-lib';
 import { fillForm2Fields } from './form-2';
+import fs from 'fs';
+import path from 'path';
 
 export const bulkFillForm2 = async (clientIds: string[]) => {
   try {
@@ -31,9 +33,11 @@ export const bulkFillForm2 = async (clientIds: string[]) => {
         console.error(`Enrollment not found for plan ${latestPlan.id}`);
         continue;
       }
+      const pdfPath = path.join(process.cwd(), 'src', 'assets', 'pdfs', 'form-2.pdf');
+      const pdfBytes = fs.readFileSync(pdfPath);
 
       // Load and fill PDF for this client
-      const { pdfDoc, form } = await loadPdfWithForm('form-2.pdf');
+      const { pdfDoc, form } = await loadPdfWithForm(pdfBytes);
 
       try {
         // Use the extracted helper to fill form fields
