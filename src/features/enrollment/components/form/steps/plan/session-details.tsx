@@ -4,7 +4,11 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { Input } from '@/components/ui/input';
 import { TypographyH5 } from '@/components/ui/typography';
 
-export const SessionDetails = () => {
+type SessionDetailsProps = {
+  disabled?: boolean;
+};
+
+export const SessionDetails = ({ disabled = false }: SessionDetailsProps) => {
   const { control } = useFormContext<AdmissionFormValues>();
 
   return (
@@ -23,6 +27,7 @@ export const SessionDetails = () => {
                   placeholder="Number of sessions"
                   value={field.value || ''}
                   onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                  disabled={disabled}
                 />
               </FormControl>
               <FormMessage />
@@ -41,6 +46,7 @@ export const SessionDetails = () => {
                   placeholder="Duration in minutes"
                   value={field.value || ''}
                   onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                  disabled={disabled}
                 />
               </FormControl>
               <FormMessage />

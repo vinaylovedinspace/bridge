@@ -31,7 +31,11 @@ const VehicleOptions = () => {
   ));
 };
 
-export const VehicleSelection = () => {
+type VehicleSelectionProps = {
+  disabled?: boolean;
+};
+
+export const VehicleSelection = ({ disabled = false }: VehicleSelectionProps) => {
   const { control } = useFormContext<AdmissionFormValues>();
   const { mutate } = useSWRConfig();
 
@@ -54,6 +58,7 @@ export const VehicleSelection = () => {
               <Select
                 onValueChange={(value) => handleVehicleChange(value, field.onChange)}
                 defaultValue={field.value}
+                disabled={disabled}
               >
                 <FormControl>
                   <SelectTrigger>

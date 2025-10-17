@@ -85,7 +85,9 @@ export function DateTimePicker<TFieldValues extends FieldValues = FieldValues>({
 
   // Format the display value
   const getDisplayValue = () => {
-    if (!selected) return placeholderText;
+    if (!selected || !(selected instanceof Date) || isNaN(selected.getTime())) {
+      return placeholderText;
+    }
     return `${format(selected, 'PPP')} at ${format(selected, 'h:mm a')}`;
   };
 
@@ -317,7 +319,9 @@ function ControlledDateTimePicker<TFieldValues extends FieldValues = FieldValues
 
   // Format the display value
   const getDisplayValue = () => {
-    if (!value) return placeholderText;
+    if (!value || !(value instanceof Date) || isNaN(value.getTime())) {
+      return placeholderText;
+    }
     return `${format(value, 'PPP')} at ${format(value, 'h:mm a')}`;
   };
 

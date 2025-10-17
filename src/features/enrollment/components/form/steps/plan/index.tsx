@@ -28,7 +28,7 @@ export const PlanStep = () => {
   const currentClientId = watch('client.id');
 
   const { slotConflict, checkSlotAvailability } = useSlotAvailability(currentClientId);
-  const { hasCompletedSessions, isTimeOutsideOperatingHours } = useSessionValidation(
+  const { hasStartedSessions, isTimeOutsideOperatingHours } = useSessionValidation(
     currentClientId,
     selectedDateTime
   );
@@ -45,8 +45,20 @@ export const PlanStep = () => {
 
   return (
     <div className="space-y-10">
-      <VehicleSelection />
-      <SessionDetails />
+      {hasStartedSessions && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+          <LockIcon className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-amber-800">
+            <p className="font-medium mb-1">Plan details are locked</p>
+            <p>
+              Sessions have already started for this client. You cannot modify the vehicle, number
+              of sessions, or joining date/time.
+            </p>
+          </div>
+        </div>
+      )}
+      <VehicleSelection disabled={hasStartedSessions} />
+      <SessionDetails disabled={hasStartedSessions} />
       <div className="grid grid-cols-12">
         <span className="col-span-3" />
         <div className="grid grid-cols-3 col-span-9 gap-6">
@@ -58,7 +70,7 @@ export const PlanStep = () => {
                 <FormItem>
                   <div className="flex items-center gap-2">
                     <FormLabel required>Joining Date & Time</FormLabel>
-                    {hasCompletedSessions && (
+                    {hasStartedSessions && (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -68,7 +80,7 @@ export const PlanStep = () => {
                           </TooltipTrigger>
                           <TooltipContent>
                             <p className="text-sm">
-                              Date cannot be changed because there are completed sessions
+                              Date and time cannot be changed because sessions have already started
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -76,15 +88,17 @@ export const PlanStep = () => {
                     )}
                   </div>
                   <FormControl>
-                    <DateTimePicker
-                      selected={field.value}
-                      onChange={field.onChange}
-                      placeholderText="Select joining date and time"
-                      minDate={new Date()}
-                      maxDate={new Date(2100, 0, 1)}
-                      disableDateChange={hasCompletedSessions}
-                      workingDays={branchWorkingDays}
-                    />
+                    <div className={hasStartedSessions ? 'pointer-events-none opacity-50' : ''}>
+                      <DateTimePicker
+                        selected={field.value}
+                        onChange={field.onChange}
+                        placeholderText="Select joining date and time"
+                        minDate={new Date()}
+                        maxDate={new Date(2100, 0, 1)}
+                        disableDateChange={hasStartedSessions}
+                        workingDays={branchWorkingDays}
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -104,6 +118,7 @@ export const PlanStep = () => {
                 variant="outline"
                 className="w-full text-blue-600 border-blue-200 hover:bg-blue-50"
                 onClick={() => setShowAvailabilityModal(true)}
+                disabled={hasStartedSessions}
               >
                 Session availability
               </Button>
@@ -119,6 +134,7 @@ export const PlanStep = () => {
         selectedDate={selectedDateTime}
         currentClientId={currentClientId}
         numberOfSessions={numberOfSessions || 1}
+        hasStartedSessions={hasStartedSessions}
         onTimeSelect={(timeValue: string) => {
           const [hours, minutes] = timeValue.split(':').map(Number);
           const newDateTime = new Date(selectedDateTime);

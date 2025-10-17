@@ -222,6 +222,7 @@ export const getClientById = async (clientId: string) => {
       drivingLicense: true,
       plan: true,
       rtoServices: true,
+      clientDocuments: true,
     },
   });
 

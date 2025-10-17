@@ -7,7 +7,7 @@ import { branchOperatingHoursAtom } from '@/lib/atoms/branch-config';
 export const useSessionValidation = (currentClientId?: string, selectedDateTime?: Date) => {
   const branchOperatingHours = useAtomValue(branchOperatingHoursAtom);
 
-  const [hasCompletedSessions, setHasCompletedSessions] = useState(false);
+  const [hasStartedSessions, setHasStartedSessions] = useState(false);
 
   const isTimeOutsideOperatingHours = Boolean(
     selectedDateTime &&
@@ -22,18 +22,25 @@ export const useSessionValidation = (currentClientId?: string, selectedDateTime?
     if (currentClientId) {
       getSessionsByClientId(currentClientId)
         .then((sessions) => {
-          const completed = sessions.some((session) => session.status === 'COMPLETED');
-          setHasCompletedSessions(completed);
+          // Check if any session has been started (IN_PROGRESS, COMPLETED, NO_SHOW)
+          const hasStarted = sessions.some(
+            (session) =>
+              session.status === 'COMPLETED' ||
+              session.status === 'IN_PROGRESS' ||
+              session.status === 'NO_SHOW'
+          );
+          setHasStartedSessions(hasStarted);
         })
         .catch((error) => {
-          console.error('Error checking completed sessions:', error);
-          setHasCompletedSessions(false);
+          console.error('Error checking started sessions:', error);
+          setHasStartedSessions(false);
         });
     }
   }, [currentClientId]);
 
   return {
-    hasCompletedSessions,
+    hasCompletedSessions: hasStartedSessions, // Keep for backward compatibility
+    hasStartedSessions,
     isTimeOutsideOperatingHours,
   };
 };
