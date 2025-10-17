@@ -32,6 +32,10 @@ export async function POST(request: NextRequest) {
 
     if (!isValid) {
       console.error('Invalid Razorpay webhook signature');
+      console.error('Received signature:', signature);
+      console.error('Body length:', body.length);
+      console.error('Secret length:', env.RAZORPAY_WEBHOOK_SECRET.length);
+      console.error('Body preview:', body.substring(0, 100));
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
