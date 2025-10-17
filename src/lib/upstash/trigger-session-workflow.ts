@@ -1,6 +1,5 @@
 import { Client } from '@upstash/workflow';
 import { env } from '@/env';
-import { getWorkflowBaseUrl } from './workflow-utils';
 
 type SessionWorkflowData = {
   sessionId: string;
@@ -24,11 +23,10 @@ type SessionWorkflowData = {
  */
 export async function triggerSessionWorkflow(data: SessionWorkflowData): Promise<void> {
   try {
-    const client = new Client({ token: env.QSTASH_TOKEN });
-    const baseUrl = getWorkflowBaseUrl();
+    const client = new Client({ token: env.QSTASH_TOKEN, baseUrl: env.QSTASH_URL });
 
     const { workflowRunId } = await client.trigger({
-      url: `${baseUrl}/api/workflows/session-status`,
+      url: `${env.NEXT_PUBLIC_APP_URL}/api/workflows/session-status`,
       body: JSON.stringify(data),
       retries: 3,
     });

@@ -62,7 +62,7 @@ export const { POST } = serve<PaymentNotificationPayload>(
     });
   },
   {
-    qstashClient: new Client({ token: env.QSTASH_TOKEN }),
+    qstashClient: new Client({ token: env.QSTASH_TOKEN, baseUrl: env.QSTASH_URL }),
     verbose: true,
   }
 );

@@ -1,6 +1,5 @@
 import { Client } from '@upstash/workflow';
 import { env } from '@/env';
-import { getWorkflowBaseUrl } from './workflow-utils';
 
 type PaymentLinkWorkflowData = {
   paymentLinkId: string;
@@ -30,10 +29,9 @@ type PaymentLinkWorkflowData = {
 export async function triggerPaymentLinkWorkflow(data: PaymentLinkWorkflowData): Promise<void> {
   try {
     const client = new Client({ token: env.QSTASH_TOKEN });
-    const baseUrl = getWorkflowBaseUrl();
 
     const { workflowRunId } = await client.trigger({
-      url: `${baseUrl}/api/workflows/payment-link-lifecycle`,
+      url: `${env.NEXT_PUBLIC_APP_URL}/api/workflows/payment-link-lifecycle`,
       body: JSON.stringify(data),
       retries: 3,
     });

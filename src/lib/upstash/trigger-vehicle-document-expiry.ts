@@ -1,6 +1,5 @@
 import { Client } from '@upstash/workflow';
 import { env } from '@/env';
-import { getWorkflowBaseUrl } from './workflow-utils';
 
 type VehicleDocumentExpiryData = {
   vehicleId: string;
@@ -22,11 +21,10 @@ export async function triggerVehicleDocumentExpiryWorkflow(
   data: VehicleDocumentExpiryData
 ): Promise<void> {
   try {
-    const client = new Client({ token: env.QSTASH_TOKEN });
-    const baseUrl = getWorkflowBaseUrl();
+    const client = new Client({ token: env.QSTASH_TOKEN, baseUrl: env.QSTASH_URL });
 
     const { workflowRunId } = await client.trigger({
-      url: `${baseUrl}/api/workflows/vehicle-document-expiry`,
+      url: `${env.NEXT_PUBLIC_APP_URL}/api/workflows/vehicle-document-expiry`,
       body: JSON.stringify(data),
       retries: 3,
     });
