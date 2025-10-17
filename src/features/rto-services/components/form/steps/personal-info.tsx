@@ -28,16 +28,21 @@ import {
   EducationalQualificationEnum,
   GuardianRelationshipEnum,
 } from '@/db/schema/client/columns';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Info } from 'lucide-react';
+import { Info, ExternalLink } from 'lucide-react';
 import { RTOServiceFormValues } from '@/features/rto-services/types';
 import { DuplicateClientModal } from '@/components/duplicate-client-modal';
 import { useDuplicateClientCheck } from '@/features/rto-services/hooks/use-duplicate-client-check';
+import { DigilockerModal } from '@/components/digilocker-modal';
+import type { ParsedAadhaarData } from '@/types/surepass';
+import { Button } from '@/components/ui/button';
+import { autofillFormWithDigilockerData } from '@/lib/surepass/autofill-form';
 
 export const PersonalInfoStep = () => {
   const methods = useFormContext<RTOServiceFormValues>();
   const { control, setValue, clearErrors } = methods;
+  const [showDigilockerModal, setShowDigilockerModal] = React.useState(false);
 
   // Use custom hook for phone and Aadhaar number validation
   const {
@@ -49,6 +54,20 @@ export const PersonalInfoStep = () => {
     handleUseExisting,
     handleContinueWithNew,
   } = useDuplicateClientCheck(setValue, clearErrors);
+
+  // Handle Digilocker success
+  const handleDigilockerSuccess = (
+    data: ParsedAadhaarData,
+    aadhaarPdfUrl?: string | null | undefined
+  ) => {
+    autofillFormWithDigilockerData(data, aadhaarPdfUrl, setValue, clearErrors);
+  };
+
+  // Watch for Aadhaar PDF URL
+  const aadhaarPdfUrl = useWatch({
+    control,
+    name: 'client.aadhaarPdfUrl',
+  });
 
   // Watch for changes in the checkbox and address fields
   const isSameAddress = useWatch({
@@ -134,7 +153,7 @@ export const PersonalInfoStep = () => {
                   <FormLabel>Aadhaar Number</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="123456789012"
+                      placeholder="xxxx xxxx xxxx"
                       value={field.value || ''}
                       onChange={(e) => {
                         const value = e.target.value.replace(/[^0-9\s]/g, '');
@@ -151,6 +170,16 @@ export const PersonalInfoStep = () => {
                 </FormItem>
               )}
             />
+            <div className="flex items-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowDigilockerModal(true)}
+                className="w-1/2"
+              >
+                Auto-fill
+              </Button>
+            </div>
           </div>
           <FormField
             control={control}
@@ -713,6 +742,20 @@ export const PersonalInfoStep = () => {
         </div>
       </div>
 
+      {aadhaarPdfUrl && (
+        <FormDescription>
+          <a
+            href={aadhaarPdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
+          >
+            View Aadhaar PDF
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </FormDescription>
+      )}
+
       {/* Duplicate Client Modal */}
       <DuplicateClientModal
         open={showDuplicateModal}
@@ -721,6 +764,13 @@ export const PersonalInfoStep = () => {
         matchedField={existingClient?.matchedField}
         onUseExisting={handleUseExisting}
         onContinueWithNew={handleContinueWithNew}
+      />
+
+      {/* Digilocker Modal */}
+      <DigilockerModal
+        open={showDigilockerModal}
+        onOpenChange={setShowDigilockerModal}
+        onSuccess={handleDigilockerSuccess}
       />
     </div>
   );

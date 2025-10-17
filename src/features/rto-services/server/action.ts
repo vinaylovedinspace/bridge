@@ -62,7 +62,14 @@ export const saveRTOServiceWithPayment = async (
     });
 
     // Validate everything at once
-    const { success, data, error } = rtoServicesFormSchemaWithOptionalPayment.safeParse(unsafeData);
+    const { success, data, error } = rtoServicesFormSchemaWithOptionalPayment.safeParse({
+      ...unsafeData,
+      client: {
+        ...unsafeData.client,
+        branchId,
+        tenantId,
+      },
+    });
 
     if (!success) {
       console.error('Validation error:', error);

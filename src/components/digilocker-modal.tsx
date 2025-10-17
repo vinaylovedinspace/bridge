@@ -20,9 +20,8 @@ import {
   initializeDigilocker,
   checkDigilockerStatus,
   downloadAadhaarData,
-} from '@/features/enrollment/server/digilocker-actions';
+} from '@/server/action/digilocker';
 import { useFormContext } from 'react-hook-form';
-import type { AdmissionFormValues } from '@/features/enrollment/types';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 type DigilockerModalProps = {
@@ -35,7 +34,7 @@ type VerificationStep = 'input' | 'waiting' | 'downloading' | 'success' | 'error
 
 export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerModalProps) {
   const branchConfig = useAtomValue(branchConfigAtom)!;
-  const { control, watch } = useFormContext<AdmissionFormValues>();
+  const { control, watch } = useFormContext<{ client: { phoneNumber: string } }>();
   const phoneNumber = watch('client.phoneNumber');
   const [step, setStep] = useState<VerificationStep>('input');
   const [errorMessage, setErrorMessage] = useState('');
