@@ -13,6 +13,9 @@ export const env = createEnv({
     QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
     QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
     BLOB_READ_WRITE_TOKEN: z.string().min(1),
+    RAZORPAY_API_KEY: z.string().min(1),
+    RAZORPAY_API_SECRET: z.string().min(1),
+    RAZORPAY_WEBHOOK_SECRET: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),

@@ -24,6 +24,7 @@ type PaymentModeSelectorProps = {
   phoneNumber: string;
   customerName: string;
   paymentId?: string;
+  paymentType: 'FULL_PAYMENT' | 'INSTALLMENTS';
   amount: number;
   buttonText?: string;
   onAcceptPayment: () => Promise<void>;
@@ -37,6 +38,7 @@ export const PaymentModeSelector = ({
   buttonText = 'Accept Payment',
   onAcceptPayment,
   paymentId,
+  paymentType,
   handlePaymentModeChange,
 }: PaymentModeSelectorProps) => {
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('PAYMENT_LINK');
@@ -124,6 +126,7 @@ export const PaymentModeSelector = ({
         customerName: customerName || 'Student',
         sendSms: true,
         paymentId,
+        paymentType,
         type: 'enrollment',
         sendEmail: false,
         enablePartialPayments: false,
@@ -132,8 +135,8 @@ export const PaymentModeSelector = ({
       if (result.success) {
         setSmsSent(true);
         setCountdown(SMS_SENT_RESET_TIMEOUT);
-        setQrCode(result.data?.qrCode || null);
-        setExpiryTime(result.data?.expiryTime || null);
+        // setQrCode(result.data?.qrCode || null);
+        // setExpiryTime(result.data?.expiryTime || null);
 
         toast.success('Payment link created!', {
           description: `Payment link sent to ${trimmedPhone}`,
@@ -156,7 +159,7 @@ export const PaymentModeSelector = ({
         }, 1000);
       } else {
         toast.error('Payment link not available', {
-          description: result.error || 'Payment link feature is currently not implemented',
+          description: 'Payment link feature is currently not implemented',
           duration: 6000,
         });
       }

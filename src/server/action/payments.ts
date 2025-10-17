@@ -7,6 +7,11 @@ import { IMMEDIATE_PAYMENT_MODES } from '@/lib/constants/payment';
 import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 import { upsertFullPaymentInDB } from '@/server/db/payments';
 import { upsertPaymentInDB } from '@/server/db/payments';
+import Razorpay from 'razorpay';
+import { env } from '@/env';
+import { db } from '@/db';
+import { FullPaymentTable, InstallmentPaymentTable, TransactionTable } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 export type PaymentLinkResult = {
   success: boolean;
@@ -27,6 +32,7 @@ export type CreatePaymentLinkRequest = {
   customerName: string;
   customerEmail?: string;
   paymentId: string;
+  paymentType: 'FULL_PAYMENT' | 'INSTALLMENTS';
   type: 'enrollment' | 'rto-service';
   sendSms?: boolean;
   sendEmail?: boolean;
@@ -35,14 +41,165 @@ export type CreatePaymentLinkRequest = {
   minimumPartialAmount?: number;
 };
 
-export async function createPaymentLinkAction(
-  request: CreatePaymentLinkRequest
-): Promise<PaymentLinkResult> {
-  // TODO: Implement payment link creation
-  console.log('Payment link creation requested:', request);
+export async function createPaymentLinkAction(request: CreatePaymentLinkRequest) {
+  const instance = new Razorpay({
+    key_id: env.RAZORPAY_API_KEY,
+    key_secret: env.RAZORPAY_API_SECRET,
+  });
+
+  let referenceId = request.paymentId;
+  let installmentId: string | undefined;
+  let installmentNumber: number | null = null;
+
+  // For FULL_PAYMENT, create the full payment entry first and use its ID as reference
+  if (request.paymentType === 'FULL_PAYMENT') {
+    const [fullPaymentEntry] = await db
+      .insert(FullPaymentTable)
+      .values({
+        paymentId: request.paymentId,
+        isPaid: false,
+      })
+      .onConflictDoUpdate({
+        target: FullPaymentTable.paymentId,
+        set: {
+          isPaid: false,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+
+    referenceId = fullPaymentEntry.id;
+  } else if (request.paymentType === 'INSTALLMENTS') {
+    // For INSTALLMENTS, find the first unpaid installment and use its ID as reference
+    const installments = await db.query.InstallmentPaymentTable.findMany({
+      where: eq(InstallmentPaymentTable.paymentId, request.paymentId),
+    });
+
+    let unpaidInstallment = installments.find((inst) => !inst.isPaid);
+
+    // If no unpaid installment exists, we need to create one
+    if (!unpaidInstallment) {
+      const paidCount = installments.filter((inst) => inst.isPaid).length;
+
+      if (paidCount === 0) {
+        // Create first installment (50% of total amount)
+        const firstInstallmentAmount = Math.ceil(request.amount / 2);
+        const [newInstallment] = await db
+          .insert(InstallmentPaymentTable)
+          .values({
+            paymentId: request.paymentId,
+            installmentNumber: 1,
+            amount: firstInstallmentAmount,
+            isPaid: false,
+          })
+          .returning();
+
+        unpaidInstallment = newInstallment;
+      } else if (paidCount === 1) {
+        // First installment is paid, create second installment
+        const firstInstallment = installments[0];
+        const secondInstallmentAmount = request.amount - firstInstallment.amount;
+        const [newInstallment] = await db
+          .insert(InstallmentPaymentTable)
+          .values({
+            paymentId: request.paymentId,
+            installmentNumber: 2,
+            amount: secondInstallmentAmount,
+            isPaid: false,
+          })
+          .returning();
+
+        unpaidInstallment = newInstallment;
+      } else {
+        throw new Error('All installments are already paid');
+      }
+    }
+
+    referenceId = unpaidInstallment.id;
+    installmentId = unpaidInstallment.id;
+    installmentNumber = unpaidInstallment.installmentNumber;
+  }
+
+  // Check for existing pending transaction with same reference ID
+  // This handles the case where a payment link is resent
+  const existingTransaction = await db.query.TransactionTable.findFirst({
+    where: and(
+      eq(TransactionTable.paymentLinkReferenceId, referenceId),
+      eq(TransactionTable.transactionStatus, 'PENDING')
+    ),
+  });
+
+  // If an existing pending transaction exists, cancel/expire the old payment link in Razorpay
+  if (existingTransaction?.paymentLinkId) {
+    try {
+      // Attempt to cancel the old payment link in Razorpay
+      await instance.paymentLink.cancel(existingTransaction.paymentLinkId);
+      console.log(`Cancelled old payment link: ${existingTransaction.paymentLinkId}`);
+    } catch (error) {
+      // If cancellation fails (link already paid/expired), just log it
+      console.warn(
+        `Could not cancel old payment link: ${existingTransaction.paymentLinkId}`,
+        error
+      );
+    }
+
+    // Mark the old transaction as cancelled in our database
+    await db
+      .update(TransactionTable)
+      .set({
+        transactionStatus: 'CANCELLED',
+        paymentLinkStatus: 'CANCELLED',
+        updatedAt: new Date(),
+      })
+      .where(eq(TransactionTable.id, existingTransaction.id));
+  }
+
+  // Create new payment link with metadata in notes
+  const paymentLink = await instance.paymentLink.create({
+    amount: request.amount * 100,
+    currency: 'INR',
+    reference_id: referenceId,
+    description: `Payment for ${request.type}`,
+    notes: {
+      payment_id: request.paymentId,
+      payment_type: request.paymentType,
+      type: request.type,
+      ...(installmentId && { installment_id: installmentId }),
+    },
+    customer: {
+      name: request.customerName,
+      email: request.customerEmail,
+      contact: request.customerPhone,
+    },
+    notify: {
+      sms: request.sendSms ?? true,
+    },
+  });
+
+  // Create new transaction record to track the payment link
+  await db.insert(TransactionTable).values({
+    paymentId: request.paymentId,
+    amount: request.amount,
+    paymentMode: 'PAYMENT_LINK',
+    paymentGateway: 'RAZORPAY',
+    transactionStatus: 'PENDING',
+    paymentLinkId: paymentLink.id,
+    paymentLinkUrl: paymentLink.short_url,
+    paymentLinkReferenceId: referenceId,
+    paymentLinkStatus: paymentLink.status,
+    paymentLinkExpiresAt: paymentLink.expire_by
+      ? new Date(Number(paymentLink.expire_by) * 1000)
+      : null,
+    paymentLinkCreatedAt: paymentLink.created_at
+      ? new Date(Number(paymentLink.created_at) * 1000)
+      : new Date(),
+    installmentNumber,
+    metadata: paymentLink,
+  });
+
   return {
-    success: false,
-    error: 'Payment link creation not implemented',
+    success: true,
+    data: paymentLink,
   };
 }
 
