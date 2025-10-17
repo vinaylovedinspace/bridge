@@ -6,6 +6,8 @@ import { getEnrollmentByPlanId } from '@/server/db/plan';
 import { form14FieldNames } from '@/features/forms/lib/field-names/form-14';
 import { getBranchConfigWithTenant } from '@/server/db/branch';
 import { formatDateToDDMMYYYY, getTenantNameInitials } from '@/lib/utils';
+import fs from 'fs';
+import path from 'path';
 
 export const fillForm14 = async (clientId: string) => {
   try {
@@ -34,8 +36,11 @@ export const fillForm14 = async (clientId: string) => {
     const learningLicense = client.learningLicense;
     const drivingLicense = client.drivingLicense;
 
+    const pdfPath = path.join(process.cwd(), 'src', 'assets', 'pdfs', 'form-14.pdf');
+    const pdfBytes = fs.readFileSync(pdfPath);
+
     // Fill the PDF form
-    const base64Pdf = await fillAndFlattenPdf('form-14.pdf', (form) => {
+    const base64Pdf = await fillAndFlattenPdf(pdfBytes, (form) => {
       try {
         // Get current year for registration
         const currentYear = new Date().getFullYear().toString();

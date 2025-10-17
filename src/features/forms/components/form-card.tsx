@@ -8,15 +8,14 @@ type FormItem = {
   name: string;
   title: string;
   description: string;
-  fileName: string;
   sections: string[];
 };
 
 type FormCardProps = {
   form: FormItem;
   selectedClient: string | null;
-  onPrint: (fileName: string) => void;
-  onDownload: (fileName: string) => void;
+  onPrint: () => void;
+  onDownload: () => void;
 };
 
 export function FormCard({ form, selectedClient, onPrint, onDownload }: FormCardProps) {
@@ -54,7 +53,7 @@ export function FormCard({ form, selectedClient, onPrint, onDownload }: FormCard
 
         <div className="flex gap-2 justify-between pt-4">
           <Button
-            onClick={() => onPrint(form.fileName)}
+            onClick={() => onPrint()}
             variant="outline"
             size="sm"
             className="flex-1"
@@ -65,7 +64,7 @@ export function FormCard({ form, selectedClient, onPrint, onDownload }: FormCard
             Print
           </Button>
           <Button
-            onClick={() => onDownload(form.fileName)}
+            onClick={() => onDownload()}
             size="sm"
             className="flex-1"
             disabled={!selectedClient}

@@ -9,6 +9,8 @@ import { getBranchConfigWithTenant } from '@/server/db/branch';
 import { formatDateToDDMMYYYY } from '@/lib/utils';
 import type { PDFForm } from 'pdf-lib';
 import type { Enrollment } from '@/server/db/plan';
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Fills Form 2 fields with client data
@@ -187,8 +189,11 @@ export const fillForm2 = async (clientId: string) => {
 
     const branchConfig = await getBranchConfigWithTenant();
 
+    const pdfPath = path.join(process.cwd(), 'src', 'assets', 'pdfs', 'form-2.pdf');
+    const pdfBytes = fs.readFileSync(pdfPath);
+
     // Fill the PDF form using the extracted helper
-    const base64Pdf = await fillAndFlattenPdf('form-2.pdf', async (form) => {
+    const base64Pdf = await fillAndFlattenPdf(pdfBytes, async (form) => {
       await fillForm2Fields(form, enrollment, branchConfig);
     });
 
