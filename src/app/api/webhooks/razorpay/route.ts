@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
     const body = await request.text();
     const signature = request.headers.get('x-razorpay-signature');
 
+    console.log('x-razorpay-signature', signature);
     if (!signature) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
     }
