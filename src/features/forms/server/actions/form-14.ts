@@ -1,11 +1,12 @@
 'use server';
 
 import { getClient } from '@/server/db/client';
-import { fillAndFlattenPdf, loadPdfTemplate } from '@/features/forms/lib/pdf-server-utils';
+import { fillAndFlattenPdf } from '@/features/forms/lib/pdf-server-utils';
 import { getEnrollmentByPlanId } from '@/server/db/plan';
 import { form14FieldNames } from '@/features/forms/lib/field-names/form-14';
 import { getBranchConfigWithTenant } from '@/server/db/branch';
 import { formatDateToDDMMYYYY, getTenantNameInitials } from '@/lib/utils';
+import { form14Base64 } from '@/features/forms/lib/forms-base64/form-14';
 
 export const fillForm14 = async (clientId: string) => {
   try {
@@ -34,7 +35,7 @@ export const fillForm14 = async (clientId: string) => {
     const learningLicense = client.learningLicense;
     const drivingLicense = client.drivingLicense;
 
-    const pdfBytes = await loadPdfTemplate('form-14.pdf');
+    const pdfBytes = Buffer.from(form14Base64, 'base64');
 
     // Fill the PDF form
     const base64Pdf = await fillAndFlattenPdf(pdfBytes, (form) => {
