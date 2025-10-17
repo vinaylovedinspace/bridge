@@ -7,9 +7,13 @@ import { TypographyMuted } from '@/components/ui/typography';
 import { Separator } from '@/components/ui/separator';
 import { PaymentMode, PaymentModeEnum } from '@/db/schema/transactions/columns';
 import { toast } from 'sonner';
-import { CheckCircle, MessageSquare, Phone, Loader2 } from 'lucide-react';
-import { createPaymentLinkAction, checkPaymentLinkStatusAction } from '@/server/action/payments';
-// import { QRModal } from './qr-modal';
+import { CheckCircle, MessageSquare, Phone, Loader2, QrCode } from 'lucide-react';
+import {
+  createPaymentLinkAction,
+  checkPaymentLinkStatusAction,
+  createSetuPaymentLinkAction,
+} from '@/server/action/payments';
+import { QRModal } from './qr-modal';
 
 // Constants
 const SMS_SENT_RESET_TIMEOUT = 30; // 30 seconds
@@ -51,9 +55,9 @@ export const PaymentModeSelector = ({
   const [isAcceptingPayment, setIsAcceptingPayment] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [isPollingPayment, setIsPollingPayment] = useState(false);
-  // const [qrCode, setQrCode] = useState<string | null>(null);
-  // const [expiryTime, setExpiryTime] = useState<string | null>(null);
-  // const [showQrModal, setShowQrModal] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [expiryTime, setExpiryTime] = useState<string | null>(null);
+  const [showQrModal, setShowQrModal] = useState(false);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pollAttemptRef = useRef(0);
@@ -127,6 +131,7 @@ export const PaymentModeSelector = ({
       pollIntervalRef.current = null;
     }
     setIsPollingPayment(false);
+    setQrCode(null);
     pollAttemptRef.current = 0;
   };
 
@@ -203,6 +208,7 @@ export const PaymentModeSelector = ({
         return;
       }
 
+      // Use Razorpay for PAYMENT_LINK mode
       const result = await createPaymentLinkAction({
         amount,
         customerPhone: trimmedPhone,
@@ -218,11 +224,9 @@ export const PaymentModeSelector = ({
       if (result.success && result.referenceId) {
         setSmsSent(true);
         setCountdown(SMS_SENT_RESET_TIMEOUT);
-        // setQrCode(result.data?.qrCode || null);
-        // setExpiryTime(result.data?.expiryTime || null);
 
-        toast.success('Payment link created!', {
-          description: `Payment link sent to ${trimmedPhone}. Waiting for payment...`,
+        toast.success('Payment link sent!', {
+          description: `Payment link sent to ${trimmedPhone} via SMS. Waiting for payment...`,
           duration: 5000,
         });
 
@@ -244,13 +248,107 @@ export const PaymentModeSelector = ({
         // Start polling for payment status using the reference ID
         startPaymentPolling(result.referenceId);
       } else {
-        toast.error('Payment link not available', {
-          description: 'Payment link feature is currently not implemented',
+        toast.error('Failed to create payment link', {
+          description: 'Please try again or contact support',
           duration: 6000,
         });
       }
     } catch (error) {
       console.error('Error creating payment link:', error);
+      toast.error('Unexpected error occurred', {
+        description: 'Please try again or contact support if the issue persists',
+        duration: 6000,
+      });
+    } finally {
+      setIsSendingLink(false);
+    }
+  };
+
+  const handleSendUpiLink = async () => {
+    const trimmedPhone = phoneNumber.trim();
+
+    // Validation checks
+    if (!trimmedPhone) {
+      toast.error('Phone number is required to send UPI link');
+      return;
+    }
+
+    if (!isValidPhoneNumber(trimmedPhone)) {
+      toast.error('Invalid phone number format. Must be 10 digits starting with 6-9');
+      return;
+    }
+
+    setIsSendingLink(true);
+    setSmsSent(false);
+
+    // Clear any existing interval
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+
+    try {
+      if (!paymentId) {
+        toast.error('Payment ID is required to send UPI link');
+        return;
+      }
+
+      const result = await createSetuPaymentLinkAction({
+        amount,
+        customerPhone: trimmedPhone,
+        customerName: customerName || 'Student',
+        sendSms: true,
+        paymentId,
+        paymentType,
+        type: 'enrollment',
+        sendEmail: false,
+        enablePartialPayments: false,
+      });
+
+      if (result.success && result.data) {
+        setSmsSent(true);
+        setCountdown(SMS_SENT_RESET_TIMEOUT);
+        // Ensure QR code has proper data URI format
+        const qrCodeData = result.data.qrCode;
+        const formattedQrCode = qrCodeData?.startsWith('data:')
+          ? qrCodeData
+          : `data:image/png;base64,${qrCodeData}`;
+        setQrCode(formattedQrCode || null);
+        setExpiryTime(result.data.expiryDate || null);
+
+        // TODO: Send WhatsApp message with result.data.shortLink
+        console.log('Send this via WhatsApp:', result.data.shortLink);
+
+        toast.success('UPI payment link created!', {
+          description: `Link will be sent via WhatsApp to ${trimmedPhone}. QR code is available.`,
+          duration: 5000,
+        });
+
+        // Start countdown interval
+        countdownIntervalRef.current = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+              }
+              setSmsSent(false);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+
+        // Start polling for payment status using the payment ID (reference ID)
+        startPaymentPolling(paymentId);
+      } else {
+        toast.error('Failed to create UPI link', {
+          description: 'Please try again or contact support',
+          duration: 6000,
+        });
+      }
+    } catch (error) {
+      console.error('Error creating UPI link:', error);
       toast.error('Unexpected error occurred', {
         description: 'Please try again or contact support if the issue persists',
         duration: 6000,
@@ -289,92 +387,97 @@ export const PaymentModeSelector = ({
           </RadioGroup>
         </FormItem>
 
-        {paymentMode === 'PAYMENT_LINK' && (
+        {(paymentMode === 'PAYMENT_LINK' || paymentMode === 'UPI') && (
           <div className="mt-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-5">
-                {isEditingPhone ? (
-                  <div className="flex items-center gap-2">
-                    <TypographyMuted>Send Payment Link to: </TypographyMuted>
-                    <Input
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="h-10 w-32"
-                      placeholder="Enter phone number"
-                      aria-label="Phone number"
-                      maxLength={10}
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={handleSavePhoneNumber}
-                      className="h-10"
-                      type="button"
-                    >
-                      Save
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <TypographyMuted>Send Payment Link to: {phoneNumber}</TypographyMuted>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsEditingPhone(true)}
-                      className="h-8 px-2"
-                      type="button"
-                      aria-label="Edit phone number"
-                    >
-                      Edit
-                    </Button>
-                  </div>
-                )}
-                <div className="flex items-center gap-3">
-                  <Button
-                    onClick={handleSendPaymentLink}
-                    type="button"
-                    disabled={isSendingLink || !isPhoneValid || smsSent || isPollingPayment}
-                    variant={smsSent ? 'secondary' : 'default'}
-                    isLoading={isSendingLink}
-                  >
-                    {smsSent ? (
-                      <>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Sent {countdown > 0 && `(${countdown}s)`}
-                      </>
-                    ) : (
-                      <>
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        Send Link
-                      </>
-                    )}
-                  </Button>
-
-                  {isPollingPayment && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Waiting for payment...</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={stopPaymentPolling}
-                        type="button"
-                        className="h-8 px-2"
-                      >
-                        Stop
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* {qrCode && (
-                    <Button variant="outline" onClick={() => setShowQrModal(true)} type="button">
-                      <QrCode className="mr-2 h-4 w-4" />
-                      Show QR
-                    </Button>
-                  )} */}
-                </div>
+            {/* Phone Number Section */}
+            {isEditingPhone ? (
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <TypographyMuted>
+                  Send {paymentMode === 'UPI' ? 'UPI' : 'Payment'} Link to:{' '}
+                </TypographyMuted>
+                <Input
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="h-10 w-32"
+                  placeholder="Enter phone number"
+                  aria-label="Phone number"
+                  maxLength={10}
+                />
+                <Button
+                  variant="outline"
+                  onClick={handleSavePhoneNumber}
+                  className="h-10"
+                  type="button"
+                >
+                  Save
+                </Button>
               </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <TypographyMuted>
+                  Send {paymentMode === 'UPI' ? 'UPI' : 'Payment'} Link to: {phoneNumber}
+                </TypographyMuted>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditingPhone(true)}
+                  className="h-8 px-2"
+                  type="button"
+                  aria-label="Edit phone number"
+                >
+                  Edit
+                </Button>
+              </div>
+            )}
+
+            {/* Actions Section */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button
+                onClick={paymentMode === 'UPI' ? handleSendUpiLink : handleSendPaymentLink}
+                type="button"
+                disabled={isSendingLink || !isPhoneValid || smsSent || isPollingPayment}
+                variant={smsSent ? 'secondary' : 'default'}
+                isLoading={isSendingLink}
+              >
+                {smsSent ? (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Sent {countdown > 0 && `(${countdown}s)`}
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Send {paymentMode === 'UPI' ? 'via WhatsApp' : 'via SMS'}
+                  </>
+                )}
+              </Button>
+
+              {paymentMode === 'UPI' && qrCode && (
+                <Button variant="outline" onClick={() => setShowQrModal(true)} type="button">
+                  <QrCode className="mr-2 h-4 w-4" />
+                  Show QR Code
+                </Button>
+              )}
             </div>
+
+            {/* Polling Status */}
+            {isPollingPayment && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Waiting for payment...</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={stopPaymentPolling}
+                  type="button"
+                  className="ml-auto h-8"
+                >
+                  Stop Waiting
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -393,12 +496,12 @@ export const PaymentModeSelector = ({
         )}
       </div>
 
-      {/* <QRModal
+      <QRModal
         showQrModal={showQrModal}
         setShowQrModal={setShowQrModal}
         qrCode={qrCode}
         expiryTime={expiryTime}
-      /> */}
+      />
     </>
   );
 };

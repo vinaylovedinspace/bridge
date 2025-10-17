@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import {
   Dialog,
   DialogContent,
@@ -27,7 +26,7 @@ export const QRModal = ({ showQrModal, setShowQrModal, qrCode, expiryTime }: QRM
         </DialogHeader>
         <div className="flex flex-col items-center gap-4 py-4">
           {qrCode && (
-            <Image
+            <img
               src={qrCode}
               alt="Payment QR Code"
               width={300}

@@ -359,3 +359,64 @@ export async function upsertPaymentWithOptionalTransaction({
     return { error: true, message, payment: undefined };
   }
 }
+
+export const createSetuPaymentLinkAction = async (request: CreatePaymentLinkRequest) => {
+  const authorizationResponse = await fetch('https://accountservice.setu.co/v1/users/login', {
+    method: 'POST',
+    headers: {
+      client: 'bridge',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      clientID: env.SETU_API_KEY,
+      secret: env.SETU_API_SECRET,
+      grant_type: 'client_credentials',
+    }),
+  });
+
+  const { access_token } = (await authorizationResponse.json()) as {
+    access_token: string;
+  };
+
+  const response = await fetch('https://umap-uat-core.setu.co/api/v1/merchants/dqr', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${access_token}`,
+      'Content-Type': 'application/json',
+      Merchantid: '01K4VTE5HPZEB81F0CJ2B4NZ79',
+    },
+    body: JSON.stringify({
+      amount: request.amount,
+      merchantVpa: 'setu.bridge24304@setuaxis',
+      referenceId: request.paymentId,
+      metadata: {
+        paymentId: request.paymentId,
+      },
+      transactionNote: 'testpay',
+    }),
+  });
+
+  const data = (await response.json()) as {
+    id: string;
+    merchantId: string;
+    referenceId: string;
+    refId: string;
+    shortLink: string;
+    intentLink: string;
+    qrCode: string;
+    merchantVpa: string;
+    amount: number;
+    transactionNote: string;
+    metadata: {
+      paymentId: string;
+    };
+    status: string;
+    createdAt: string;
+    expiryDate: string;
+  };
+
+  return {
+    success: true,
+    data,
+  };
+};

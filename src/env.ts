@@ -16,6 +16,8 @@ export const env = createEnv({
     RAZORPAY_API_KEY: z.string().min(1),
     RAZORPAY_API_SECRET: z.string().min(1),
     RAZORPAY_WEBHOOK_SECRET: z.string().min(1),
+    SETU_API_KEY: z.string().min(1),
+    SETU_API_SECRET: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
