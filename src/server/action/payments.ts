@@ -10,7 +10,12 @@ import { upsertPaymentInDB } from '@/server/db/payments';
 import Razorpay from 'razorpay';
 import { env } from '@/env';
 import { db } from '@/db';
-import { FullPaymentTable, InstallmentPaymentTable, TransactionTable } from '@/db/schema';
+import {
+  FullPaymentTable,
+  InstallmentPaymentTable,
+  TransactionTable,
+  PaymentTable,
+} from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 export type PaymentLinkResult = {
@@ -23,6 +28,7 @@ export type PaymentLinkResult = {
     status?: 'ACTIVE' | 'INACTIVE' | 'PAID' | 'EXPIRED';
     amountPaid?: number;
   };
+  referenceId?: string; // Reference ID for polling transactions
   error?: string;
 };
 
@@ -200,7 +206,61 @@ export async function createPaymentLinkAction(request: CreatePaymentLinkRequest)
   return {
     success: true,
     data: paymentLink,
+    referenceId, // Return reference ID for polling
   };
+}
+
+/**
+ * Check payment link status by transaction
+ * Polls the transaction table to check if the specific payment link was paid
+ * Much more efficient than checking payment/installment tables
+ */
+export async function checkPaymentLinkStatusAction(paymentLinkReferenceId: string): Promise<{
+  success: boolean;
+  isPaid: boolean;
+  transactionStatus: 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELLED' | 'REFUNDED';
+  paymentLinkStatus?: string;
+  razorpayPaymentId?: string;
+  error?: string;
+}> {
+  try {
+    // Get the most recent transaction for this reference ID
+    const transaction = await db.query.TransactionTable.findFirst({
+      where: and(
+        eq(TransactionTable.paymentLinkReferenceId, paymentLinkReferenceId),
+        eq(TransactionTable.paymentMode, 'PAYMENT_LINK')
+      ),
+      orderBy: (transactions, { desc }) => [desc(transactions.createdAt)],
+    });
+
+    if (!transaction) {
+      return {
+        success: false,
+        isPaid: false,
+        transactionStatus: 'PENDING',
+        error: 'Transaction not found',
+      };
+    }
+
+    // Check if the transaction is successful
+    const isPaid = transaction.transactionStatus === 'SUCCESS';
+
+    return {
+      success: true,
+      isPaid,
+      transactionStatus: transaction.transactionStatus,
+      paymentLinkStatus: transaction.paymentLinkStatus || undefined,
+      razorpayPaymentId: transaction.razorpayPaymentId || undefined,
+    };
+  } catch (error) {
+    console.error('Error checking payment link status:', error);
+    return {
+      success: false,
+      isPaid: false,
+      transactionStatus: 'PENDING',
+      error: 'Failed to check payment link status',
+    };
+  }
 }
 
 export async function getPaymentLinkStatusAction(linkId: string): Promise<PaymentLinkResult> {

@@ -8,7 +8,7 @@ import {
   InstallmentPaymentTable,
   TransactionTable,
 } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 /**
  * Razorpay Webhook Handler

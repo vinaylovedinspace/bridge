@@ -7,12 +7,14 @@ import { TypographyMuted } from '@/components/ui/typography';
 import { Separator } from '@/components/ui/separator';
 import { PaymentMode, PaymentModeEnum } from '@/db/schema/transactions/columns';
 import { toast } from 'sonner';
-import { CheckCircle, MessageSquare, Phone, QrCode } from 'lucide-react';
-import { createPaymentLinkAction } from '@/server/action/payments';
-import { QRModal } from './qr-modal';
+import { CheckCircle, MessageSquare, Phone, Loader2 } from 'lucide-react';
+import { createPaymentLinkAction, checkPaymentLinkStatusAction } from '@/server/action/payments';
+// import { QRModal } from './qr-modal';
 
 // Constants
 const SMS_SENT_RESET_TIMEOUT = 30; // 30 seconds
+const PAYMENT_POLL_INTERVAL = 5000; // 5 seconds
+const PAYMENT_POLL_MAX_ATTEMPTS = 120; // 10 minutes max (120 * 5s = 600s)
 
 // Phone number validation
 const isValidPhoneNumber = (phone: string): boolean => {
@@ -48,16 +50,23 @@ export const PaymentModeSelector = ({
   const [smsSent, setSmsSent] = useState(false);
   const [isAcceptingPayment, setIsAcceptingPayment] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [expiryTime, setExpiryTime] = useState<string | null>(null);
-  const [showQrModal, setShowQrModal] = useState(false);
+  const [isPollingPayment, setIsPollingPayment] = useState(false);
+  // const [qrCode, setQrCode] = useState<string | null>(null);
+  // const [expiryTime, setExpiryTime] = useState<string | null>(null);
+  // const [showQrModal, setShowQrModal] = useState(false);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollAttemptRef = useRef(0);
+  const paymentLinkReferenceIdRef = useRef<string | null>(null);
 
   // Cleanup intervals on unmount
   useEffect(() => {
     return () => {
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
+      }
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
       }
     };
   }, []);
@@ -89,6 +98,80 @@ export const PaymentModeSelector = ({
 
     setPhoneNumber(trimmedPhone);
     setIsEditingPhone(false);
+  };
+
+  // Start polling for payment status
+  const startPaymentPolling = (referenceId: string) => {
+    // Clear any existing polling
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+
+    paymentLinkReferenceIdRef.current = referenceId;
+    setIsPollingPayment(true);
+    pollAttemptRef.current = 0;
+
+    // Initial check
+    checkPaymentLinkStatus();
+
+    // Set up interval
+    pollIntervalRef.current = setInterval(() => {
+      checkPaymentLinkStatus();
+    }, PAYMENT_POLL_INTERVAL);
+  };
+
+  // Stop polling
+  const stopPaymentPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    setIsPollingPayment(false);
+    pollAttemptRef.current = 0;
+  };
+
+  // Check payment link status via transaction
+  const checkPaymentLinkStatus = async () => {
+    const referenceId = paymentLinkReferenceIdRef.current;
+    if (!referenceId) return;
+
+    pollAttemptRef.current += 1;
+
+    // Stop polling after max attempts
+    if (pollAttemptRef.current > PAYMENT_POLL_MAX_ATTEMPTS) {
+      stopPaymentPolling();
+      toast.info('Payment link has expired', {
+        description: 'Please send a new payment link if needed',
+      });
+      return;
+    }
+
+    try {
+      const result = await checkPaymentLinkStatusAction(referenceId);
+
+      if (!result.success || !result.isPaid) {
+        return; // No payment detected yet, continue polling
+      }
+
+      // Payment link was paid successfully!
+      stopPaymentPolling();
+
+      toast.success('Payment received successfully! 🎉', {
+        description: 'Completing enrollment...',
+        duration: 5000,
+      });
+
+      // Wait a moment for user to see the toast, then complete the flow
+      setTimeout(async () => {
+        try {
+          await handleAcceptPayment();
+        } catch (error) {
+          console.error('Error completing enrollment:', error);
+        }
+      }, 1500);
+    } catch (error) {
+      console.error('Error checking payment link status:', error);
+    }
   };
 
   const handleSendPaymentLink = async () => {
@@ -132,14 +215,14 @@ export const PaymentModeSelector = ({
         enablePartialPayments: false,
       });
 
-      if (result.success) {
+      if (result.success && result.referenceId) {
         setSmsSent(true);
         setCountdown(SMS_SENT_RESET_TIMEOUT);
         // setQrCode(result.data?.qrCode || null);
         // setExpiryTime(result.data?.expiryTime || null);
 
         toast.success('Payment link created!', {
-          description: `Payment link sent to ${trimmedPhone}`,
+          description: `Payment link sent to ${trimmedPhone}. Waiting for payment...`,
           duration: 5000,
         });
 
@@ -157,6 +240,9 @@ export const PaymentModeSelector = ({
             return prev - 1;
           });
         }, 1000);
+
+        // Start polling for payment status using the reference ID
+        startPaymentPolling(result.referenceId);
       } else {
         toast.error('Payment link not available', {
           description: 'Payment link feature is currently not implemented',
@@ -247,7 +333,7 @@ export const PaymentModeSelector = ({
                   <Button
                     onClick={handleSendPaymentLink}
                     type="button"
-                    disabled={isSendingLink || !isPhoneValid || smsSent}
+                    disabled={isSendingLink || !isPhoneValid || smsSent || isPollingPayment}
                     variant={smsSent ? 'secondary' : 'default'}
                     isLoading={isSendingLink}
                   >
@@ -264,12 +350,28 @@ export const PaymentModeSelector = ({
                     )}
                   </Button>
 
-                  {qrCode && (
+                  {isPollingPayment && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Waiting for payment...</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={stopPaymentPolling}
+                        type="button"
+                        className="h-8 px-2"
+                      >
+                        Stop
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* {qrCode && (
                     <Button variant="outline" onClick={() => setShowQrModal(true)} type="button">
                       <QrCode className="mr-2 h-4 w-4" />
                       Show QR
                     </Button>
-                  )}
+                  )} */}
                 </div>
               </div>
             </div>
@@ -291,12 +393,12 @@ export const PaymentModeSelector = ({
         )}
       </div>
 
-      <QRModal
+      {/* <QRModal
         showQrModal={showQrModal}
         setShowQrModal={setShowQrModal}
         qrCode={qrCode}
         expiryTime={expiryTime}
-      />
+      /> */}
     </>
   );
 };
