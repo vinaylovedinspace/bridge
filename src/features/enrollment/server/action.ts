@@ -167,15 +167,17 @@ export const upsertDrivingLicense = async (unsafeData: DrivingLicenseValues): Ac
 };
 
 export const upsertPlanWithPayment = async (
-  unsafePlanData: PlanValues,
+  unsafePlanData: PlanValues & { joiningDateString?: string; joiningTimeString?: string },
   unsafePaymentData: PaymentValues
 ): Promise<{ error: boolean; message: string; planId?: string; paymentId?: string }> => {
   const branchConfig = await getBranchConfig();
   const { id: branchId } = branchConfig;
   try {
-    // 1. Extract and validate time
-    const joiningTime = formatTimeString(unsafePlanData.joiningDate);
-    const joiningDate = formatDateToYYYYMMDD(unsafePlanData.joiningDate);
+    // 1. Use the string values directly if provided (avoids timezone conversion issues)
+    const joiningDate =
+      unsafePlanData.joiningDateString || formatDateToYYYYMMDD(unsafePlanData.joiningDate);
+    const joiningTime =
+      unsafePlanData.joiningTimeString || formatTimeString(unsafePlanData.joiningDate);
 
     // 2. Parallelize independent database queries
     const [existingPlan, vehicle] = await Promise.all([

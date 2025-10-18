@@ -108,10 +108,23 @@ export const useUpsertEnrollmentForm = ({
         const existingPlanId = getValues('plan.id');
         const serviceType = getValues('serviceType');
 
+        // Extract date and time as strings to avoid timezone conversion issues
+        const joiningDateTime = data.joiningDate;
+        const year = joiningDateTime.getFullYear();
+        const month = String(joiningDateTime.getMonth() + 1).padStart(2, '0');
+        const day = String(joiningDateTime.getDate()).padStart(2, '0');
+        const hours = String(joiningDateTime.getHours()).padStart(2, '0');
+        const minutes = String(joiningDateTime.getMinutes()).padStart(2, '0');
+
+        const joiningDateStr = `${year}-${month}-${day}`;
+        const joiningTimeStr = `${hours}:${minutes}`;
+
         const planInput = {
           ...data,
           id: existingPlanId,
           serviceType: serviceType || data.serviceType,
+          joiningDateString: joiningDateStr,
+          joiningTimeString: joiningTimeStr,
         };
 
         const paymentInput = getValues('payment');
