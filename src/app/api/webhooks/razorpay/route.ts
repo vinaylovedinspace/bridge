@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
     const body = await request.text();
     const signature = request.headers.get('x-razorpay-signature');
 
-    console.log('x-razorpay-signature', signature);
     if (!signature) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
     }
@@ -31,19 +30,12 @@ export async function POST(request: NextRequest) {
     const isValid = verifyWebhookSignature(body, signature, env.RAZORPAY_WEBHOOK_SECRET);
 
     if (!isValid) {
-      console.error('Invalid Razorpay webhook signature');
-      console.error('Received signature:', signature);
-      console.error('Body length:', body.length);
-      console.error('Secret length:', env.RAZORPAY_WEBHOOK_SECRET.length);
-      console.error('Body preview:', body.substring(0, 100));
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
     // Parse the verified payload
     const payload = JSON.parse(body);
     const event = payload.event;
-
-    console.log('Razorpay webhook event:', event);
 
     // Handle payment link events
     if (event === 'payment_link.paid') {
@@ -86,6 +78,7 @@ async function handlePaymentLinkPaid(payload: RazorpayWebhookPayload) {
 
   // Extract metadata from notes
   const paymentId = notes?.payment_id;
+  console.log('paymentId', paymentId);
   const paymentType = notes?.payment_type as 'FULL_PAYMENT' | 'INSTALLMENTS';
 
   if (!paymentId || !paymentType) {
