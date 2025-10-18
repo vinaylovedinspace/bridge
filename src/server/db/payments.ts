@@ -71,9 +71,23 @@ export const upsertFullPaymentInDB = async (data: typeof FullPaymentTable.$infer
 
 export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert) => {
   if (data.id) {
+    // Fetch current payment to check if it's already paid
+    const currentPayment = await db.query.PaymentTable.findFirst({
+      where: eq(PaymentTable.id, data.id),
+    });
+
+    // Don't overwrite paymentStatus if it's already FULLY_PAID or PARTIALLY_PAID
+    const shouldPreserveStatus =
+      currentPayment?.paymentStatus === 'FULLY_PAID' ||
+      currentPayment?.paymentStatus === 'PARTIALLY_PAID';
+
+    const updateData = shouldPreserveStatus
+      ? { ...data, paymentStatus: currentPayment.paymentStatus, updatedAt: new Date() }
+      : { ...data, updatedAt: new Date() };
+
     const [updated] = await db
       .update(PaymentTable)
-      .set({ ...data, updatedAt: new Date() })
+      .set(updateData)
       .where(eq(PaymentTable.id, data.id))
       .returning();
 

@@ -14,6 +14,7 @@ import { usePaymentLinkSender } from './hooks/use-payment-link-sender';
 import { PhoneNumberEditor } from './components/phone-number-editor';
 import { SendLinkButton } from './components/send-link-button';
 import { PollingStatus } from './components/polling-status';
+import { useRouter } from 'next/navigation';
 
 type PaymentModeSelectorProps = {
   phoneNumber: string;
@@ -42,12 +43,12 @@ export const PaymentModeSelector = ({
   const [isAcceptingPayment, setIsAcceptingPayment] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
 
+  const router = useRouter();
   const phone = usePhoneNumber(initialPhoneNumber);
   const { smsSent, countdown, startCountdown } = useSendLinkCountdown();
   const { isSending, qrCode, expiryTime, sendRazorpayLink, sendSetuLink } = usePaymentLinkSender();
 
   const handlePaymentSuccess = async () => {
-    setIsAcceptingPayment(true);
     try {
       await onAcceptPayment();
     } catch (error) {
@@ -58,7 +59,11 @@ export const PaymentModeSelector = ({
     }
   };
 
-  const polling = usePaymentPolling({ onPaymentSuccess: handlePaymentSuccess });
+  const handlePaymentLinkSuccess = async () => {
+    router.back();
+  };
+
+  const polling = usePaymentPolling({ onPaymentSuccess: handlePaymentLinkSuccess });
 
   const handleSendPaymentLink = async () => {
     if (!paymentId) {
