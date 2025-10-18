@@ -60,6 +60,7 @@ export const PaymentModeSelector = ({
   };
 
   const handlePaymentLinkSuccess = async () => {
+    router.refresh();
     router.back();
   };
 
