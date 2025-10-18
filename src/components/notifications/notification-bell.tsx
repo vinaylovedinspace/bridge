@@ -9,8 +9,7 @@ import { NotificationList } from './notification-list';
 import { useNotifications } from '@/hooks/use-notifications';
 
 export function NotificationBell() {
-  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead, loadMore, hasMore } =
-    useNotifications();
+  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead } = useNotifications();
 
   return (
     <Popover>
@@ -47,8 +46,6 @@ export function NotificationBell() {
             notifications={notifications}
             isLoading={isLoading}
             onMarkAsRead={markAsRead}
-            onLoadMore={loadMore}
-            hasMore={hasMore}
           />
         </div>
       </PopoverContent>

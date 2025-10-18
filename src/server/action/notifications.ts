@@ -23,7 +23,8 @@ export async function getNotifications(params?: GetNotificationsParams) {
   const offset = params?.offset || 0;
   const unreadOnly = params?.unreadOnly || false;
 
-  const conditions = [eq(notifications.userId, userId), eq(notifications.branchId, branch.id)];
+  // Only filter by branchId - show all branch notifications to all users in that branch
+  const conditions = [eq(notifications.branchId, branch.id)];
 
   if (unreadOnly) {
     conditions.push(eq(notifications.isRead, false));
@@ -49,13 +50,7 @@ export async function getNotifications(params?: GetNotificationsParams) {
         await db
           .select({ count: sql<number>`count(*)` })
           .from(notifications)
-          .where(
-            and(
-              eq(notifications.userId, userId),
-              eq(notifications.branchId, branch.id),
-              eq(notifications.isRead, false)
-            )
-          )
+          .where(and(eq(notifications.branchId, branch.id), eq(notifications.isRead, false)))
       )[0].count;
 
   return {
@@ -77,13 +72,7 @@ export async function markNotificationAsRead(notificationId: number) {
   await db
     .update(notifications)
     .set({ isRead: true, readAt: new Date() })
-    .where(
-      and(
-        eq(notifications.userId, userId),
-        eq(notifications.branchId, branch.id),
-        eq(notifications.id, notificationId)
-      )
-    );
+    .where(and(eq(notifications.branchId, branch.id), eq(notifications.id, notificationId)));
 
   return { success: true };
 }
@@ -99,13 +88,7 @@ export async function markAllNotificationsAsRead() {
   await db
     .update(notifications)
     .set({ isRead: true, readAt: new Date() })
-    .where(
-      and(
-        eq(notifications.userId, userId),
-        eq(notifications.branchId, branch.id),
-        eq(notifications.isRead, false)
-      )
-    );
+    .where(and(eq(notifications.branchId, branch.id), eq(notifications.isRead, false)));
 
   return { success: true };
 }
