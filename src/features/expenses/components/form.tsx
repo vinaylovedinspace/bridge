@@ -31,6 +31,7 @@ import { addExpense, updateExpense } from '../server/action';
 import { expenseFormSchema } from '../schemas/expense';
 import { useRouter } from 'next/navigation';
 import { Expense } from '@/server/db/expense';
+import { extractDateTimeStrings } from '@/lib/date-time-utils';
 
 type Staff = {
   id: string;
@@ -55,12 +56,21 @@ export function ExpenseForm({ expense, staff }: { expense?: Expense; staff: Staf
   async function onSubmit(values: z.infer<typeof expenseFormSchema>) {
     setIsPending(true);
     try {
+      // Extract date and time as strings to avoid timezone conversion issues
+      const { dateString, timeString } = extractDateTimeStrings(values.expenseDate);
+
+      const dataToSubmit = {
+        ...values,
+        expenseDateString: dateString,
+        expenseTimeString: timeString,
+      };
+
       let result;
 
       if (expense?.id) {
-        result = await updateExpense(expense.id, values);
+        result = await updateExpense(expense.id, dataToSubmit);
       } else {
-        result = await addExpense(values);
+        result = await addExpense(dataToSubmit);
       }
 
       if (result.error) {

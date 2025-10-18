@@ -20,6 +20,7 @@ import { ActionReturnType } from '@/types/actions';
 import { LAST_ENROLLMENT_CLIENT_ID, LAST_ENROLLMENT_STEP } from '@/lib/constants/business';
 import { upsertPaymentWithOptionalTransaction } from '@/server/action/payments';
 import { Enrollment } from '@/server/db/plan';
+import { extractDateTimeStrings } from '@/lib/date-time-utils';
 
 type UpsertEnrollmentFormParams = {
   enrollment?: NonNullable<Enrollment>;
@@ -109,15 +110,9 @@ export const useUpsertEnrollmentForm = ({
         const serviceType = getValues('serviceType');
 
         // Extract date and time as strings to avoid timezone conversion issues
-        const joiningDateTime = data.joiningDate;
-        const year = joiningDateTime.getFullYear();
-        const month = String(joiningDateTime.getMonth() + 1).padStart(2, '0');
-        const day = String(joiningDateTime.getDate()).padStart(2, '0');
-        const hours = String(joiningDateTime.getHours()).padStart(2, '0');
-        const minutes = String(joiningDateTime.getMinutes()).padStart(2, '0');
-
-        const joiningDateStr = `${year}-${month}-${day}`;
-        const joiningTimeStr = `${hours}:${minutes}`;
+        const { dateString: joiningDateStr, timeString: joiningTimeStr } = extractDateTimeStrings(
+          data.joiningDate
+        );
 
         const planInput = {
           ...data,
