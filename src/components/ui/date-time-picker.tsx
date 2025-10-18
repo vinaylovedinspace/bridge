@@ -71,7 +71,6 @@ export function DateTimePicker<TFieldValues extends FieldValues = FieldValues>({
   const handleTimeChange = (newHours: number, newMinutes: number, newIsPM: boolean) => {
     if (!selected || !onChange) return;
 
-    const newDate = new Date(selected);
     const hours24 = newIsPM
       ? newHours === 12
         ? 12
@@ -79,7 +78,14 @@ export function DateTimePicker<TFieldValues extends FieldValues = FieldValues>({
       : newHours === 12
         ? 0
         : newHours;
-    newDate.setHours(hours24, newMinutes);
+
+    // Create a new date preserving the selected date and applying the new time
+    // We use the local date components to avoid timezone shifts
+    const year = selected.getFullYear();
+    const month = selected.getMonth();
+    const day = selected.getDate();
+    const newDate = new Date(year, month, day, hours24, newMinutes, 0, 0);
+
     onChange(newDate);
   };
 
@@ -145,7 +151,26 @@ export function DateTimePicker<TFieldValues extends FieldValues = FieldValues>({
                 mode="single"
                 selected={selected as Date | undefined}
                 onSelect={
-                  disableDateChange ? undefined : (onChange as (date: Date | undefined) => void)
+                  disableDateChange
+                    ? undefined
+                    : (date: Date | undefined) => {
+                        if (!date || !onChange) {
+                          onChange?.(date ?? null);
+                          return;
+                        }
+                        // Preserve time when changing date (use local components)
+                        const year = date.getFullYear();
+                        const month = date.getMonth();
+                        const day = date.getDate();
+
+                        if (selected) {
+                          const hours = selected.getHours();
+                          const minutes = selected.getMinutes();
+                          onChange(new Date(year, month, day, hours, minutes, 0, 0));
+                        } else {
+                          onChange(new Date(year, month, day, 12, 0, 0, 0));
+                        }
+                      }
                 }
                 disabled={disableDateChange ? () => true : dateFilter}
                 initialFocus
@@ -305,7 +330,6 @@ function ControlledDateTimePicker<TFieldValues extends FieldValues = FieldValues
   const handleTimeChange = (newHours: number, newMinutes: number, newIsPM: boolean) => {
     if (!value) return;
 
-    const newDate = new Date(value);
     const hours24 = newIsPM
       ? newHours === 12
         ? 12
@@ -313,7 +337,14 @@ function ControlledDateTimePicker<TFieldValues extends FieldValues = FieldValues
       : newHours === 12
         ? 0
         : newHours;
-    newDate.setHours(hours24, newMinutes);
+
+    // Create a new date preserving the selected date and applying the new time
+    // We use the local date components to avoid timezone shifts
+    const year = value.getFullYear();
+    const month = value.getMonth();
+    const day = value.getDate();
+    const newDate = new Date(year, month, day, hours24, newMinutes, 0, 0);
+
     onChange(newDate);
   };
 
@@ -363,7 +394,26 @@ function ControlledDateTimePicker<TFieldValues extends FieldValues = FieldValues
                 mode="single"
                 selected={value as Date | undefined}
                 onSelect={
-                  disableDateChange ? undefined : (onChange as (date: Date | undefined) => void)
+                  disableDateChange
+                    ? undefined
+                    : (date: Date | undefined) => {
+                        if (!date) {
+                          onChange(date);
+                          return;
+                        }
+                        // Preserve time when changing date (use local components)
+                        const year = date.getFullYear();
+                        const month = date.getMonth();
+                        const day = date.getDate();
+
+                        if (value) {
+                          const hours = value.getHours();
+                          const minutes = value.getMinutes();
+                          onChange(new Date(year, month, day, hours, minutes, 0, 0));
+                        } else {
+                          onChange(new Date(year, month, day, 12, 0, 0, 0));
+                        }
+                      }
                 }
                 disabled={disableDateChange ? () => true : dateFilter}
                 initialFocus

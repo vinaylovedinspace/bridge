@@ -174,13 +174,8 @@ export const upsertPlanWithPayment = async (
   const { id: branchId } = branchConfig;
   try {
     // 1. Extract and validate time
-    console.log('DEBUG: unsafePlanData.joiningDate =', unsafePlanData.joiningDate);
-    console.log('DEBUG: joiningDate ISO string =', unsafePlanData.joiningDate.toISOString());
-    console.log('DEBUG: joiningDate local string =', unsafePlanData.joiningDate.toString());
     const joiningTime = formatTimeString(unsafePlanData.joiningDate);
     const joiningDate = formatDateToYYYYMMDD(unsafePlanData.joiningDate);
-    console.log('DEBUG: Extracted joiningTime =', joiningTime);
-    console.log('DEBUG: Extracted joiningDate =', joiningDate);
 
     // 2. Parallelize independent database queries
     const [existingPlan, vehicle] = await Promise.all([
