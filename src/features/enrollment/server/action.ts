@@ -169,7 +169,8 @@ export const upsertPlanWithPayment = async (
 
     // 2. Parallelize independent database queries
     const [existingPlan, vehicle] = await Promise.all([
-      findExistingPlanInDB(unsafePlanData.id, unsafePlanData.clientId),
+      // Only check for existing plan by ID (not by clientId) to determine if this specific plan exists
+      findExistingPlanInDB(unsafePlanData.id),
       getVehicleRentAmount(unsafePlanData.vehicleId),
     ]);
 
@@ -243,11 +244,27 @@ export const upsertPlanWithPayment = async (
     const planCode = unsafePlanData.planCode ?? (await getNextPlanCode(branchId));
 
     // 9. Create/update plan with paymentId
-    const { plan } = await upsertPlanWithPaymentIdInDB({
-      ...planData,
-      planCode,
-      paymentId: paymentResult.payment.id,
-    });
+    let plan;
+    try {
+      const planResult = await upsertPlanWithPaymentIdInDB({
+        ...planData,
+        planCode,
+        paymentId: paymentResult.payment.id,
+      });
+      plan = planResult.plan;
+    } catch (error) {
+      console.error('❌ [Enrollment Action] Error creating/updating plan:', error);
+      if (
+        error instanceof Error &&
+        error.message.includes('duplicate key value violates unique constraint')
+      ) {
+        return {
+          error: true,
+          message: 'A plan with this payment already exists. Please try again or contact support.',
+        };
+      }
+      throw error;
+    }
 
     // 10. Generate sessions
     await handleSessionGeneration(
@@ -263,6 +280,20 @@ export const upsertPlanWithPayment = async (
       branchConfig
     );
 
+    // 11. Send onboarding WhatsApp message for new plans only
+    if (!existingPlan) {
+      console.log('📱 [Enrollment Action] Sending onboarding message for new plan');
+      try {
+        await sendEnrollmentMessages({
+          clientId: planData.clientId,
+          planId: plan.id,
+        });
+      } catch (error) {
+        console.error('❌ [Enrollment Action] Failed to send onboarding message:', error);
+        // Don't fail the enrollment if messaging fails
+      }
+    }
+
     return {
       error: false,
       message: 'Plan and payment processed successfully',
@@ -276,3 +307,86 @@ export const upsertPlanWithPayment = async (
     return { error: true, message };
   }
 };
+// Helper function to send enrollment messages
+async function sendEnrollmentMessages({ clientId, planId }: { clientId: string; planId: string }) {
+  console.log('📱 [Enrollment Messages] Sending onboarding message');
+
+  try {
+    // Import WhatsApp service and database utilities
+    const { sendOnboardingMessage } = await import('@/lib/whatsapp/services/onboarding-service');
+    const { db } = await import('@/db');
+    const { PlanTable, ClientTable, VehicleTable, SessionTable } = await import('@/db/schema');
+    const { eq, and, isNull } = await import('drizzle-orm');
+
+    // Get enrollment data directly
+    const plan = await db.query.PlanTable.findFirst({
+      where: eq(PlanTable.id, planId),
+    });
+
+    if (!plan) {
+      console.error('❌ [Enrollment Messages] Plan not found');
+      return;
+    }
+
+    const [client, vehicle, sessions] = await Promise.all([
+      db.query.ClientTable.findFirst({
+        where: eq(ClientTable.id, clientId),
+        columns: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phoneNumber: true,
+        },
+      }),
+      db.query.VehicleTable.findFirst({
+        where: eq(VehicleTable.id, plan.vehicleId),
+        columns: {
+          name: true,
+          number: true,
+        },
+      }),
+      db.query.SessionTable.findMany({
+        where: and(eq(SessionTable.planId, planId), isNull(SessionTable.deletedAt)),
+        columns: {
+          sessionDate: true,
+          startTime: true,
+        },
+        orderBy: (sessions, { asc }) => [asc(sessions.sessionDate)],
+      }),
+    ]);
+
+    if (!client || !vehicle) {
+      console.error('❌ [Enrollment Messages] Client or vehicle not found');
+      return;
+    }
+
+    // Send onboarding message using our clean service
+    const result = await sendOnboardingMessage({
+      id: client.id,
+      firstName: client.firstName,
+      lastName: client.lastName,
+      phoneNumber: client.phoneNumber,
+      plan: {
+        numberOfSessions: plan.numberOfSessions,
+        joiningDate: plan.joiningDate,
+        joiningTime: plan.joiningTime,
+      },
+      sessions: sessions.map((session) => ({
+        sessionDate: session.sessionDate,
+        startTime: session.startTime,
+      })),
+      vehicleDetails: {
+        name: vehicle.name,
+        number: vehicle.number,
+      },
+    });
+
+    if (result.success) {
+      console.log('✅ [Enrollment Messages] Onboarding message sent successfully');
+    } else {
+      console.error('❌ [Enrollment Messages] Failed to send onboarding message:', result.error);
+    }
+  } catch (error) {
+    console.error('❌ [Enrollment Messages] Error sending onboarding message:', error);
+  }
+}

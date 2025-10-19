@@ -65,9 +65,61 @@ export const upsertFullPaymentInDB = async (data: typeof FullPaymentTable.$infer
       .where(eq(PaymentTable.id, data.paymentId))
       .returning();
 
+    // Send payment receipt after successful payment processing
+    try {
+      await sendPaymentReceiptAfterPayment(updatedPayment.id, data.paymentMode || 'CASH');
+    } catch (error) {
+      console.error('❌ [Payment Receipt] Failed to send payment receipt:', error);
+    }
+
     return updatedPayment;
   });
 };
+
+// Helper function to send payment receipt after successful payment
+async function sendPaymentReceiptAfterPayment(paymentId: string, paymentMode: string) {
+  console.log('📱 [Payment Receipt] Sending payment receipt for payment:', paymentId);
+
+  try {
+    // Get payment with client information
+    const payment = await db.query.PaymentTable.findFirst({
+      where: eq(PaymentTable.id, paymentId),
+      with: {
+        client: {
+          columns: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phoneNumber: true,
+          },
+        },
+      },
+    });
+
+    if (!payment || !payment.client) {
+      console.log('❌ [Payment Receipt] Payment or client not found');
+      return;
+    }
+
+    // Import payment service dynamically to avoid circular dependencies
+    const { sendPaymentReceipt } = await import('@/lib/whatsapp/services/payment-service');
+
+    const paymentReceiptResult = await sendPaymentReceipt(payment.client, {
+      amount: payment.totalAmount,
+      date: new Date(),
+      type: payment.paymentType === 'INSTALLMENTS' ? 'installment' : 'full',
+      paymentMode: paymentMode,
+      transactionReference: `PAY-${payment.id}`,
+      totalAmount: payment.totalAmount,
+      remainingAmount: 0,
+      installmentNumber: 1,
+    });
+
+    console.log('📱 [Payment Receipt] Payment receipt result:', paymentReceiptResult);
+  } catch (error) {
+    console.error('❌ [Payment Receipt] Error sending payment receipt:', error);
+  }
+}
 
 export const upsertPaymentInDB = async (data: typeof PaymentTable.$inferInsert) => {
   if (data.id) {

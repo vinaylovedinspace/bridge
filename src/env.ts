@@ -9,6 +9,8 @@ export const env = createEnv({
     SUREPASS_API_TOKEN: z.string().min(1),
     SUREPASS_BASE_URL: z.string().url().default('https://sandbox.surepass.io'),
     QSTASH_TOKEN: z.string().min(1),
+    WHATSAPP_CLOUD_TOKEN: z.string().min(1),
+    WHATSAPP_CLOUD_PHONE_NUMBER_ID: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),

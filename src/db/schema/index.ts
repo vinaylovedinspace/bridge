@@ -53,3 +53,6 @@ export * from './expenses/relations';
 
 export * from './digilocker-verifications/columns';
 export * from './digilocker-verifications/relations';
+
+export * from './message-logs/columns';
+export * from './message-logs/relations';

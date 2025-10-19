@@ -188,12 +188,79 @@ export const upsertPlanWithPaymentIdInDB = async (planData: typeof PlanTable.$in
     };
   }
 
-  // Create new plan
-  const [plan] = await db.insert(PlanTable).values(planData).returning();
+  const existingPlan = await db.query.PlanTable.findFirst({
+    where: eq(PlanTable.paymentId, planData.paymentId),
+  });
 
-  return {
-    plan,
-  };
+  if (existingPlan) {
+    console.log(
+      '⚠️ [Plan DB] Found existing plan with same paymentId, updating instead of creating new one:',
+      existingPlan.id
+    );
+    // Update the existing plan instead of creating a new one
+    const [plan] = await db
+      .update(PlanTable)
+      .set({
+        ...planData,
+        id: existingPlan.id, // Keep the existing ID
+        updatedAt: new Date(),
+      })
+      .where(eq(PlanTable.id, existingPlan.id))
+      .returning();
+
+    console.log('✅ [Plan DB] Updated existing plan successfully');
+    return {
+      plan,
+    };
+  }
+
+  // Create new plan
+  console.log('🆕 [Plan DB] Creating new plan with paymentId:', planData.paymentId);
+  try {
+    const [plan] = await db.insert(PlanTable).values(planData).returning();
+    console.log('✅ [Plan DB] Created new plan successfully:', plan.id);
+    return {
+      plan,
+    };
+  } catch (error) {
+    console.error('❌ [Plan DB] Error creating plan:', error);
+
+    // If we still get a duplicate key error, try to find and update the existing plan
+    if (
+      error instanceof Error &&
+      error.message.includes('duplicate key value violates unique constraint')
+    ) {
+      console.log(
+        '🔄 [Plan DB] Duplicate key error detected, attempting to find and update existing plan'
+      );
+
+      const existingPlan = await db.query.PlanTable.findFirst({
+        where: eq(PlanTable.paymentId, planData.paymentId),
+      });
+
+      if (existingPlan) {
+        console.log(
+          '🔍 [Plan DB] Found existing plan after duplicate error, updating:',
+          existingPlan.id
+        );
+        const [plan] = await db
+          .update(PlanTable)
+          .set({
+            ...planData,
+            id: existingPlan.id,
+            updatedAt: new Date(),
+          })
+          .where(eq(PlanTable.id, existingPlan.id))
+          .returning();
+
+        return {
+          plan,
+        };
+      }
+    }
+
+    throw error;
+  }
 };
 
 export const updatePlanById = async (
@@ -266,15 +333,32 @@ export const createInstallmentPaymentsInDB = async (
       });
 
       const paidCount = allInstallments.filter((inst) => inst.isPaid).length;
+      const newPaymentStatus = calculatePaymentStatus(paidCount);
 
       const [updatedPayment] = await tx
         .update(PaymentTable)
         .set({
-          paymentStatus: calculatePaymentStatus(paidCount),
+          paymentStatus: newPaymentStatus,
           updatedAt: new Date(),
         })
         .where(eq(PaymentTable.id, data.paymentId))
         .returning();
+
+      // Send payment receipt if payment was made
+      if (data.isPaid) {
+        try {
+          await sendInstallmentPaymentReceipt(
+            data.paymentId,
+            data.installmentNumber || 1,
+            data.amount,
+            data.paymentMode || 'CASH',
+            newPaymentStatus
+          );
+        } catch (error) {
+          console.error('❌ [Installment Receipt] Failed to send payment receipt:', error);
+          // Don't fail the payment transaction if messaging fails
+        }
+      }
 
       return updatedPayment;
     }
@@ -287,19 +371,92 @@ export const createInstallmentPaymentsInDB = async (
     });
 
     const paidCount = allInstallments.filter((inst) => inst.isPaid).length;
+    const newPaymentStatus = calculatePaymentStatus(paidCount);
 
     const [updatedPayment] = await tx
       .update(PaymentTable)
       .set({
-        paymentStatus: calculatePaymentStatus(paidCount),
+        paymentStatus: newPaymentStatus,
         updatedAt: new Date(),
       })
       .where(eq(PaymentTable.id, data.paymentId))
       .returning();
 
+    // Send payment receipt if payment was made
+    if (data.isPaid) {
+      try {
+        await sendInstallmentPaymentReceipt(
+          data.paymentId,
+          data.installmentNumber || 1,
+          data.amount,
+          data.paymentMode || 'CASH',
+          newPaymentStatus
+        );
+      } catch (error) {
+        console.error('❌ [Installment Receipt] Failed to send payment receipt:', error);
+        // Don't fail the payment transaction if messaging fails
+      }
+    }
+
     return updatedPayment;
   });
 };
+
+// Helper function to send payment receipt for installment payments
+async function sendInstallmentPaymentReceipt(
+  paymentId: string,
+  installmentNumber: number,
+  amount: number,
+  paymentMode: string,
+  paymentStatus: string
+) {
+  console.log(
+    '📱 [Installment Receipt] Sending installment payment receipt for payment:',
+    paymentId
+  );
+
+  try {
+    // Get payment with client information
+    const payment = await db.query.PaymentTable.findFirst({
+      where: eq(PaymentTable.id, paymentId),
+      with: {
+        client: {
+          columns: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phoneNumber: true,
+          },
+        },
+      },
+    });
+
+    if (!payment || !payment.client) {
+      console.log('❌ [Installment Receipt] Payment or client not found');
+      return;
+    }
+
+    // Import payment service dynamically to avoid circular dependencies
+    const { sendPaymentReceipt } = await import('@/lib/whatsapp/services/payment-service');
+
+    const remainingAmount = paymentStatus === 'FULLY_PAID' ? 0 : payment.totalAmount - amount;
+
+    const paymentReceiptResult = await sendPaymentReceipt(payment.client, {
+      amount: amount,
+      date: new Date(),
+      type: 'installment',
+      paymentMode: paymentMode,
+      transactionReference: `PAY-${payment.id}-INST-${installmentNumber}`,
+      totalAmount: payment.totalAmount,
+      remainingAmount: remainingAmount,
+      installmentNumber: installmentNumber,
+    });
+
+    console.log('📱 [Installment Receipt] Payment receipt result:', paymentReceiptResult);
+  } catch (error) {
+    console.error('❌ [Installment Receipt] Error sending payment receipt:', error);
+  }
+}
 
 // ============================================================================
 // Plan-related database queries

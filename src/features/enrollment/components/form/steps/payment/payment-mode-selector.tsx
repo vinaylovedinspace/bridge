@@ -51,6 +51,9 @@ export const PaymentModeSelector = ({ payment }: { payment: EnrollmentPayment })
 
       setValue('payment', updatedPayment);
 
+      // Note: WhatsApp messages (onboarding + payment receipt) are sent
+      // from the enrollment action in the correct order
+
       toast.success(message, {
         position: 'top-right',
       });
