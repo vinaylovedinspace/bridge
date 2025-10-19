@@ -267,7 +267,7 @@ export const upsertPlanWithPayment = async (
     }
 
     // 10. Generate sessions
-    await handleSessionGeneration(
+    const sessionResult = await handleSessionGeneration(
       planData.clientId,
       plan.id,
       {
@@ -280,9 +280,8 @@ export const upsertPlanWithPayment = async (
       branchConfig
     );
 
-    // 11. Send onboarding WhatsApp message for new plans only
+    // 11. Send onboarding WhatsApp message for new plans only (after sessions are created)
     if (!existingPlan) {
-      console.log('📱 [Enrollment Action] Sending onboarding message for new plan');
       try {
         await sendEnrollmentMessages({
           clientId: planData.clientId,
@@ -290,7 +289,6 @@ export const upsertPlanWithPayment = async (
         });
       } catch (error) {
         console.error('❌ [Enrollment Action] Failed to send onboarding message:', error);
-        // Don't fail the enrollment if messaging fails
       }
     }
 
@@ -307,18 +305,17 @@ export const upsertPlanWithPayment = async (
     return { error: true, message };
   }
 };
+
 // Helper function to send enrollment messages
 async function sendEnrollmentMessages({ clientId, planId }: { clientId: string; planId: string }) {
   console.log('📱 [Enrollment Messages] Sending onboarding message');
 
   try {
-    // Import WhatsApp service and database utilities
     const { sendOnboardingMessage } = await import('@/lib/whatsapp/services/onboarding-service');
     const { db } = await import('@/db');
     const { PlanTable, ClientTable, VehicleTable, SessionTable } = await import('@/db/schema');
     const { eq, and, isNull } = await import('drizzle-orm');
 
-    // Get enrollment data directly
     const plan = await db.query.PlanTable.findFirst({
       where: eq(PlanTable.id, planId),
     });
@@ -360,7 +357,6 @@ async function sendEnrollmentMessages({ clientId, planId }: { clientId: string; 
       return;
     }
 
-    // Send onboarding message using our clean service
     const result = await sendOnboardingMessage({
       id: client.id,
       firstName: client.firstName,

@@ -67,9 +67,18 @@ function formatTime(time: string): string {
 export function buildOnboardingMessage(data: OnboardingMessageData): string {
   const { name, schedule, totalSessions, vehicleDetails, tenantName } = data;
 
-  const firstSession = schedule[0];
-  const lastSession = schedule[schedule.length - 1];
-  const scheduleText = `${formatDate(firstSession.date)} to ${formatDate(lastSession.date)} at ${formatTime(firstSession.time)}`;
+  let scheduleText = 'Sessions will be scheduled soon';
+
+  if (schedule && schedule.length > 0) {
+    const firstSession = schedule[0];
+    const lastSession = schedule[schedule.length - 1];
+
+    if (schedule.length === 1) {
+      scheduleText = `${formatDate(firstSession.date)} at ${formatTime(firstSession.time)}`;
+    } else {
+      scheduleText = `${formatDate(firstSession.date)} to ${formatDate(lastSession.date)} at ${formatTime(firstSession.time)}`;
+    }
+  }
 
   return `🎉 Welcome to ${tenantName}!
 
