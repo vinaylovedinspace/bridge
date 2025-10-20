@@ -6,6 +6,7 @@ import { getEnrollmentByPlanId } from '@/server/db/plan';
 import { form5bFieldNames } from '@/features/forms/lib/field-names/form-5b';
 import { getBranchConfigWithTenant } from '@/server/db/branch';
 import { formatDateToDDMMYYYY, getTenantNameInitials } from '@/lib/utils';
+import { form5BBase64 } from '../../lib/forms-base64/form-5B';
 
 export const fillForm5b = async (clientId: string) => {
   try {
@@ -33,8 +34,10 @@ export const fillForm5b = async (clientId: string) => {
     const client = enrollment.client;
     const learningLicense = client.learningLicense;
 
+    const pdfBytes = Buffer.from(form5BBase64, 'base64');
+
     // Fill the PDF form
-    const base64Pdf = await fillAndFlattenPdf('form-5b.pdf', (form) => {
+    const base64Pdf = await fillAndFlattenPdf(pdfBytes, (form) => {
       try {
         // Personal details
         const fullName = `${client.firstName}${client.middleName ? ' ' + client.middleName : ''} ${client.lastName}`;

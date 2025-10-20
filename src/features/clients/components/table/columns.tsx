@@ -115,10 +115,13 @@ export const columns: ColumnDef<Client>[] = [
       const { plan, id } = row.original;
 
       if (!plan || plan.length === 0) {
-        const lastStep = localStorage.getItem(LAST_ENROLLMENT_STEP);
-        const clientIdforLastStep = JSON.parse(
-          JSON.stringify(localStorage.getItem(LAST_ENROLLMENT_CLIENT_ID))
-        );
+        const lastStepRaw = localStorage.getItem(LAST_ENROLLMENT_STEP);
+        const clientIdRaw = localStorage.getItem(LAST_ENROLLMENT_CLIENT_ID);
+
+        const lastStep = lastStepRaw ? JSON.parse(lastStepRaw) : null;
+        const clientIdforLastStep = clientIdRaw ? JSON.parse(clientIdRaw) : null;
+
+        console.log(lastStep, clientIdforLastStep, id);
         const isLastStepOfTheSameClientId = clientIdforLastStep === id;
         return (
           <Link

@@ -1,9 +1,10 @@
 import { pgTable, text, uuid, integer, timestamp, pgEnum, jsonb } from 'drizzle-orm/pg-core';
 
-export const PaymentModeEnum = pgEnum('payment_mode', ['PAYMENT_LINK', 'QR', 'CASH']);
+export const PaymentModeEnum = pgEnum('payment_mode', ['PAYMENT_LINK', 'UPI', 'QR', 'CASH']);
 export type PaymentMode = (typeof PaymentModeEnum.enumValues)[number];
 
-export const PaymentGatewayEnum = pgEnum('payment_gateway', ['PLACEHOLDER']);
+export const PaymentGatewayEnum = pgEnum('payment_gateway', ['RAZORPAY', 'SETU']);
+export type PaymentGateway = (typeof PaymentGatewayEnum.enumValues)[number];
 
 export const TransactionStatusEnum = pgEnum('transaction_status', [
   'SUCCESS',
@@ -42,9 +43,19 @@ export const TransactionTable = pgTable('transactions', {
   checksumHash: text('checksum_hash'), // Transaction verification hash
   txnDate: timestamp('txn_date'), // Gateway transaction timestamp
 
+  // Razorpay Payment Link specific fields
+  paymentLinkId: text('payment_link_id'), // Razorpay payment link ID (e.g., plink_xxx)
+  paymentLinkUrl: text('payment_link_url'), // Short URL for the payment link
+  paymentLinkReferenceId: text('payment_link_reference_id'), // Our reference ID (full_payment.id or installment.id)
+  paymentLinkStatus: text('payment_link_status'), // CREATED, ACTIVE, PAID, PARTIALLY_PAID, EXPIRED, CANCELLED
+  paymentLinkExpiresAt: timestamp('payment_link_expires_at'), // When the payment link expires
+  paymentLinkCreatedAt: timestamp('payment_link_created_at'), // When the payment link was created
+  razorpayPaymentId: text('razorpay_payment_id'), // Razorpay payment ID (e.g., pay_xxx) when payment is completed
+
   // For installment payments
   installmentNumber: integer('installment_number'),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
   deletedAt: timestamp('deleted_at'),
 });

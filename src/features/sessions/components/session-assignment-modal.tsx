@@ -16,6 +16,8 @@ interface SessionAssignmentModalProps {
   date: Date;
 }
 
+const LIST_LIMIT = 3;
+
 export const SessionAssignmentModal = ({
   isOpen,
   onClose,
@@ -102,7 +104,7 @@ export const SessionAssignmentModal = ({
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredClients.map((client) => (
+              {filteredClients.slice(0, LIST_LIMIT).map((client) => (
                 <div
                   key={client.id}
                   onClick={() => handleClientSelect(client)}

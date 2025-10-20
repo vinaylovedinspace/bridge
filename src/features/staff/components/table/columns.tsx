@@ -96,11 +96,13 @@ export const columns: ColumnDef<Staff>[] = [
         return <span className="text-muted-foreground">-</span>;
       }
       return (
-        <div className="space-y-1">
+        <div className="flex gap-2">
           <div className="font-medium">{vehicle.name}</div>
-          <Badge variant="outline" className="text-xs">
-            {vehicle.number}
-          </Badge>
+          {vehicle.number && (
+            <Badge variant="outline" className="text-xs">
+              {vehicle.number}
+            </Badge>
+          )}
         </div>
       );
     },

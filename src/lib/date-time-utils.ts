@@ -19,6 +19,25 @@ export const formatTimeString = (date: Date): string => {
 };
 
 /**
+ * Extract date and time from a Date object as separate strings
+ * Use this when sending Date values to server actions to avoid timezone conversion issues
+ * @param date The Date object to extract from
+ * @returns Object with dateString (YYYY-MM-DD) and timeString (HH:MM)
+ */
+export const extractDateTimeStrings = (date: Date): { dateString: string; timeString: string } => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+
+  return {
+    dateString: `${year}-${month}-${day}`,
+    timeString: `${hours}:${minutes}`,
+  };
+};
+
+/**
  * Format date to YYYY-MM-DD string (preserves local IST date, no timezone conversion)
  */
 export const formatDateToYYYYMMDD = (date: Date | null): string => {

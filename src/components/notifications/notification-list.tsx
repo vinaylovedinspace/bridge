@@ -1,7 +1,6 @@
 'use client';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
 import { Notification } from '@/db/schema';
 import { NotificationItem } from './notification-item';
 import { Loader2 } from 'lucide-react';
@@ -10,16 +9,12 @@ type NotificationListProps = {
   notifications: Notification[];
   isLoading: boolean;
   onMarkAsRead: (id: number) => void;
-  onLoadMore: () => void;
-  hasMore: boolean;
 };
 
 export function NotificationList({
   notifications,
   isLoading,
   onMarkAsRead,
-  onLoadMore,
-  hasMore,
 }: NotificationListProps) {
   if (isLoading && notifications.length === 0) {
     return (
@@ -48,19 +43,6 @@ export function NotificationList({
           ))}
         </div>
       </ScrollArea>
-      {hasMore && (
-        <div className="border-t p-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full"
-            onClick={onLoadMore}
-            disabled={isLoading}
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Load more'}
-          </Button>
-        </div>
-      )}
     </>
   );
 }

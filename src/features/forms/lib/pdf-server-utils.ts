@@ -12,10 +12,10 @@ import { join } from 'path';
  * @param fileName - Name of the PDF file (e.g., 'form-1A.pdf')
  * @returns Loaded PDF document
  */
-export async function loadPdfTemplate(fileName: string): Promise<PDFDocument> {
-  const pdfPath = join(process.cwd(), 'public', fileName);
+export async function loadPdfTemplate(fileName: string) {
+  const pdfPath = join(process.cwd(), 'assets', 'pdfs', fileName);
   const pdfBytes = await readFile(pdfPath);
-  return PDFDocument.load(pdfBytes);
+  return pdfBytes;
 }
 
 /**
@@ -34,9 +34,9 @@ export async function pdfToBase64(pdfDoc: PDFDocument): Promise<string> {
  * @returns Object containing the PDF document and form
  */
 export async function loadPdfWithForm(
-  fileName: string
+  pdfBytes: Buffer
 ): Promise<{ pdfDoc: PDFDocument; form: PDFForm }> {
-  const pdfDoc = await loadPdfTemplate(fileName);
+  const pdfDoc = await PDFDocument.load(pdfBytes);
   const form = pdfDoc.getForm();
   return { pdfDoc, form };
 }
@@ -48,10 +48,10 @@ export async function loadPdfWithForm(
  * @returns Base64 encoded PDF
  */
 export async function fillAndFlattenPdf(
-  fileName: string,
+  pdfBytes: Buffer,
   fillFunction: (form: PDFForm) => void
 ): Promise<string> {
-  const { pdfDoc, form } = await loadPdfWithForm(fileName);
+  const { pdfDoc, form } = await loadPdfWithForm(pdfBytes);
 
   // Fill the form fields
   fillFunction(form);

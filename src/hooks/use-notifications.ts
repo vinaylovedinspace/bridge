@@ -4,6 +4,11 @@ import { useState, useCallback } from 'react';
 import useSWR, { mutate } from 'swr';
 import { Notification } from '@/db/schema';
 import { toast } from 'sonner';
+import {
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+} from '@/server/action/notifications';
 
 type NotificationsResponse = {
   notifications: Notification[];
@@ -12,60 +17,49 @@ type NotificationsResponse = {
   hasMore: boolean;
 };
 
-const NOTIFICATIONS_KEY = '/api/notifications';
+const NOTIFICATIONS_KEY = 'notifications';
 const POLL_INTERVAL = 30000; // 30 seconds
 
-async function fetcher(url: string): Promise<NotificationsResponse> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch notifications');
-  return res.json();
-}
-
-export function useNotifications() {
-  const [offset, setOffset] = useState(0);
-  const limit = 20;
-
+export function useNotifications(limit = 20, offset = 0) {
   const {
     data,
     error,
     isLoading,
     mutate: mutateNotifications,
   } = useSWR<NotificationsResponse>(
-    `${NOTIFICATIONS_KEY}?limit=${limit}&offset=${offset}`,
-    fetcher,
+    [NOTIFICATIONS_KEY, limit, offset],
+    () => getNotifications({ limit, offset }),
     {
-      refreshInterval: POLL_INTERVAL,
-      revalidateOnFocus: true,
+      revalidateOnMount: true,
     }
   );
 
   const markAsRead = useCallback(
     async (notificationId: number) => {
       try {
-        const res = await fetch(NOTIFICATIONS_KEY, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ notificationIds: [notificationId] }),
-        });
-
-        if (!res.ok) throw new Error('Failed to mark notification as read');
-
         // Update local data optimistically
-        mutateNotifications((current) => {
-          if (!current) return current;
-          return {
-            ...current,
-            notifications: current.notifications.map((n) =>
-              n.id === notificationId ? { ...n, isRead: true, readAt: new Date() } : n
-            ),
-            unreadCount: Math.max(0, current.unreadCount - 1),
-          };
-        }, false);
+        mutateNotifications(
+          (current) => {
+            if (!current) return current;
+            return {
+              ...current,
+              notifications: current.notifications.map((n) =>
+                n.id === notificationId ? { ...n, isRead: true, readAt: new Date() } : n
+              ),
+              unreadCount: Math.max(0, current.unreadCount - 1),
+            };
+          },
+          { revalidate: false }
+        );
+
+        await markNotificationAsRead(notificationId);
 
         // Revalidate all notification queries
-        mutate((key) => typeof key === 'string' && key.startsWith(NOTIFICATIONS_KEY));
+        mutate((key) => Array.isArray(key) && key[0] === NOTIFICATIONS_KEY);
       } catch {
         toast.error('Failed to mark notification as read');
+        // Revert optimistic update on error
+        mutateNotifications();
       }
     },
     [mutateNotifications]
@@ -73,40 +67,35 @@ export function useNotifications() {
 
   const markAllAsRead = useCallback(async () => {
     try {
-      const res = await fetch(NOTIFICATIONS_KEY, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ markAllAsRead: true }),
-      });
-
-      if (!res.ok) throw new Error('Failed to mark all notifications as read');
-
       // Update local data optimistically
-      mutateNotifications((current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          notifications: current.notifications.map((n) => ({
-            ...n,
-            isRead: true,
-            readAt: new Date(),
-          })),
-          unreadCount: 0,
-        };
-      }, false);
+      mutateNotifications(
+        (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            notifications: current.notifications.map((n) => ({
+              ...n,
+              isRead: true,
+              readAt: new Date(),
+            })),
+            unreadCount: 0,
+          };
+        },
+        { revalidate: false }
+      );
+
+      await markAllNotificationsAsRead();
 
       // Revalidate all notification queries
-      mutate((key) => typeof key === 'string' && key.startsWith(NOTIFICATIONS_KEY));
+      mutate((key) => Array.isArray(key) && key[0] === NOTIFICATIONS_KEY);
 
       toast.success('All notifications marked as read');
     } catch {
       toast.error('Failed to mark all notifications as read');
+      // Revert optimistic update on error
+      mutateNotifications();
     }
   }, [mutateNotifications]);
-
-  const loadMore = useCallback(() => {
-    setOffset((prev) => prev + limit);
-  }, [limit]);
 
   return {
     notifications: data?.notifications || [],
@@ -117,7 +106,6 @@ export function useNotifications() {
     error,
     markAsRead,
     markAllAsRead,
-    loadMore,
     refetch: mutateNotifications,
   };
 }
@@ -125,8 +113,8 @@ export function useNotifications() {
 // Hook to get just the unread count for the badge
 export function useUnreadNotificationCount() {
   const { data } = useSWR<NotificationsResponse>(
-    `${NOTIFICATIONS_KEY}?limit=1&unread=true`,
-    fetcher,
+    [NOTIFICATIONS_KEY, 'unread', 1],
+    () => getNotifications({ limit: 1, unreadOnly: true }),
     {
       refreshInterval: POLL_INTERVAL,
       revalidateOnFocus: true,

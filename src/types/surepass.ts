@@ -1,7 +1,10 @@
+import { GenderEnumType, GuardianRelationshipEnumType } from '@/db/schema';
+
 export type DigilockerInitializeRequest = {
   mobile: string;
   tenantId: string;
   branchId: string;
+  sendSMS?: boolean;
 };
 
 export type DigilockerInitializeResponse = {
@@ -36,13 +39,12 @@ export type DigilockerStatusResponse = {
 export type DigilockerListDocumentsResponse = {
   data?: {
     documents?: Array<{
-      digi_file_id: string;
+      file_id: string;
       name: string;
-      type: string;
-      size?: number;
-      issued_on?: string;
-      valid_until?: string;
-      issuer?: string;
+      doc_type: string;
+      downloaded: boolean;
+      issuer: string;
+      description: string;
     }>;
   };
   status_code?: number;
@@ -111,12 +113,39 @@ export type DigilockerDownloadAadhaarResponse = {
   error?: string;
 };
 
+export type DigilockerListFilesResponse = {
+  data: {
+    documents: [
+      {
+        file_id: string;
+        name: string;
+        doc_type: string;
+        downloaded: boolean;
+        issuer: string;
+        description: string;
+      },
+      {
+        file_id: string;
+        name: string;
+        doc_type: string;
+        downloaded: boolean;
+        issuer: string;
+        description: string;
+      },
+    ];
+  };
+  status_code: 200;
+  success: true;
+  message: 'Success';
+  message_code: 'success';
+};
+
 export type ParsedAadhaarData = {
   firstName: string;
   middleName?: string;
   lastName: string;
   birthDate: Date;
-  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  gender: GenderEnumType;
   aadhaarNumber?: string;
   addressLine1: string;
   addressLine2: string;
@@ -133,5 +162,19 @@ export type ParsedAadhaarData = {
   guardianFirstName?: string;
   guardianMiddleName?: string;
   guardianLastName?: string;
+  guardianRelationship: GuardianRelationshipEnumType;
+
   photoUrl?: string;
+};
+
+export type DownloadAadhaarDocumentResponse = {
+  data?: {
+    download_url: string;
+    mime_type: string;
+  };
+  status_code?: number;
+  success: boolean;
+  message?: string;
+  message_code?: string;
+  error?: string;
 };

@@ -4,6 +4,7 @@ import { getClient } from '@/server/db/client';
 import { fillAndFlattenPdf } from '@/features/forms/lib/pdf-server-utils';
 import { form4AFieldNames } from '@/features/forms/lib/field-names/form-4A';
 import { getBranchConfigWithTenant } from '@/server/db/branch';
+import { form4ABase64 } from '@/features/forms/lib/forms-base64/form-4A';
 
 export const fillForm4A = async (clientId: string) => {
   try {
@@ -17,8 +18,10 @@ export const fillForm4A = async (clientId: string) => {
     const branchConfig = await getBranchConfigWithTenant();
     const client = _client;
 
+    const pdfBytes = Buffer.from(form4ABase64, 'base64');
+
     // Fill the PDF form
-    const base64Pdf = await fillAndFlattenPdf('form-4A.pdf', (form) => {
+    const base64Pdf = await fillAndFlattenPdf(pdfBytes, (form) => {
       try {
         // License authority
         const rtoOffice = (branchConfig?.defaultRtoOffice as string).toUpperCase();

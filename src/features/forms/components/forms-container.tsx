@@ -28,7 +28,6 @@ type FormItem = {
   name: string;
   title: string;
   description: string;
-  fileName: string;
   sections: string[];
   serverAction?: FormServerAction;
 };
@@ -40,7 +39,6 @@ const primaryForms: FormItem[] = [
     title: 'Medical Certificate',
     description:
       'Required for applicants aged 40+, or those applying for commercial (transport) licences',
-    fileName: 'form-1a.pdf',
     sections: ['Personal Info', 'Medical Details', 'Age Verification'],
     serverAction: fillForm1A,
   },
@@ -50,7 +48,6 @@ const primaryForms: FormItem[] = [
     title: 'Application for Licence',
     description:
       'Covers new learners licence, permanent licence, addition of vehicle class, renewal, duplicate licence, and change/correction of DL',
-    fileName: 'form-2.pdf',
     sections: ['Personal Info', 'Address', 'Guardian Info', '+1'],
     serverAction: fillForm2,
   },
@@ -60,7 +57,6 @@ const primaryForms: FormItem[] = [
     title: 'Application for International Driving Permit (IDP)',
     description:
       'Required along with your valid DL, Medical Certificate, passport & visa copies, photos & applicable fees',
-    fileName: 'form-4a.pdf',
     sections: ['Personal Info', 'Driving Licence', 'Passport', '+1'],
     serverAction: fillForm4A,
   },
@@ -69,7 +65,6 @@ const primaryForms: FormItem[] = [
     name: 'Form 5',
     title: 'Driving School Certificate',
     description: 'Issued by certified driving schools; mandatory for transport licence applicants',
-    fileName: 'form-5.pdf',
     sections: ['Personal Info', 'School Details', 'Training Records'],
   },
   {
@@ -78,7 +73,6 @@ const primaryForms: FormItem[] = [
     title: 'ADTC Certificate (Maharashtra)',
     description:
       'Certificate from Accredited Driver Training Centre (ADTC) — exempts from driving test',
-    fileName: 'form-5B.pdf',
     sections: ['Personal Info', 'ADTC Details', 'Training Records', '+1'],
     serverAction: fillForm5b,
   },
@@ -88,7 +82,6 @@ const primaryForms: FormItem[] = [
     title: 'Enrollment Document',
     description:
       'Register showing the Enrolment of Trainee(s) in the Driving School Establishments',
-    fileName: 'form-14.pdf',
     sections: ['Personal Info', 'Address'],
     serverAction: fillForm14,
   },
@@ -103,7 +96,7 @@ export function FormsContainer({ clients }: FormsContainerProps) {
     shallow: false,
   });
 
-  const handleDownload = async (fileName: string, serverAction?: FormServerAction) => {
+  const handleDownload = async (serverAction?: FormServerAction) => {
     if (!selectedClient) return;
 
     // If form has a server action, use it to fill the PDF
@@ -112,7 +105,7 @@ export function FormsContainer({ clients }: FormsContainerProps) {
         const result = await serverAction(selectedClient);
 
         if (result.success && result.pdfData) {
-          downloadPdfFromBase64(result.pdfData, result.fileName || fileName);
+          downloadPdfFromBase64(result.pdfData, result.fileName ?? 'form');
         } else {
           toast.error(result.error || 'Failed to fill PDF');
         }
@@ -122,17 +115,9 @@ export function FormsContainer({ clients }: FormsContainerProps) {
       }
       return;
     }
-
-    // Default behavior for forms without server action
-    const link = document.createElement('a');
-    link.href = `/${fileName}`;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
-  const handlePrint = async (fileName: string, serverAction?: FormServerAction) => {
+  const handlePrint = async (serverAction?: FormServerAction) => {
     if (!selectedClient) return;
 
     // If form has a server action, use it to fill the PDF
@@ -150,14 +135,6 @@ export function FormsContainer({ clients }: FormsContainerProps) {
         console.error('Print error:', error);
       }
       return;
-    }
-
-    // Default behavior for forms without server action
-    const printWindow = window.open(`/${fileName}`, '_blank');
-    if (printWindow) {
-      printWindow.onload = () => {
-        printWindow.print();
-      };
     }
   };
 
@@ -213,8 +190,8 @@ export function FormsContainer({ clients }: FormsContainerProps) {
                   key={form.id}
                   form={form}
                   selectedClient={selectedClient}
-                  onPrint={(fileName) => handlePrint(fileName, form.serverAction)}
-                  onDownload={(fileName) => handleDownload(fileName, form.serverAction)}
+                  onPrint={() => handlePrint(form.serverAction)}
+                  onDownload={() => handleDownload(form.serverAction)}
                 />
               ))}
             </div>

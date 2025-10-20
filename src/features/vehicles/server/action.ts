@@ -10,6 +10,7 @@ import {
 import { ActionReturnType } from '@/types/actions';
 import { vehicleFormSchema } from '../schemas/vehicles';
 import { getBranchConfig } from '@/server/action/branch';
+import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 
 /**
  * Server action to add a new vehicle
@@ -28,6 +29,11 @@ export async function addVehicle(unsafeData: z.infer<typeof vehicleFormSchema>):
 
     await addVehicleInDB({
       ...data,
+      pucExpiry: data.pucExpiry ? formatDateToYYYYMMDD(data.pucExpiry) : null,
+      insuranceExpiry: data.insuranceExpiry ? formatDateToYYYYMMDD(data.insuranceExpiry) : null,
+      registrationExpiry: data.registrationExpiry
+        ? formatDateToYYYYMMDD(data.registrationExpiry)
+        : null,
       branchId,
       createdBy: userId!,
     });
@@ -66,6 +72,11 @@ export async function updateVehicle(
 
     await updateVehicleInDB(id, {
       ...data,
+      pucExpiry: data.pucExpiry ? formatDateToYYYYMMDD(data.pucExpiry) : null,
+      insuranceExpiry: data.insuranceExpiry ? formatDateToYYYYMMDD(data.insuranceExpiry) : null,
+      registrationExpiry: data.registrationExpiry
+        ? formatDateToYYYYMMDD(data.registrationExpiry)
+        : null,
       branchId,
       createdBy: userId!,
     });

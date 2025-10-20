@@ -6,6 +6,7 @@ import { getEnrollmentByPlanId } from '@/server/db/plan';
 import { getBranchConfigWithTenant } from '@/server/db/branch';
 import { PDFDocument } from 'pdf-lib';
 import { fillForm2Fields } from './form-2';
+import { form2Base64 } from '../../lib/forms-base64/form-2';
 
 export const bulkFillForm2 = async (clientIds: string[]) => {
   try {
@@ -32,8 +33,10 @@ export const bulkFillForm2 = async (clientIds: string[]) => {
         continue;
       }
 
+      const pdfBytes = Buffer.from(form2Base64, 'base64');
+
       // Load and fill PDF for this client
-      const { pdfDoc, form } = await loadPdfWithForm('form-2.pdf');
+      const { pdfDoc, form } = await loadPdfWithForm(pdfBytes);
 
       try {
         // Use the extracted helper to fill form fields

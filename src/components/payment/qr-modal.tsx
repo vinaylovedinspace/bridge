@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import {
   Dialog,
   DialogContent,
@@ -7,6 +6,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { TypographyMuted } from '@/components/ui/typography';
+import Image from 'next/image';
 
 type QRModalProps = {
   showQrModal: boolean;

@@ -76,6 +76,7 @@ export const PaymentModeSelector = () => {
       phoneNumber={formValues.client?.phoneNumber}
       customerName={customerName}
       paymentId={formValues.payment?.id}
+      paymentType={formValues.payment?.paymentType || 'FULL_PAYMENT'}
       amount={totalAmountAfterDiscount}
       buttonText="Accept Payment"
       onAcceptPayment={handleAcceptPayment}

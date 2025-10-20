@@ -8,12 +8,13 @@ import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAdmissionStepNavigation, ProgressBar } from '../progress-bar/progress-bar';
 import { getMultistepAdmissionStepValidationFields, getStepData } from '../../lib/utils';
-import { useUpsertEnrollmentForm } from '../../hooks/submission-handlers/use-upsert-enrollment-form';
+import { useUpsertEnrollmentForm } from '../../hooks/use-upsert-enrollment-form';
 import { useAddAdmissionForm } from '../../hooks/use-admission-form';
 import { AdmissionFormStepKey } from '../../types';
 import { FormNavigation } from '@/components/ui/form-navigation';
 import { ClientType } from '../../server/db';
 import { EnrollmentFormSteps } from './form-steps';
+import { softDeleteClient } from '../../server/action';
 
 type MultistepFormProps = {
   existingClient?: ClientType;
@@ -70,6 +71,23 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
     }
   };
 
+  const handleDiscard = async () => {
+    const clientId = getValues('client.id');
+    if (clientId) {
+      const result = await softDeleteClient(clientId);
+      if (result.error) {
+        toast.error(result.message);
+      } else {
+        toast.success(result.message);
+        router.back();
+      }
+    }
+  };
+
+  const handleSaveAndExit = async () => {
+    router.back();
+  };
+
   return (
     <FormProvider {...formMethods}>
       <div className="h-full flex flex-col gap-10" data-testid={`admission-step-${currentStep}`}>
@@ -86,9 +104,14 @@ export const MultistepForm = ({ existingClient }: MultistepFormProps) => {
           isFirstStep={isFirstStep}
           isLastStep={isLastStep}
           isSubmitting={isSubmitting}
-          onCancel={() => router.back()}
+          onCancel={() => {
+            router.refresh();
+            router.back();
+          }}
           onPrevious={goToPrevious}
           onNext={handleNext}
+          onDiscard={handleDiscard}
+          onSaveAndExit={handleSaveAndExit}
         />
       </div>
     </FormProvider>

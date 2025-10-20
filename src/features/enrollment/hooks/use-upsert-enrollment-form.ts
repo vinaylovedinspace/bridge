@@ -20,6 +20,7 @@ import { ActionReturnType } from '@/types/actions';
 import { LAST_ENROLLMENT_CLIENT_ID, LAST_ENROLLMENT_STEP } from '@/lib/constants/business';
 import { upsertPaymentWithOptionalTransaction } from '@/server/action/payments';
 import { Enrollment } from '@/server/db/plan';
+import { extractDateTimeStrings } from '@/lib/date-time-utils';
 
 type UpsertEnrollmentFormParams = {
   enrollment?: NonNullable<Enrollment>;
@@ -35,8 +36,9 @@ export const useUpsertEnrollmentForm = ({
   const isEditMode = !!enrollment;
 
   const handlePersonalStep = useCallback(
-    async (data: PersonalInfoValues): ActionReturnType => {
-      const result = await upsertClient(data);
+    async (data: PersonalInfoValues & { aadhaarPdfUrl?: string }): ActionReturnType => {
+      const { aadhaarPdfUrl, ...clientData } = data;
+      const result = await upsertClient(clientData, aadhaarPdfUrl);
 
       // In create mode, store clientId for later steps
       if (!isEditMode && setValue && result.clientId) {
@@ -107,10 +109,17 @@ export const useUpsertEnrollmentForm = ({
         const existingPlanId = getValues('plan.id');
         const serviceType = getValues('serviceType');
 
+        // Extract date and time as strings to avoid timezone conversion issues
+        const { dateString: joiningDateStr, timeString: joiningTimeStr } = extractDateTimeStrings(
+          data.joiningDate
+        );
+
         const planInput = {
           ...data,
           id: existingPlanId,
           serviceType: serviceType || data.serviceType,
+          joiningDateString: joiningDateStr,
+          joiningTimeString: joiningTimeStr,
         };
 
         const paymentInput = getValues('payment');
@@ -183,6 +192,7 @@ export const useUpsertEnrollmentForm = ({
       // Only manage localStorage in create mode
       if (!isEditMode) {
         localStorage.setItem(LAST_ENROLLMENT_CLIENT_ID, JSON.stringify(getValues('client.id')));
+        localStorage.setItem(LAST_ENROLLMENT_STEP, JSON.stringify(currentStep));
 
         if (isLastStep) {
           localStorage.removeItem(LAST_ENROLLMENT_CLIENT_ID);
@@ -191,10 +201,16 @@ export const useUpsertEnrollmentForm = ({
       }
 
       // Show success toast for edit mode (create mode shows it only on last step)
-      if (isEditMode || isLastStep) {
-        toast.success(result?.message || 'Information saved successfully', {
-          position: 'top-right',
-        });
+      if (isLastStep) {
+        if (isEditMode) {
+          toast.success('Information updated successfully', {
+            position: 'top-center',
+          });
+        } else {
+          toast.success('Admission completed successfully!', {
+            position: 'top-center',
+          });
+        }
       }
 
       return true;

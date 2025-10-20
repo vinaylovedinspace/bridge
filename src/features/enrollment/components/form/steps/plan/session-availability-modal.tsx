@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { format, addDays } from 'date-fns';
+import { format, addDays, isToday } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, X } from 'lucide-react';
@@ -19,6 +19,7 @@ type SessionAvailabilityModalProps = {
   onTimeSelect?: (time: string) => void;
   currentClientId?: string; // To highlight current client's sessions
   numberOfSessions?: number; // Number of sessions to check availability for
+  hasStartedSessions?: boolean; // If true, disable time selection
 };
 
 export const SessionAvailabilityModal = ({
@@ -29,6 +30,7 @@ export const SessionAvailabilityModal = ({
   onTimeSelect,
   currentClientId,
   numberOfSessions = 1,
+  hasStartedSessions = false,
 }: SessionAvailabilityModalProps) => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,6 +40,8 @@ export const SessionAvailabilityModal = ({
   const timeSlots = generateTimeSlots(branchOperatingHours);
 
   const selectedDateStr = format(selectedDate ?? new Date(), 'yyyy-MM-dd');
+  const isSelectedDateToday = selectedDate ? isToday(selectedDate) : false;
+  const currentTime = new Date();
 
   // Get session details for each time slot on the selected date
   const sessionsByTimeSlot = sessions
@@ -189,7 +193,13 @@ export const SessionAvailabilityModal = ({
             <div>
               Operating Hours: {branchOperatingHours.start} - {branchOperatingHours.end}
             </div>
-            {numberOfSessions > 1 && selectedDate && (
+            {hasStartedSessions && (
+              <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                <strong>⚠️ Time selection disabled:</strong> Sessions have already started. You can
+                view availability but cannot change the joining time.
+              </div>
+            )}
+            {!hasStartedSessions && numberOfSessions > 1 && selectedDate && (
               <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
                 <strong>Note:</strong> Checking availability for all {numberOfSessions} sessions
                 starting from {format(selectedDate, 'PPP')}. Partially available slots can be
@@ -213,8 +223,24 @@ export const SessionAvailabilityModal = ({
                   const sessionForSlot = availabilityDetails.conflictingSession;
                   const isCurrentClient = sessionForSlot?.clientId === currentClientId;
 
+                  // Check if this time slot is in the past (only for today's date)
+                  const isPastTimeSlot =
+                    isSelectedDateToday &&
+                    (() => {
+                      const [hours, minutes] = slot.value.split(':').map(Number);
+                      const slotTime = new Date(currentTime);
+                      slotTime.setHours(hours, minutes, 0, 0);
+                      return slotTime < currentTime;
+                    })();
+
                   let bgColor, borderColor, textColor, hoverColor;
-                  if (isFullyAvailable) {
+                  if (isPastTimeSlot) {
+                    // Past time slots - greyed out
+                    bgColor = 'bg-gray-100';
+                    borderColor = 'border-gray-300';
+                    textColor = 'text-gray-400';
+                    hoverColor = '';
+                  } else if (isFullyAvailable) {
                     bgColor = 'bg-green-50';
                     borderColor = 'border-green-200';
                     textColor = 'text-green-800';
@@ -236,7 +262,10 @@ export const SessionAvailabilityModal = ({
                     hoverColor = '';
                   }
 
-                  const canSelect = isFullyAvailable || isPartiallyAvailable;
+                  const canSelect =
+                    !hasStartedSessions &&
+                    !isPastTimeSlot &&
+                    (isFullyAvailable || isPartiallyAvailable);
 
                   return (
                     <div
@@ -245,6 +274,7 @@ export const SessionAvailabilityModal = ({
                         p-2 rounded-lg border text-center transition-colors min-h-[90px] flex flex-col justify-between
                         ${bgColor} ${borderColor} ${textColor}
                         ${canSelect ? `cursor-pointer ${hoverColor}` : 'cursor-not-allowed'}
+                        ${hasStartedSessions ? 'opacity-60' : ''}
                       `}
                       onClick={() =>
                         canSelect &&

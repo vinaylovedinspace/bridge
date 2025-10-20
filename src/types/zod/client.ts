@@ -11,11 +11,9 @@ import { z } from 'zod';
 export const clientSchema = createInsertSchema(ClientTable, {
   aadhaarNumber: z
     .string()
+    .min(1, 'Aadhaar number is required')
     .regex(/^[2-9]\d{3}\s?\d{4}\s?\d{4}$/, 'Aadhaar must be 12 digits starting with 2-9')
-    .transform((val) => val.replace(/\s+/g, ''))
-    .optional()
-    .or(z.literal(''))
-    .nullable(),
+    .transform((val) => val.replace(/\s+/g, '')),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   phoneNumber: z.string().min(10, 'Phone number is required').max(10, 'Phone number is not valid'),
@@ -60,4 +58,7 @@ export const clientSchema = createInsertSchema(ClientTable, {
   // Make clientCode optional - it's auto-generated on create, preserved on update
   clientCode: z.string().optional(),
   id: z.string().optional(),
+}).extend({
+  // Extended field not in database, used for form handling
+  aadhaarPdfUrl: z.string().optional(),
 });

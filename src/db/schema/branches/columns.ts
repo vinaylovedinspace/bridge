@@ -1,5 +1,6 @@
 import { pgTable, text, timestamp, uuid, json, integer } from 'drizzle-orm/pg-core';
 import { DEFAULT_WORKING_DAYS, DEFAULT_OPERATING_HOURS } from '@/lib/constants/business';
+import { DigilockerFlowPreferenceEnum } from '../enums';
 
 export const BranchTable = pgTable('branches', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -19,6 +20,11 @@ export const BranchTable = pgTable('branches', {
 
   // Default RTO office for this branch
   defaultRtoOffice: text('default_rto_office'), // RTO office name (e.g., 'Mumbai South RTO')
+
+  // Digilocker auto-fill preference
+  digilockerFlowPreference: DigilockerFlowPreferenceEnum('digilocker_flow_preference')
+    .default('manager')
+    .notNull(), // Who completes the Digilocker flow
 
   tenantId: uuid('tenant_id').notNull(),
   createdBy: text('created_by').notNull(),

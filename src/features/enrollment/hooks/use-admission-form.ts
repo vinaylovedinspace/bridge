@@ -12,7 +12,7 @@ export const useEditAdmissionForm = (enrollment: NonNullable<Enrollment>) => {
   const methods = useForm<AdmissionFormValues>({
     resolver: zodResolver(admissionFormSchema),
     defaultValues: getDefaultValuesForEditEnrollmentForm(enrollment),
-    mode: 'onChange',
+    mode: 'onSubmit',
   });
 
   return methods;
@@ -22,7 +22,7 @@ export const useAddAdmissionForm = (existingClient?: ClientType) => {
   const methods = useForm<AdmissionFormValues>({
     resolver: zodResolver(admissionFormSchema),
     defaultValues: getDefaultValuesForAddEnrollmentForm(existingClient),
-    mode: 'onChange',
+    mode: 'onSubmit',
   });
 
   return methods;

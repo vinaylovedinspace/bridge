@@ -1,10 +1,9 @@
 import { serve } from '@upstash/workflow/nextjs';
-import { Client } from '@upstash/qstash';
 import { db } from '@/db';
 import { VehicleTable } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
-import { env } from '@/env';
 import { NotificationService } from '@/lib/notifications/notification-service';
+import { qstashClient } from '@/lib/upstash/workflow';
 
 type VehicleDocumentExpiryPayload = {
   vehicleId: string;
@@ -46,7 +45,7 @@ export const { POST } = serve<VehicleDocumentExpiryPayload>(
     });
   },
   {
-    qstashClient: new Client({ token: env.QSTASH_TOKEN }),
+    qstashClient,
     verbose: true,
   }
 );

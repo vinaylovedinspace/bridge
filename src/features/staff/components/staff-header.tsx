@@ -17,9 +17,9 @@ export function StaffHeader() {
           <StaffSearchBar />
         </Suspense>
         <Link href="/staff/add">
-          <Button>
+          <Button variant="outline">
             <Plus className="h-4 w-4" />
-            Add Staff
+            Add
           </Button>
         </Link>
       </div>

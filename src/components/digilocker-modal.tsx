@@ -11,39 +11,42 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ParsedAadhaarData } from '@/types/surepass';
 import { useAtomValue } from 'jotai';
 import { branchConfigAtom } from '@/lib/atoms/branch-config';
+import {
+  initializeDigilocker,
+  checkDigilockerStatus,
+  downloadAadhaarData,
+} from '@/server/action/digilocker';
+import { useFormContext } from 'react-hook-form';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 type DigilockerModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: (data: ParsedAadhaarData, aadhaarPdfUrl?: string) => void;
+  onSuccess: (data: ParsedAadhaarData, aadhaarPdfUrl?: string | null) => void;
 };
 
 type VerificationStep = 'input' | 'waiting' | 'downloading' | 'success' | 'error';
 
 export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerModalProps) {
-  const [mobile, setMobile] = useState('');
-  const [clientId, setClientId] = useState<string | null>(null);
-  const [authUrl, setAuthUrl] = useState<string | null>(null);
+  const branchConfig = useAtomValue(branchConfigAtom)!;
+  const { control, watch } = useFormContext<{ client: { phoneNumber: string } }>();
+  const phoneNumber = watch('client.phoneNumber');
   const [step, setStep] = useState<VerificationStep>('input');
   const [errorMessage, setErrorMessage] = useState('');
-  const [flowType, setFlowType] = useState<'manager' | 'client'>('manager');
+  const [flowType, setFlowType] = useState<'manager' | 'client'>(
+    branchConfig.digilockerFlowPreference || 'manager'
+  );
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const branchConfig = useAtomValue(branchConfigAtom)!;
 
   const resetModal = () => {
-    setMobile('');
-    setClientId(null);
-    setAuthUrl(null);
     setStep('input');
     setErrorMessage('');
-    setFlowType('manager');
+    setFlowType(branchConfig.digilockerFlowPreference);
     // Clear any active polling
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
@@ -61,61 +64,69 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
   }, []);
 
   const handleInitialize = async () => {
-    if (!mobile || !/^\d{10}$/.test(mobile)) {
-      toast.error('Please enter a valid 10-digit mobile number');
-      return;
+    // For manager mode, open a blank window immediately to avoid popup blocker
+    let newWindow: Window | null = null;
+    if (flowType === 'manager') {
+      newWindow = window.open('about:blank', '_blank');
     }
 
     setStep('waiting');
     setErrorMessage('');
 
     try {
-      const response = await fetch('/api/surepass/initialize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mobile,
-          tenantId: branchConfig.tenantId,
-          branchId: branchConfig.id,
-        }),
+      const result = await initializeDigilocker({
+        sendSMS: flowType === 'client',
+        mobile: phoneNumber,
+        tenantId: branchConfig.tenantId,
+        branchId: branchConfig.id,
       });
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        setErrorMessage(data.error || 'Failed to send SMS');
+      if (!result.success) {
+        setErrorMessage(result.error || 'Failed to initialize Digilocker');
         setStep('error');
+        // Close the blank window if it was opened
+        if (newWindow) {
+          newWindow.close();
+        }
         return;
       }
 
-      setClientId(data.client_id);
-      setAuthUrl(data.url);
-      toast.success(data.message || 'SMS sent successfully. Please authorize on your device.');
+      // For manager mode, navigate the opened window to Digilocker URL
+      if (flowType === 'manager' && result.url) {
+        if (newWindow) {
+          newWindow.location.href = result.url;
+        }
+      } else {
+        // For client mode, show SMS sent message
+        toast.success(result.message || 'SMS sent successfully. Please authorize on your device.');
+      }
 
-      // Start polling for status
-      startStatusPolling(data.client_id);
+      // Start polling for status (both modes)
+      startStatusPolling(result.client_id!);
     } catch (error) {
       console.error('Error initializing Digilocker:', error);
-      setErrorMessage('Failed to send SMS. Please try again.');
+      setErrorMessage('Failed to initialize Digilocker. Please try again.');
       setStep('error');
+      // Close the blank window if it was opened
+      if (newWindow) {
+        newWindow.close();
+      }
     }
   };
 
   const checkStatus = async (client_id: string) => {
     try {
-      const response = await fetch(`/api/surepass/status?client_id=${client_id}`);
-      const data = await response.json();
+      const result = await checkDigilockerStatus(client_id);
 
-      if (response.ok && data.success) {
-        if (data.completed && data.aadhaar_linked) {
+      if (result.success) {
+        if (result.completed) {
           // Authorization completed - automatically download data
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current);
             pollingIntervalRef.current = null;
           }
-          toast.success('Authorization completed! Downloading your Aadhaar data...');
-          await handleDownload();
-        } else if (data.failed) {
+          await handleDownload(client_id);
+        } else if (result.failed) {
           // Authorization failed
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current);
@@ -148,25 +159,14 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
     );
   };
 
-  const handleDownload = async () => {
-    if (!clientId) {
-      toast.error('Client ID not available. Please restart the process.');
-      return;
-    }
-
+  const handleDownload = async (clientId: string) => {
     setStep('downloading');
     setErrorMessage('');
 
     try {
-      const response = await fetch('/api/surepass/download-aadhaar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client_id: clientId }),
-      });
+      const result = await downloadAadhaarData(clientId, phoneNumber);
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
+      if (!result.success) {
         setErrorMessage(
           result.error ||
             'Failed to download Aadhaar data. Please ensure you have authorized Digilocker access.'
@@ -177,13 +177,7 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
 
       setStep('success');
       toast.success('Aadhaar data retrieved successfully!');
-
-      // Wait a moment before closing to show success state
-      setTimeout(() => {
-        onSuccess(result.data, result.aadhaarPdfUrl);
-        onOpenChange(false);
-        resetModal();
-      }, 1500);
+      onSuccess(result.data!, result.aadhaarUrl);
     } catch (error) {
       console.error('Error downloading Aadhaar data:', error);
       setErrorMessage('Failed to download Aadhaar data. Please try again.');
@@ -202,47 +196,34 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
         <DialogHeader>
           <DialogTitle>Auto-fill via Digilocker</DialogTitle>
           <DialogDescription>
-            Verify your Aadhaar through Digilocker to automatically fill personal details
+            Verify Aadhaar through Digilocker to automatically fill personal details
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           {step === 'input' && (
-            <>
-              <div className="space-y-4">
-                <Label>Who will complete the Digilocker flow?</Label>
-                <RadioGroup
-                  value={flowType}
-                  className="space-y-1"
-                  onValueChange={(v) => setFlowType(v as 'manager' | 'client')}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="manager" id="manager" />
-                    <Label htmlFor="manager" className="font-normal cursor-pointer">
-                      I will complete it now
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="client" id="client" />
-                    <Label htmlFor="client" className="font-normal cursor-pointer">
-                      Send SMS to client to complete themselves
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              <div className="space-y-2 pt-2">
-                <Label htmlFor="mobile">Aadhaar Registered Mobile Number</Label>
-                <Input
-                  id="mobile"
-                  placeholder="Enter 10-digit mobile number"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  maxLength={10}
-                  autoFocus
-                />
-              </div>
-            </>
+            <FormField
+              control={control}
+              name="client.phoneNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Aadhaar Registered Mobile Number</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter 10-digit mobile number"
+                      value={field.value || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        field.onChange(value);
+                      }}
+                      maxLength={10}
+                      autoFocus
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           )}
 
           {step === 'waiting' && (
@@ -254,27 +235,13 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
                 <h3 className="font-semibold">Waiting for Authorization...</h3>
                 <p className="text-sm text-muted-foreground">
                   {flowType === 'manager'
-                    ? 'Please check your mobile device for the authorization link and complete the Digilocker authorization.'
-                    : 'Please ask the client to check their mobile device for the authorization link and complete the Digilocker authorization.'}
+                    ? 'Please complete the Digilocker authorization in the opened tab.'
+                    : 'Please ask the client to check their mobile device for the SMS and complete the Digilocker authorization.'}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   We&apos;ll automatically download the Aadhaar details once authorized.
                 </p>
               </div>
-              {flowType === 'manager' && authUrl && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-center">
-                    Or click the link below to authorize:
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => window.open(authUrl, '_blank')}
-                  >
-                    Open Digilocker Authorization
-                  </Button>
-                </div>
-              )}
             </div>
           )}
 
@@ -322,7 +289,9 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button onClick={handleInitialize}>Send SMS</Button>
+              <Button onClick={handleInitialize}>
+                {flowType === 'manager' ? 'Open Digilocker' : 'Send SMS'}
+              </Button>
             </>
           )}
 
@@ -331,7 +300,6 @@ export function DigilockerModal({ open, onOpenChange, onSuccess }: DigilockerMod
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button onClick={handleDownload}>Download Now</Button>
             </>
           )}
 

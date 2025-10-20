@@ -174,6 +174,7 @@ export const checkPhoneNumberExistsInDB = async (phoneNumber: string) => {
       with: {
         learningLicense: true,
         drivingLicense: true,
+        clientDocuments: true,
       },
     });
 
@@ -200,6 +201,7 @@ export const checkAadhaarNumberExistsInDB = async (aadhaarNumber: string) => {
       with: {
         learningLicense: true,
         drivingLicense: true,
+        clientDocuments: true,
       },
     });
 

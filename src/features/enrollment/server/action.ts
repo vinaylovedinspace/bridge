@@ -17,6 +17,7 @@ import {
   findExistingPlanInDB,
   upsertPlanWithPaymentIdInDB,
   getVehicleRentAmount,
+  deleteClientInDB,
 } from './db';
 import { formatDateToYYYYMMDD, formatTimeString } from '@/lib/date-time-utils';
 import { clientSchema } from '@/types/zod/client';
@@ -30,7 +31,8 @@ import { getAadhaarPdfUrlByPhoneNumber } from '@/server/db/digilocker-verificati
 import { saveAadhaarDocument } from '@/server/db/client-documents';
 
 export const upsertClient = async (
-  unsafeData: z.infer<typeof clientSchema>
+  unsafeData: z.infer<typeof clientSchema>,
+  aadhaarPdfUrl?: string
 ): Promise<{ error: boolean; message: string } & { clientId?: string }> => {
   try {
     const { id: branchId, tenantId } = await getBranchConfig();
@@ -56,12 +58,20 @@ export const upsertClient = async (
       birthDate: birthDateString, // Convert to YYYY-MM-DD string
     });
 
-    // If client was created (not updated) and has phone number, check for Aadhaar document
-    if (clientId && !data.id && data.phoneNumber) {
+    // If client was created (not updated), save Aadhaar document if provided
+    if (clientId && !data.id) {
       try {
-        const aadhaarPdfUrl = await getAadhaarPdfUrlByPhoneNumber(data.phoneNumber, tenantId);
-        if (aadhaarPdfUrl) {
-          await saveAadhaarDocument(clientId, aadhaarPdfUrl);
+        // First priority: use the provided aadhaarPdfUrl from form
+        let urlToSave = aadhaarPdfUrl;
+
+        // Fallback: if not provided in form, check DigilockerVerificationTable by phone
+        if (!urlToSave && data.phoneNumber) {
+          const fetchedUrl = await getAadhaarPdfUrlByPhoneNumber(data.phoneNumber, tenantId);
+          urlToSave = fetchedUrl ?? undefined;
+        }
+
+        if (urlToSave) {
+          await saveAadhaarDocument(clientId, urlToSave);
         }
       } catch (docError) {
         console.error('Error saving Aadhaar document:', docError);
@@ -157,15 +167,17 @@ export const upsertDrivingLicense = async (unsafeData: DrivingLicenseValues): Ac
 };
 
 export const upsertPlanWithPayment = async (
-  unsafePlanData: PlanValues,
+  unsafePlanData: PlanValues & { joiningDateString?: string; joiningTimeString?: string },
   unsafePaymentData: PaymentValues
 ): Promise<{ error: boolean; message: string; planId?: string; paymentId?: string }> => {
   const branchConfig = await getBranchConfig();
   const { id: branchId } = branchConfig;
   try {
-    // 1. Extract and validate time
-    const joiningTime = formatTimeString(unsafePlanData.joiningDate);
-    const joiningDate = formatDateToYYYYMMDD(unsafePlanData.joiningDate);
+    // 1. Use the string values directly if provided (avoids timezone conversion issues)
+    const joiningDate =
+      unsafePlanData.joiningDateString || formatDateToYYYYMMDD(unsafePlanData.joiningDate);
+    const joiningTime =
+      unsafePlanData.joiningTimeString || formatTimeString(unsafePlanData.joiningDate);
 
     // 2. Parallelize independent database queries
     const [existingPlan, vehicle] = await Promise.all([
@@ -306,83 +318,20 @@ export const upsertPlanWithPayment = async (
   }
 };
 
-// Helper function to send enrollment messages
-async function sendEnrollmentMessages({ clientId, planId }: { clientId: string; planId: string }) {
-  console.log('📱 [Enrollment Messages] Sending onboarding message');
-
+export const softDeleteClient = async (clientId: string): ActionReturnType => {
   try {
-    const { sendOnboardingMessage } = await import('@/lib/whatsapp/services/onboarding-service');
-    const { db } = await import('@/db');
-    const { PlanTable, ClientTable, VehicleTable, SessionTable } = await import('@/db/schema');
-    const { eq, and, isNull } = await import('drizzle-orm');
-
-    const plan = await db.query.PlanTable.findFirst({
-      where: eq(PlanTable.id, planId),
-    });
-
-    if (!plan) {
-      console.error('❌ [Enrollment Messages] Plan not found');
-      return;
+    if (!clientId) {
+      return { error: true, message: 'Client ID is required' };
     }
 
-    const [client, vehicle, sessions] = await Promise.all([
-      db.query.ClientTable.findFirst({
-        where: eq(ClientTable.id, clientId),
-        columns: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          phoneNumber: true,
-        },
-      }),
-      db.query.VehicleTable.findFirst({
-        where: eq(VehicleTable.id, plan.vehicleId),
-        columns: {
-          name: true,
-          number: true,
-        },
-      }),
-      db.query.SessionTable.findMany({
-        where: and(eq(SessionTable.planId, planId), isNull(SessionTable.deletedAt)),
-        columns: {
-          sessionDate: true,
-          startTime: true,
-        },
-        orderBy: (sessions, { asc }) => [asc(sessions.sessionDate)],
-      }),
-    ]);
+    await deleteClientInDB(clientId);
 
-    if (!client || !vehicle) {
-      console.error('❌ [Enrollment Messages] Client or vehicle not found');
-      return;
-    }
-
-    const result = await sendOnboardingMessage({
-      id: client.id,
-      firstName: client.firstName,
-      lastName: client.lastName,
-      phoneNumber: client.phoneNumber,
-      plan: {
-        numberOfSessions: plan.numberOfSessions,
-        joiningDate: plan.joiningDate,
-        joiningTime: plan.joiningTime,
-      },
-      sessions: sessions.map((session) => ({
-        sessionDate: session.sessionDate,
-        startTime: session.startTime,
-      })),
-      vehicleDetails: {
-        name: vehicle.name,
-        number: vehicle.number,
-      },
-    });
-
-    if (result.success) {
-      console.log('✅ [Enrollment Messages] Onboarding message sent successfully');
-    } else {
-      console.error('❌ [Enrollment Messages] Failed to send onboarding message:', result.error);
-    }
+    return {
+      error: false,
+      message: 'Enrollment discarded successfully',
+    };
   } catch (error) {
-    console.error('❌ [Enrollment Messages] Error sending onboarding message:', error);
+    console.error('Error soft deleting client:', error);
+    return { error: true, message: 'Failed to discard enrollment' };
   }
-}
+};

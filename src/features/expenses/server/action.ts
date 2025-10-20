@@ -14,7 +14,12 @@ import { getBranchConfig } from '@/server/action/branch';
 /**
  * Server action to add a new expense
  */
-export async function addExpense(unsafeData: z.infer<typeof expenseFormSchema>): ActionReturnType {
+export async function addExpense(
+  unsafeData: z.infer<typeof expenseFormSchema> & {
+    expenseDateString?: string;
+    expenseTimeString?: string;
+  }
+): ActionReturnType {
   try {
     const { userId } = await auth();
 
@@ -26,8 +31,20 @@ export async function addExpense(unsafeData: z.infer<typeof expenseFormSchema>):
     }
     const { id: branchId } = await getBranchConfig();
 
-    await addExpenseInDB({
+    // Use string values if provided to avoid timezone issues
+    const expenseData = {
       ...data,
+      // If date/time strings are provided, reconstruct the date from them
+      ...(unsafeData.expenseDateString &&
+        unsafeData.expenseTimeString && {
+          expenseDate: new Date(
+            `${unsafeData.expenseDateString}T${unsafeData.expenseTimeString}:00`
+          ),
+        }),
+    };
+
+    await addExpenseInDB({
+      ...expenseData,
       branchId,
       createdBy: userId!,
     });
@@ -50,7 +67,10 @@ export async function addExpense(unsafeData: z.infer<typeof expenseFormSchema>):
  */
 export async function updateExpense(
   id: string,
-  unsafeData: z.infer<typeof expenseFormSchema>
+  unsafeData: z.infer<typeof expenseFormSchema> & {
+    expenseDateString?: string;
+    expenseTimeString?: string;
+  }
 ): ActionReturnType {
   try {
     const { userId } = await auth();
@@ -64,8 +84,20 @@ export async function updateExpense(
 
     const { id: branchId } = await getBranchConfig();
 
-    await updateExpenseInDB(id, {
+    // Use string values if provided to avoid timezone issues
+    const expenseData = {
       ...data,
+      // If date/time strings are provided, reconstruct the date from them
+      ...(unsafeData.expenseDateString &&
+        unsafeData.expenseTimeString && {
+          expenseDate: new Date(
+            `${unsafeData.expenseDateString}T${unsafeData.expenseTimeString}:00`
+          ),
+        }),
+    };
+
+    await updateExpenseInDB(id, {
+      ...expenseData,
       branchId,
       createdBy: userId!,
     });

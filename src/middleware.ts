@@ -13,6 +13,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/notifications/check',
   '/api/cron/(.*)',
   '/api/webhooks/(.*)',
+  '/api/workflows/(.*)',
 ]);
 
 // Auth routes that authenticated users should be redirected from

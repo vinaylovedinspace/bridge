@@ -38,8 +38,12 @@ export function parseAadhaarDataToFormFields(aadhaarXmlData: AadhaarXmlData): Pa
   const pincode = aadhaarXmlData.zip || '';
 
   // Parse guardian name from care_of or father_name
-  const guardianName = aadhaarXmlData.father_name || aadhaarXmlData.care_of || '';
-  const guardianParts = guardianName.replace(/^(S\/O|D\/O|W\/O|C\/O):?\s*/i, '').trim().split(/\s+/);
+  const guardianName =
+    aadhaarXmlData.father_name ?? aadhaarXmlData.care_of ?? `${middleName} ${lastName}`;
+  const guardianParts = guardianName
+    .replace(/^(S\/O|D\/O|W\/O|C\/O):?\s*/i, '')
+    .trim()
+    .split(/\s+/);
   const guardianFirstName = guardianParts[0] || undefined;
   const guardianLastName =
     guardianParts.length > 1 ? guardianParts[guardianParts.length - 1] : undefined;
@@ -58,6 +62,7 @@ export function parseAadhaarDataToFormFields(aadhaarXmlData: AadhaarXmlData): Pa
     lastName,
     birthDate,
     gender,
+
     aadhaarNumber: aadhaarXmlData.masked_aadhaar?.replace(/X/g, ''),
     addressLine1,
     addressLine2,
@@ -65,6 +70,7 @@ export function parseAadhaarDataToFormFields(aadhaarXmlData: AadhaarXmlData): Pa
     city,
     state,
     pincode,
+    guardianRelationship: 'FATHER',
     // Set permanent address same as current address
     permanentAddressLine1: addressLine1,
     permanentAddressLine2: addressLine2,
