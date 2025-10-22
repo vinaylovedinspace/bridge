@@ -1,8 +1,8 @@
 import { serve } from '@upstash/workflow/nextjs';
 import { db } from '@/db';
-import { SessionTable } from '@/db/schema';
+import { SessionTable, ClientTable } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
-import { sendSessionReminder } from '@/lib/whatsapp/send-session-reminder';
+import { sendSessionReminder } from '@/lib/whatsapp/services/session-reminder-service';
 import { qstashClient } from '@/lib/upstash/workflow';
 
 type SessionWorkflowPayload = {
@@ -39,8 +39,41 @@ export const { POST } = serve<SessionWorkflowPayload>(
 
       // Only send reminder if session is still scheduled
       if (session && session.status === 'SCHEDULED' && session.client?.phoneNumber) {
-        await sendSessionReminder(sessionId, session.client.phoneNumber, sessionDate, startTime);
-        console.log(`Reminder sent for session ${sessionId}`);
+        // Get full client data for the new function signature
+        const fullClient = await db.query.ClientTable.findFirst({
+          where: eq(ClientTable.id, session.clientId),
+          columns: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phoneNumber: true,
+          },
+        });
+
+        if (fullClient) {
+          const result = await sendSessionReminder(
+            {
+              id: fullClient.id,
+              firstName: fullClient.firstName,
+              lastName: fullClient.lastName,
+              phoneNumber: fullClient.phoneNumber,
+            },
+            {
+              sessionId: sessionId,
+              sessionDate: sessionDate,
+              startTime: startTime,
+              sessionNumber: session.sessionNumber,
+              instructorName: undefined,
+              vehicleDetails: undefined,
+            }
+          );
+
+          if (result.success) {
+            console.log(`Reminder sent for session ${sessionId}`);
+          } else {
+            console.error(`Failed to send reminder for session ${sessionId}:`, result.error);
+          }
+        }
       } else {
         console.warn(
           `Skipping reminder for session ${sessionId} - session not found or not scheduled`

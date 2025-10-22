@@ -181,8 +181,7 @@ export const upsertPlanWithPayment = async (
 
     // 2. Parallelize independent database queries
     const [existingPlan, vehicle] = await Promise.all([
-      // Only check for existing plan by ID (not by clientId) to determine if this specific plan exists
-      findExistingPlanInDB(unsafePlanData.id),
+      findExistingPlanInDB(unsafePlanData.id, unsafePlanData.clientId),
       getVehicleRentAmount(unsafePlanData.vehicleId),
     ]);
 
@@ -256,30 +255,14 @@ export const upsertPlanWithPayment = async (
     const planCode = unsafePlanData.planCode ?? (await getNextPlanCode(branchId));
 
     // 9. Create/update plan with paymentId
-    let plan;
-    try {
-      const planResult = await upsertPlanWithPaymentIdInDB({
-        ...planData,
-        planCode,
-        paymentId: paymentResult.payment.id,
-      });
-      plan = planResult.plan;
-    } catch (error) {
-      console.error('❌ [Enrollment Action] Error creating/updating plan:', error);
-      if (
-        error instanceof Error &&
-        error.message.includes('duplicate key value violates unique constraint')
-      ) {
-        return {
-          error: true,
-          message: 'A plan with this payment already exists. Please try again or contact support.',
-        };
-      }
-      throw error;
-    }
+    const { plan } = await upsertPlanWithPaymentIdInDB({
+      ...planData,
+      planCode,
+      paymentId: paymentResult.payment.id,
+    });
 
     // 10. Generate sessions
-    const sessionResult = await handleSessionGeneration(
+    await handleSessionGeneration(
       planData.clientId,
       plan.id,
       {
@@ -300,7 +283,7 @@ export const upsertPlanWithPayment = async (
           planId: plan.id,
         });
       } catch (error) {
-        console.error('❌ [Enrollment Action] Failed to send onboarding message:', error);
+        console.error('Failed to send onboarding message:', error);
       }
     }
 
@@ -317,6 +300,90 @@ export const upsertPlanWithPayment = async (
     return { error: true, message };
   }
 };
+
+async function sendEnrollmentMessages({ clientId, planId }: { clientId: string; planId: string }) {
+  try {
+    const { sendOnboardingMessage } = await import('@/lib/whatsapp/services/onboarding-service');
+    const { db } = await import('@/db');
+    const { PlanTable, ClientTable, VehicleTable, SessionTable } = await import('@/db/schema');
+    const { eq, and, isNull } = await import('drizzle-orm');
+
+    const plan = await db.query.PlanTable.findFirst({
+      where: eq(PlanTable.id, planId),
+    });
+
+    if (!plan) {
+      console.error('❌ [Enrollment Messages] Plan not found for ID:', planId);
+      return;
+    }
+
+    const [client, vehicle, sessions] = await Promise.all([
+      db.query.ClientTable.findFirst({
+        where: eq(ClientTable.id, clientId),
+        columns: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phoneNumber: true,
+        },
+      }),
+      db.query.VehicleTable.findFirst({
+        where: eq(VehicleTable.id, plan.vehicleId),
+        columns: {
+          name: true,
+          number: true,
+        },
+      }),
+      db.query.SessionTable.findMany({
+        where: and(eq(SessionTable.planId, planId), isNull(SessionTable.deletedAt)),
+        columns: {
+          sessionDate: true,
+          startTime: true,
+        },
+        orderBy: (sessions, { asc }) => [asc(sessions.sessionDate)],
+      }),
+    ]);
+
+    if (!client || !vehicle) {
+      console.error('❌ [Enrollment Messages] Missing data:', {
+        client: client ? 'FOUND' : 'NOT FOUND',
+        vehicle: vehicle ? 'FOUND' : 'NOT FOUND',
+      });
+      return;
+    }
+    console.log('📱 [Enrollment Messages] Calling sendOnboardingMessage...');
+
+    const result = await sendOnboardingMessage({
+      id: client.id,
+      firstName: client.firstName,
+      lastName: client.lastName,
+      phoneNumber: client.phoneNumber,
+      plan: {
+        numberOfSessions: plan.numberOfSessions,
+        joiningDate: plan.joiningDate,
+        joiningTime: plan.joiningTime,
+      },
+      sessions: sessions.map((session) => ({
+        sessionDate: session.sessionDate,
+        startTime: session.startTime,
+      })),
+      vehicleDetails: {
+        name: vehicle.name,
+        number: vehicle.number,
+      },
+    });
+
+    console.log('📱 [Enrollment Messages] sendOnboardingMessage result:', result);
+
+    if (result.success) {
+      console.log('✅ [Enrollment Messages] Onboarding message sent successfully');
+    } else {
+      console.error('❌ [Enrollment Messages] Failed to send onboarding message:', result.error);
+    }
+  } catch (error) {
+    console.error('❌ [Enrollment Messages] Error sending onboarding message:', error);
+  }
+}
 
 export const softDeleteClient = async (clientId: string): ActionReturnType => {
   try {

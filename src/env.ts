@@ -19,6 +19,10 @@ export const env = createEnv({
     SETU_API_KEY: z.string().min(1),
     SETU_API_SECRET: z.string().min(1),
     SETU_URL: z.string().url().default('https://umap-uat-core.setu.co'),
+    // WhatsApp Cloud API
+    WHATSAPP_CLOUD_TOKEN: z.string().min(1),
+    WHATSAPP_CLOUD_PHONE_NUMBER_ID: z.string().min(1),
+    WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),

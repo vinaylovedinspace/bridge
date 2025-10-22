@@ -80,6 +80,8 @@ export const createSessions = async (
         sessionDate: session.sessionDate,
         startTime: session.startTime,
         endTime: session.endTime,
+      }).catch((error) => {
+        console.error(`Failed to trigger workflow for session ${session.id}:`, error);
       });
     });
 
