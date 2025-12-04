@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import { checkPaymentLinkStatusAction } from '@/server/action/payments';
+import { checkSetuPaymentLinkStatusAction } from '@/server/action/payments';
 
 const PAYMENT_POLL_INTERVAL = 5000; // 5 seconds
 const PAYMENT_POLL_MAX_ATTEMPTS = 120; // 10 minutes max
@@ -38,9 +38,10 @@ export const usePaymentPolling = ({ onPaymentSuccess }: PaymentPollingProps) => 
     }
 
     try {
-      const result = await checkPaymentLinkStatusAction(referenceId);
+      const result = await checkSetuPaymentLinkStatusAction(referenceId);
 
-      if (result.success && result.isPaid) {
+      // Check if payment is successful (Setu status should be 'PAID' or similar)
+      if (result.success && result.data && result.data.status === 'PAID') {
         stop();
         toast.success('Payment received successfully! 🎉', {
           description: 'Completing enrollment...',

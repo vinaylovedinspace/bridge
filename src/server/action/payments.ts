@@ -14,9 +14,6 @@ import {
   createTransactionRecord,
 } from '@/lib/payment/payment-link-helpers';
 import { env } from '@/env';
-import { db } from '@/db';
-import { TransactionTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
 import { SetuCreateDQRResponse, SetuGetDQRResponse } from '@/types/setu';
 
 export type PaymentLinkResult = {
@@ -206,7 +203,6 @@ export const createSetuPaymentLinkAction = async (request: CreatePaymentLinkRequ
   await createTransactionRecord({
     paymentId: request.paymentId,
     amount: request.amount,
-    paymentGateway: 'SETU',
     referenceId,
     installmentNumber,
     paymentLinkId: data.id,

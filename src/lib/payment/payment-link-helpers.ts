@@ -6,7 +6,7 @@ import {
   TransactionTable,
   PaymentTable,
 } from '@/db/schema';
-import { eq, and, ne } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 import type { ExtractTablesWithRelations } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
