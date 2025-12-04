@@ -8,12 +8,9 @@ import {
 } from '@/db/schema';
 import { eq, and, ne } from 'drizzle-orm';
 import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
-import Razorpay from 'razorpay';
 import type { ExtractTablesWithRelations } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 import type { NeonQueryResultHKT } from 'drizzle-orm/neon-serverless';
-import type { PaymentLinks } from 'razorpay/dist/types/paymentLink';
-import { triggerPaymentNotification } from '@/lib/upstash/trigger-payment-notification';
 
 export type PaymentReferenceResult = {
   referenceId: string;
@@ -141,7 +138,6 @@ export async function cancelExistingPendingTransaction(referenceId: string) {
 export async function createTransactionRecord(params: {
   paymentId: string;
   amount: number;
-  paymentGateway: 'RAZORPAY' | 'SETU';
   referenceId: string;
   installmentNumber: number | null;
   paymentLinkId: string;
@@ -155,7 +151,7 @@ export async function createTransactionRecord(params: {
     paymentId: params.paymentId,
     amount: params.amount,
     paymentMode: 'PAYMENT_LINK',
-    paymentGateway: params.paymentGateway,
+    paymentGateway: 'SETU',
     transactionStatus: 'PENDING',
     paymentLinkId: params.paymentLinkId,
     paymentLinkUrl: params.paymentLinkUrl,
@@ -174,22 +170,6 @@ type TransactionContext = PgTransaction<
   typeof schema,
   ExtractTablesWithRelations<typeof schema>
 >;
-
-/**
- * Finds an existing active or pending transaction for the given reference ID
- * Excludes cancelled and failed transactions
- */
-export async function findExistingTransaction(referenceId: string, gateway: 'RAZORPAY' | 'SETU') {
-  return await db.query.TransactionTable.findFirst({
-    where: and(
-      eq(TransactionTable.paymentLinkReferenceId, referenceId),
-      eq(TransactionTable.paymentGateway, gateway),
-      ne(TransactionTable.transactionStatus, 'CANCELLED'),
-      ne(TransactionTable.transactionStatus, 'FAILED')
-    ),
-    orderBy: (transactions, { desc }) => [desc(transactions.createdAt)],
-  });
-}
 
 /**
  * Updates payment tables when a payment link is paid
@@ -256,82 +236,4 @@ export async function markPaymentAsPaidInTransaction(
       })
       .where(eq(PaymentTable.id, params.paymentId));
   }
-}
-
-/**
- * Handles a paid Razorpay payment link
- * Updates transaction and payment records in a single transaction
- */
-export async function handlePaidRazorpayLink(params: {
-  transactionId: string;
-  paymentId: string;
-  paymentType: 'FULL_PAYMENT' | 'INSTALLMENTS';
-  referenceId: string;
-  installmentNumber: number | null;
-  razorpayLink: PaymentLinks.RazorpayPaymentLink;
-}) {
-  await db.transaction(async (tx) => {
-    // Extract Razorpay payment ID from the link
-    // Razorpay returns payments as an array or object depending on the response
-    const payments = Array.isArray(params.razorpayLink.payments)
-      ? params.razorpayLink.payments
-      : params.razorpayLink.payments
-        ? [params.razorpayLink.payments]
-        : [];
-    const razorpayPaymentId = payments[0]?.id;
-    const txnDate = payments[0]?.created_at ? new Date(payments[0].created_at * 1000) : null;
-
-    // Update transaction record
-    await tx
-      .update(TransactionTable)
-      .set({
-        transactionStatus: 'SUCCESS',
-        paymentLinkStatus: params.razorpayLink.status,
-        razorpayPaymentId: razorpayPaymentId,
-        txnId: razorpayPaymentId,
-        txnDate: txnDate,
-        updatedAt: new Date(),
-      })
-      .where(eq(TransactionTable.id, params.transactionId));
-
-    // Update payment tables
-    await markPaymentAsPaidInTransaction(tx, {
-      paymentId: params.paymentId,
-      paymentType: params.paymentType,
-      referenceId: params.referenceId,
-      installmentNumber: params.installmentNumber,
-    });
-  });
-
-  // Trigger payment notification workflow (fire-and-forget)
-  await triggerPaymentNotification({
-    transactionId: params.transactionId,
-  });
-}
-
-/**
- * Cancels an expired or invalid Razorpay payment link
- */
-export async function cancelRazorpayLink(
-  instance: Razorpay,
-  transactionId: string,
-  paymentLinkId: string
-) {
-  try {
-    // Try to cancel on Razorpay
-    await instance.paymentLink.cancel(paymentLinkId);
-    console.log(`Cancelled old payment link: ${paymentLinkId}`);
-  } catch (error) {
-    console.warn(`Could not cancel old payment link: ${paymentLinkId}`, error);
-  }
-
-  // Mark as cancelled in DB
-  await db
-    .update(TransactionTable)
-    .set({
-      transactionStatus: 'CANCELLED',
-      paymentLinkStatus: 'CANCELLED',
-      updatedAt: new Date(),
-    })
-    .where(eq(TransactionTable.id, transactionId));
 }

@@ -46,7 +46,7 @@ export const PaymentModeSelector = ({
   const router = useRouter();
   const phone = usePhoneNumber(initialPhoneNumber);
   const { smsSent, countdown, startCountdown } = useSendLinkCountdown();
-  const { isSending, qrCode, expiryTime, sendRazorpayLink, sendSetuLink } = usePaymentLinkSender();
+  const { isSending, qrCode, expiryTime, sendSetuLink } = usePaymentLinkSender();
 
   const handlePaymentSuccess = async () => {
     try {
@@ -67,26 +67,6 @@ export const PaymentModeSelector = ({
   const polling = usePaymentPolling({ onPaymentSuccess: handlePaymentLinkSuccess });
 
   const handleSendPaymentLink = async () => {
-    if (!paymentId) {
-      toast.error('Payment ID is required to send payment link');
-      return;
-    }
-
-    const result = await sendRazorpayLink({
-      amount,
-      customerPhone: phone.phoneNumber,
-      customerName: customerName || 'Student',
-      paymentId,
-      paymentType,
-    });
-
-    if (result.success && result.referenceId) {
-      startCountdown();
-      polling.start(result.referenceId);
-    }
-  };
-
-  const handleSendUpiLink = async () => {
     if (!phone.isValid) {
       toast.error('Please enter a valid phone number');
       return;
@@ -160,7 +140,7 @@ export const PaymentModeSelector = ({
                 countdown={countdown}
                 isPhoneValid={phone.isValid}
                 isPolling={polling.isPolling}
-                onClick={paymentMode === 'UPI' ? handleSendUpiLink : handleSendPaymentLink}
+                onClick={handleSendPaymentLink}
               />
 
               {paymentMode === 'UPI' && qrCode && (
