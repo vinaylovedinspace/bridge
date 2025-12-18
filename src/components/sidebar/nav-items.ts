@@ -2,7 +2,7 @@ export const navItems = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Enrollments', href: '/enrollments' },
   { label: 'Clients', href: '/clients' },
-  { label: 'Payments', href: '/payments' },
+  { label: 'transactions', href: '/transactions' },
   { label: 'Calendar', href: '/calendar' },
   { label: 'Forms', href: '/forms' },
   { label: 'Vehicles', href: '/vehicles' },

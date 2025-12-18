@@ -1,21 +1,26 @@
 import { serve } from '@upstash/workflow/nextjs';
 import { db } from '@/db';
 import { TransactionTable } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { qstashClient, workflowClient } from '@/lib/upstash/workflow';
 import { env } from '@/env';
 import type { PhonePeWebhookData } from '@/types/phonepe';
 import { mapPhonePeStatusToDbStatus } from '@/lib/payment/status-helpers';
 import { markPaymentAsPaid } from '@/lib/payment/payment-link-helpers';
+import {
+  getPaymentType,
+  getGatewayReferenceId,
+  setGatewayResponse,
+} from '@/lib/payment/transaction-metadata';
 
 export const { POST } = serve<PhonePeWebhookData>(
   async (context) => {
     const payload = context.requestPayload;
 
-    // Step 1: Find transaction by orderId
+    // Step 1: Find transaction by orderId in metadata
     const transaction = await context.run('find-transaction', async () => {
       return await db.query.TransactionTable.findFirst({
-        where: eq(TransactionTable.paymentLinkId, payload.orderId),
+        where: sql`${TransactionTable.metadata}->>'gateway'->>'linkId' = ${payload.orderId}`,
       });
     });
 
@@ -30,19 +35,23 @@ export const { POST } = serve<PhonePeWebhookData>(
       return { success: true, message: 'Already processed' };
     }
 
-    // Step 3: Update transaction status
+    // Step 3: Update transaction status and store response in metadata
     await context.run('update-transaction-status', async () => {
       const newStatus = mapPhonePeStatusToDbStatus(payload.state);
       const firstPayment = payload.paymentDetails?.[0];
+
+      const updatedMetadata = setGatewayResponse(transaction.metadata, {
+        txnId: firstPayment?.transactionId,
+        bankTxnId: firstPayment?.rail?.utr,
+        responseCode: payload.errorCode,
+      });
 
       await db
         .update(TransactionTable)
         .set({
           transactionStatus: newStatus,
-          txnId: firstPayment?.transactionId,
-          bankTxnId: firstPayment?.rail?.utr,
-          responseCode: payload.errorCode,
           txnDate: new Date(),
+          metadata: updatedMetadata,
           updatedAt: new Date(),
         })
         .where(eq(TransactionTable.id, transaction.id));
@@ -58,22 +67,26 @@ export const { POST } = serve<PhonePeWebhookData>(
     // Step 4: If SUCCESS, update payment records
     if (payload.state === 'COMPLETED') {
       await context.run('mark-payment-paid', async () => {
-        // Get payment type from transaction metadata
-        const metadata = transaction.metadata as { paymentType?: string } | null;
-        const paymentType =
-          (metadata?.paymentType as 'FULL_PAYMENT' | 'INSTALLMENTS') || 'FULL_PAYMENT';
+        // Get payment type and reference ID from metadata
+        const paymentType = getPaymentType(transaction.metadata) || 'FULL_PAYMENT';
+        const referenceId = getGatewayReferenceId(transaction.metadata);
+
+        if (!referenceId) {
+          console.error('No reference ID found in transaction metadata:', transaction.id);
+          return;
+        }
 
         await markPaymentAsPaid({
           paymentId: transaction.paymentId,
           paymentType,
-          referenceId: transaction.paymentLinkReferenceId!,
+          referenceId,
           installmentNumber: transaction.installmentNumber,
         });
 
         console.log('Payment marked as paid:', {
           paymentId: transaction.paymentId,
           paymentType,
-          referenceId: transaction.paymentLinkReferenceId,
+          referenceId,
         });
       });
 

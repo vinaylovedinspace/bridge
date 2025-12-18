@@ -27,7 +27,7 @@ type PaymentModeSelectorProps = {
   handlePaymentModeChange: (mode: PaymentMode) => void;
 };
 
-const PAYMENT_MODES: PaymentMode[] = ['UPI', 'CASH'];
+const PAYMENT_MODES: PaymentMode[] = ['UPI', 'QR', 'CASH'];
 
 export const PaymentModeSelector = ({
   phoneNumber: initialPhoneNumber,
@@ -96,7 +96,7 @@ export const PaymentModeSelector = ({
   };
 
   const isOnlinePaymentMode = paymentMode === 'UPI';
-  const isOfflinePaymentMode = paymentMode === 'CASH';
+  const isOfflinePaymentMode = paymentMode === 'CASH' || paymentMode === 'QR';
 
   return (
     <>

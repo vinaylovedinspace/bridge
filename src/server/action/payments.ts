@@ -5,12 +5,12 @@ import { getBranchConfig } from '@/server/action/branch';
 import { paymentSchema } from '@/types/zod/payment';
 import { IMMEDIATE_PAYMENT_MODES } from '@/lib/constants/payment';
 import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
-import { upsertFullPaymentInDB } from '@/server/db/payments';
 import { upsertPaymentInDB } from '@/server/db/payments';
 import {
   preparePaymentReference,
   cancelExistingPendingTransaction,
   createTransactionRecord,
+  createManualTransactionRecord,
 } from '@/lib/payment/payment-link-helpers';
 import { env } from '@/env';
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest } from 'pg-sdk-node';
@@ -87,19 +87,70 @@ export async function upsertPaymentWithOptionalTransaction({
       IMMEDIATE_PAYMENT_MODES.includes(data.paymentMode as (typeof IMMEDIATE_PAYMENT_MODES)[number])
     ) {
       const currentDate = formatDateToYYYYMMDD(new Date());
+      const isManualPayment = data.paymentMode === 'CASH' || data.paymentMode === 'QR';
 
       if (data.paymentType === 'FULL_PAYMENT') {
-        const updatedPayment = await upsertFullPaymentInDB({
-          paymentId: payment.id,
-          paymentMode: data.paymentMode,
-          paymentDate: currentDate,
-          isPaid: true,
+        // Use DB transaction to ensure atomicity
+        const result = await import('@/db').then(async ({ db }) => {
+          return await db.transaction(async (tx) => {
+            // 1. Update full payment record
+            await tx
+              .update((await import('@/db/schema')).FullPaymentTable)
+              .set({
+                paymentId: payment.id,
+                paymentMode: data.paymentMode,
+                paymentDate: currentDate,
+                isPaid: true,
+                updatedAt: new Date(),
+              })
+              .where(
+                (await import('drizzle-orm')).eq(
+                  (await import('@/db/schema')).FullPaymentTable.paymentId,
+                  payment.id
+                )
+              );
+
+            // 2. Update main payment status
+            const [finalPayment] = await tx
+              .update((await import('@/db/schema')).PaymentTable)
+              .set({
+                paymentStatus: 'FULLY_PAID',
+                updatedAt: new Date(),
+              })
+              .where(
+                (await import('drizzle-orm')).eq(
+                  (await import('@/db/schema')).PaymentTable.id,
+                  payment.id
+                )
+              )
+              .returning();
+
+            // 3. Create transaction record for manual payments (CASH/QR)
+            if (isManualPayment) {
+              await tx.insert((await import('@/db/schema')).TransactionTable).values({
+                paymentId: payment.id,
+                amount: data.totalAmount,
+                paymentMode: data.paymentMode,
+                paymentGateway: null,
+                transactionStatus: 'SUCCESS',
+                notes: `Manual ${data.paymentMode} payment recorded`,
+                installmentNumber: null,
+                txnDate: new Date(),
+                metadata: {
+                  recordedAt: new Date().toISOString(),
+                  paymentType: data.paymentType,
+                },
+              });
+            }
+
+            return finalPayment;
+          });
         });
 
         return {
           error: false,
           message: 'Payment processed successfully',
-          payment: updatedPayment,
+          payment: result,
         };
       } else if (data.paymentType === 'INSTALLMENTS') {
         // Import dynamically to avoid circular dependencies
@@ -111,6 +162,29 @@ export async function upsertPaymentWithOptionalTransaction({
           data.paymentMode,
           data.totalAmount
         );
+
+        // Create transaction record for manual installment payments (CASH/QR) in separate transaction
+        if (isManualPayment) {
+          await import('@/db').then(async ({ db }) => {
+            // Determine which installment was just paid
+            const installments = await db.query.InstallmentPaymentTable.findMany({
+              where: (table, { eq }) => eq(table.paymentId, payment.id),
+            });
+
+            const paidInstallments = installments.filter((inst) => inst.isPaid);
+            const lastPaidInstallment = paidInstallments[paidInstallments.length - 1];
+
+            if (lastPaidInstallment && (data.paymentMode === 'CASH' || data.paymentMode === 'QR')) {
+              await createManualTransactionRecord({
+                paymentId: payment.id,
+                amount: lastPaidInstallment.amount,
+                paymentMode: data.paymentMode,
+                installmentNumber: lastPaidInstallment.installmentNumber,
+                paymentType: data.paymentType,
+              });
+            }
+          });
+        }
 
         return {
           error: false,
@@ -183,11 +257,8 @@ export const createPhonePePaymentLinkAction = async (request: CreatePaymentLinkR
       paymentLinkStatus: 'ACTIVE',
       paymentLinkExpiresAt: null, // PhonePe doesn't provide explicit expiry
       paymentLinkCreatedAt: new Date(),
-      metadata: {
-        merchantTransactionId,
-        paymentType: request.paymentType,
-        type: request.type,
-      },
+      paymentType: request.paymentType,
+      type: request.type,
     });
 
     return {

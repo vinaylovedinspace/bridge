@@ -6,11 +6,15 @@ import {
   TransactionTable,
   PaymentTable,
 } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
 import type { ExtractTablesWithRelations } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 import type { NeonQueryResultHKT } from 'drizzle-orm/neon-serverless';
+import {
+  buildPaymentLinkMetadata,
+  buildManualPaymentMetadata,
+} from '@/lib/payment/transaction-metadata';
 
 export type PaymentReferenceResult = {
   referenceId: string;
@@ -112,21 +116,26 @@ export async function preparePaymentReference(
  * Returns the cancelled transaction
  */
 export async function cancelExistingPendingTransaction(referenceId: string) {
+  // Find transaction by metadata.gateway.referenceId
   const existingTransaction = await db.query.TransactionTable.findFirst({
     where: and(
-      eq(TransactionTable.paymentLinkReferenceId, referenceId),
+      sql`${TransactionTable.metadata}->>'gateway'->>'referenceId' = ${referenceId}`,
       eq(TransactionTable.transactionStatus, 'PENDING')
     ),
   });
 
-  if (existingTransaction && existingTransaction.paymentLinkId) {
+  if (existingTransaction) {
     // Mark as cancelled in our DB
     // PhonePe doesn't support explicit link expiry, so we only update DB
     await db
       .update(TransactionTable)
       .set({
         transactionStatus: 'CANCELLED',
-        paymentLinkStatus: 'EXPIRED',
+        metadata: sql`jsonb_set(
+          ${TransactionTable.metadata},
+          '{gateway,linkStatus}',
+          '"EXPIRED"'
+        )`,
         updatedAt: new Date(),
       })
       .where(eq(TransactionTable.id, existingTransaction.id));
@@ -148,22 +157,60 @@ export async function createTransactionRecord(params: {
   paymentLinkStatus?: string;
   paymentLinkExpiresAt?: Date | null;
   paymentLinkCreatedAt?: Date;
-  metadata?: unknown;
+  paymentType: 'FULL_PAYMENT' | 'INSTALLMENTS';
+  type: 'enrollment' | 'rto-service';
 }) {
+  const metadata = buildPaymentLinkMetadata({
+    paymentType: params.paymentType,
+    type: params.type,
+    linkId: params.paymentLinkId,
+    linkUrl: params.paymentLinkUrl,
+    linkStatus: params.paymentLinkStatus,
+    linkExpiresAt: params.paymentLinkExpiresAt,
+    linkCreatedAt: params.paymentLinkCreatedAt,
+    referenceId: params.referenceId,
+  });
+
   return await db.insert(TransactionTable).values({
     paymentId: params.paymentId,
     amount: params.amount,
     paymentMode: 'UPI',
     paymentGateway: 'PHONEPE',
     transactionStatus: 'PENDING',
-    paymentLinkId: params.paymentLinkId,
-    paymentLinkUrl: params.paymentLinkUrl,
-    paymentLinkReferenceId: params.referenceId,
-    paymentLinkStatus: params.paymentLinkStatus,
-    paymentLinkExpiresAt: params.paymentLinkExpiresAt,
-    paymentLinkCreatedAt: params.paymentLinkCreatedAt ?? new Date(),
     installmentNumber: params.installmentNumber,
-    metadata: params.metadata,
+    metadata,
+  });
+}
+
+/**
+ * Creates a transaction record for manual payments (CASH/QR)
+ */
+export async function createManualTransactionRecord(params: {
+  paymentId: string;
+  amount: number;
+  paymentMode: 'CASH' | 'QR';
+  installmentNumber: number | null;
+  transactionReference?: string;
+  notes?: string;
+  paymentType?: 'FULL_PAYMENT' | 'INSTALLMENTS';
+  type?: 'enrollment' | 'rto-service';
+}) {
+  const metadata = buildManualPaymentMetadata({
+    paymentType: params.paymentType,
+    type: params.type,
+  });
+
+  return await db.insert(TransactionTable).values({
+    paymentId: params.paymentId,
+    amount: params.amount,
+    paymentMode: params.paymentMode,
+    paymentGateway: null,
+    transactionStatus: 'SUCCESS',
+    transactionReference: params.transactionReference,
+    notes: params.notes || `Manual ${params.paymentMode} payment recorded`,
+    installmentNumber: params.installmentNumber,
+    txnDate: new Date(),
+    metadata,
   });
 }
 

@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { TransactionTable } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { mapPhonePeStatusToDbStatus } from '@/lib/payment/status-helpers';
 import { markPaymentAsPaid } from '@/lib/payment/payment-link-helpers';
 import { env } from '@/env';
 import { StandardCheckoutClient, Env } from 'pg-sdk-node';
 import type { PhonePeWebhookData } from '@/types/phonepe';
 import { workflowClient } from '@/lib/upstash/workflow';
+import {
+  getPaymentType,
+  getGatewayReferenceId,
+  setGatewayResponse,
+} from '@/lib/payment/transaction-metadata';
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,9 +61,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid signature' }, { status: 400 });
     }
 
-    // Find transaction by orderId (merchantOrderId)
+    // Find transaction by orderId (merchantOrderId) in metadata.gateway.linkId
     const transaction = await db.query.TransactionTable.findFirst({
-      where: eq(TransactionTable.paymentLinkId, webhookData.orderId),
+      where: sql`${TransactionTable.metadata}->>'gateway'->>'linkId' = ${webhookData.orderId}`,
     });
 
     if (!transaction) {
@@ -72,18 +77,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Already processed' });
     }
 
-    // Update transaction status
+    // Update transaction status and store gateway response in metadata
     const newStatus = mapPhonePeStatusToDbStatus(webhookData.state);
     const firstPayment = webhookData.paymentDetails?.[0];
+
+    const updatedMetadata = setGatewayResponse(transaction.metadata, {
+      txnId: firstPayment?.transactionId,
+      bankTxnId: firstPayment?.rail?.utr,
+      responseCode: webhookData.errorCode,
+    });
 
     await db
       .update(TransactionTable)
       .set({
         transactionStatus: newStatus,
-        txnId: firstPayment?.transactionId,
-        bankTxnId: firstPayment?.rail?.utr,
-        responseCode: webhookData.errorCode,
         txnDate: new Date(),
+        metadata: updatedMetadata,
         updatedAt: new Date(),
       })
       .where(eq(TransactionTable.id, transaction.id));
@@ -98,21 +107,28 @@ export async function POST(request: NextRequest) {
     // If SUCCESS, update payment records
     if (webhookData.state === 'COMPLETED') {
       // Get payment type from transaction metadata
-      const metadata = transaction.metadata as { paymentType?: string } | null;
-      const paymentType =
-        (metadata?.paymentType as 'FULL_PAYMENT' | 'INSTALLMENTS') || 'FULL_PAYMENT';
+      const paymentType = getPaymentType(transaction.metadata) || 'FULL_PAYMENT';
+      const referenceId = getGatewayReferenceId(transaction.metadata);
+
+      if (!referenceId) {
+        console.error('No reference ID found in transaction metadata:', transaction.id);
+        return NextResponse.json(
+          { success: false, error: 'Invalid transaction metadata' },
+          { status: 400 }
+        );
+      }
 
       await markPaymentAsPaid({
         paymentId: transaction.paymentId,
         paymentType,
-        referenceId: transaction.paymentLinkReferenceId!,
+        referenceId,
         installmentNumber: transaction.installmentNumber,
       });
 
       console.log('Payment marked as paid:', {
         paymentId: transaction.paymentId,
         paymentType,
-        referenceId: transaction.paymentLinkReferenceId,
+        referenceId,
       });
 
       // Trigger notification workflow

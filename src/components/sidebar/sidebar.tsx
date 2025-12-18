@@ -1,9 +1,9 @@
-import { Button } from '@/components/ui/button';
 import { SignOutButton } from '@clerk/nextjs';
 import { LogOut } from 'lucide-react';
-import { navItems } from './nav-items';
-import { NavItem } from './nav-item';
 import { OrgSelector } from '@/components/organization/org-selector';
+import { Button } from '@/components/ui/button';
+import { NavItem } from './nav-item';
+import { navItems } from './nav-items';
 
 export function Sidebar() {
   return (

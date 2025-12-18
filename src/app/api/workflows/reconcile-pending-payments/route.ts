@@ -5,6 +5,12 @@ import { eq, and, lt } from 'drizzle-orm';
 import { qstashClient } from '@/lib/upstash/workflow';
 import { checkPhonePePaymentStatusAction } from '@/server/action/payments';
 import { markPaymentAsPaid } from '@/lib/payment/payment-link-helpers';
+import {
+  getPaymentType,
+  getGatewayReferenceId,
+  getGatewayLinkId,
+  setGatewayResponse,
+} from '@/lib/payment/transaction-metadata';
 
 type ReconciliationPayload = {
   trigger?: string;
@@ -41,13 +47,14 @@ export const { POST } = serve<ReconciliationPayload>(
     for (const transaction of stuckTransactions) {
       await context.run(`check-status-${transaction.id}`, async () => {
         try {
-          if (!transaction.paymentLinkId) {
-            console.warn(`Transaction ${transaction.id} has no paymentLinkId`);
+          const linkId = getGatewayLinkId(transaction.metadata);
+          if (!linkId) {
+            console.warn(`Transaction ${transaction.id} has no gateway linkId in metadata`);
             return;
           }
 
           // Check PhonePe status
-          const result = await checkPhonePePaymentStatusAction(transaction.paymentLinkId);
+          const result = await checkPhonePePaymentStatusAction(linkId);
 
           if (result.success && result.data?.state === 'COMPLETED') {
             // Payment succeeded but webhook missed! Update now
@@ -58,27 +65,30 @@ export const { POST } = serve<ReconciliationPayload>(
             const utr =
               firstPayment?.rail && 'utr' in firstPayment.rail ? firstPayment.rail.utr : undefined;
 
+            const updatedMetadata = setGatewayResponse(transaction.metadata, {
+              txnId: firstPayment?.transactionId,
+              bankTxnId: utr,
+              responseCode: result.data.errorCode,
+            });
+
             await db
               .update(TransactionTable)
               .set({
                 transactionStatus: 'SUCCESS',
-                txnId: firstPayment?.transactionId,
-                bankTxnId: utr,
-                responseCode: result.data.errorCode,
+                metadata: updatedMetadata,
                 updatedAt: new Date(),
               })
               .where(eq(TransactionTable.id, transaction.id));
 
-            // Get payment type from metadata
-            const metadata = transaction.metadata as { paymentType?: string } | null;
-            const paymentType =
-              (metadata?.paymentType as 'FULL_PAYMENT' | 'INSTALLMENTS') || 'FULL_PAYMENT';
+            // Get payment type and reference ID from metadata
+            const paymentType = getPaymentType(transaction.metadata) || 'FULL_PAYMENT';
+            const referenceId = getGatewayReferenceId(transaction.metadata);
 
-            if (transaction.paymentLinkReferenceId) {
+            if (referenceId) {
               await markPaymentAsPaid({
                 paymentId: transaction.paymentId,
                 paymentType,
-                referenceId: transaction.paymentLinkReferenceId,
+                referenceId,
                 installmentNumber: transaction.installmentNumber,
               });
             }
@@ -87,11 +97,15 @@ export const { POST } = serve<ReconciliationPayload>(
             console.log(`Transaction ${transaction.id} reconciled successfully`);
           } else if (result.success && result.data?.state === 'FAILED') {
             // Payment failed
+            const updatedMetadata = setGatewayResponse(transaction.metadata, {
+              responseCode: result.data.errorCode,
+            });
+
             await db
               .update(TransactionTable)
               .set({
                 transactionStatus: 'FAILED',
-                responseCode: result.data.errorCode,
+                metadata: updatedMetadata,
                 updatedAt: new Date(),
               })
               .where(eq(TransactionTable.id, transaction.id));
