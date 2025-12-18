@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { createSetuPaymentLinkAction } from '@/server/action/payments';
+import { createPhonePePaymentLinkAction } from '@/server/action/payments';
 
 type PaymentLinkParams = {
   amount: number;
@@ -15,35 +15,29 @@ export const usePaymentLinkSender = () => {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [expiryTime, setExpiryTime] = useState<string | null>(null);
 
-  const sendSetuLink = async (params: PaymentLinkParams) => {
+  const sendPhonePeLink = async (params: PaymentLinkParams) => {
     setIsSending(true);
     try {
-      const result = await createSetuPaymentLinkAction({
+      const result = await createPhonePePaymentLinkAction({
         ...params,
-        sendSms: true,
         type: 'enrollment',
         sendEmail: false,
         enablePartialPayments: false,
       });
 
       if (result.success && result.data) {
-        const qrCodeData = result.data.qrCode;
-        const formattedQrCode = qrCodeData?.startsWith('data:')
-          ? qrCodeData
-          : `data:image/png;base64,${qrCodeData}`;
+        setQrCode(null); // PhonePe doesn't provide QR code in payment link
+        setExpiryTime(null); // PhonePe doesn't provide explicit expiry
 
-        setQrCode(formattedQrCode || null);
-        setExpiryTime(result.data.expiryDate || null);
-
-        // TODO: Send WhatsApp message with result.data.shortLink
-        console.log('Send this via WhatsApp:', result.data.shortLink);
+        // TODO: Send WhatsApp message with result.data.paymentUrl
+        console.log('Send this via WhatsApp:', result.data.paymentUrl);
 
         toast.success('UPI payment link created!', {
-          description: `Link will be sent via WhatsApp to ${params.customerPhone}. QR code is available.`,
+          description: `Link will be sent via WhatsApp to ${params.customerPhone}.`,
           duration: 5000,
         });
 
-        return { success: true, referenceId: params.paymentId };
+        return { success: true, referenceId: result.data.linkId };
       }
 
       toast.error('Failed to create UPI link', {
@@ -67,6 +61,6 @@ export const usePaymentLinkSender = () => {
     isSending,
     qrCode,
     expiryTime,
-    sendSetuLink,
+    sendPhonePeLink,
   };
 };

@@ -108,7 +108,8 @@ export async function preparePaymentReference(
 
 /**
  * Cancels existing pending payment link transactions
- * Returns the cancelled transaction for gateway-specific cleanup
+ * Marks transaction as cancelled in DB
+ * Returns the cancelled transaction
  */
 export async function cancelExistingPendingTransaction(referenceId: string) {
   const existingTransaction = await db.query.TransactionTable.findFirst({
@@ -118,12 +119,14 @@ export async function cancelExistingPendingTransaction(referenceId: string) {
     ),
   });
 
-  if (existingTransaction) {
+  if (existingTransaction && existingTransaction.paymentLinkId) {
+    // Mark as cancelled in our DB
+    // PhonePe doesn't support explicit link expiry, so we only update DB
     await db
       .update(TransactionTable)
       .set({
         transactionStatus: 'CANCELLED',
-        paymentLinkStatus: 'CANCELLED',
+        paymentLinkStatus: 'EXPIRED',
         updatedAt: new Date(),
       })
       .where(eq(TransactionTable.id, existingTransaction.id));
@@ -150,8 +153,8 @@ export async function createTransactionRecord(params: {
   return await db.insert(TransactionTable).values({
     paymentId: params.paymentId,
     amount: params.amount,
-    paymentMode: 'PAYMENT_LINK',
-    paymentGateway: 'SETU',
+    paymentMode: 'UPI',
+    paymentGateway: 'PHONEPE',
     transactionStatus: 'PENDING',
     paymentLinkId: params.paymentLinkId,
     paymentLinkUrl: params.paymentLinkUrl,
@@ -192,7 +195,7 @@ export async function markPaymentAsPaidInTransaction(
       .update(FullPaymentTable)
       .set({
         isPaid: true,
-        paymentMode: 'PAYMENT_LINK',
+        paymentMode: 'UPI',
         paymentDate: currentDate,
         updatedAt: new Date(),
       })
@@ -212,7 +215,7 @@ export async function markPaymentAsPaidInTransaction(
       .update(InstallmentPaymentTable)
       .set({
         isPaid: true,
-        paymentMode: 'PAYMENT_LINK',
+        paymentMode: 'UPI',
         paymentDate: currentDate,
         updatedAt: new Date(),
       })
@@ -236,4 +239,19 @@ export async function markPaymentAsPaidInTransaction(
       })
       .where(eq(PaymentTable.id, params.paymentId));
   }
+}
+
+/**
+ * Standalone version for marking payment as paid (creates its own transaction)
+ * Used by webhook processing workflow
+ */
+export async function markPaymentAsPaid(params: {
+  paymentId: string;
+  paymentType: 'FULL_PAYMENT' | 'INSTALLMENTS';
+  referenceId: string;
+  installmentNumber: number | null;
+}) {
+  await db.transaction(async (tx) => {
+    await markPaymentAsPaidInTransaction(tx, params);
+  });
 }

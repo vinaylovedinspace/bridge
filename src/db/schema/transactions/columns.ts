@@ -3,7 +3,7 @@ import { pgTable, text, uuid, integer, timestamp, pgEnum, jsonb } from 'drizzle-
 export const PaymentModeEnum = pgEnum('payment_mode', ['PAYMENT_LINK', 'UPI', 'QR', 'CASH']);
 export type PaymentMode = (typeof PaymentModeEnum.enumValues)[number];
 
-export const PaymentGatewayEnum = pgEnum('payment_gateway', ['SETU']);
+export const PaymentGatewayEnum = pgEnum('payment_gateway', ['SETU', 'PHONEPE']);
 export type PaymentGateway = (typeof PaymentGatewayEnum.enumValues)[number];
 
 export const TransactionStatusEnum = pgEnum('transaction_status', [
@@ -43,7 +43,7 @@ export const TransactionTable = pgTable('transactions', {
   checksumHash: text('checksum_hash'), // Transaction verification hash
   txnDate: timestamp('txn_date'), // Gateway transaction timestamp
 
-  // Payment Link fields (used by Setu)
+  // Payment Link fields (used by PhonePe and legacy Setu)
   paymentLinkId: text('payment_link_id'), // Payment link ID from gateway
   paymentLinkUrl: text('payment_link_url'), // Short URL for the payment link
   paymentLinkReferenceId: text('payment_link_reference_id'), // Our reference ID (full_payment.id or installment.id)

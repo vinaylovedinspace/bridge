@@ -3,7 +3,7 @@ import { FormItem, FormLabel } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { PaymentMode, PaymentModeEnum } from '@/db/schema/transactions/columns';
+import { PaymentMode } from '@/db/schema/transactions/columns';
 import { toast } from 'sonner';
 import { QrCode } from 'lucide-react';
 import { QRModal } from './qr-modal';
@@ -27,7 +27,7 @@ type PaymentModeSelectorProps = {
   handlePaymentModeChange: (mode: PaymentMode) => void;
 };
 
-const PAYMENT_MODES = PaymentModeEnum.enumValues.filter((mode) => mode !== 'UPI');
+const PAYMENT_MODES: PaymentMode[] = ['UPI', 'CASH'];
 
 export const PaymentModeSelector = ({
   phoneNumber: initialPhoneNumber,
@@ -39,14 +39,14 @@ export const PaymentModeSelector = ({
   paymentType,
   handlePaymentModeChange,
 }: PaymentModeSelectorProps) => {
-  const [paymentMode, setPaymentMode] = useState<PaymentMode>('PAYMENT_LINK');
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('UPI');
   const [isAcceptingPayment, setIsAcceptingPayment] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
 
   const router = useRouter();
   const phone = usePhoneNumber(initialPhoneNumber);
   const { smsSent, countdown, startCountdown } = useSendLinkCountdown();
-  const { isSending, qrCode, expiryTime, sendSetuLink } = usePaymentLinkSender();
+  const { isSending, qrCode, expiryTime, sendPhonePeLink } = usePaymentLinkSender();
 
   const handlePaymentSuccess = async () => {
     try {
@@ -77,7 +77,7 @@ export const PaymentModeSelector = ({
       return;
     }
 
-    const result = await sendSetuLink({
+    const result = await sendPhonePeLink({
       amount,
       customerPhone: phone.phoneNumber,
       customerName: customerName || 'Student',
@@ -88,11 +88,15 @@ export const PaymentModeSelector = ({
     if (result.success && result.referenceId) {
       startCountdown();
       polling.start(result.referenceId);
+      // Auto-show QR modal for UPI payments
+      if (paymentMode === 'UPI') {
+        setShowQrModal(true);
+      }
     }
   };
 
-  const isOnlinePaymentMode = paymentMode === 'PAYMENT_LINK' || paymentMode === 'UPI';
-  const isOfflinePaymentMode = paymentMode === 'CASH' || paymentMode === 'QR';
+  const isOnlinePaymentMode = paymentMode === 'UPI';
+  const isOfflinePaymentMode = paymentMode === 'CASH';
 
   return (
     <>

@@ -12,7 +12,6 @@ type SendLinkButtonProps = {
 };
 
 export const SendLinkButton = ({
-  paymentMode,
   isSending,
   smsSent,
   countdown,
@@ -20,8 +19,6 @@ export const SendLinkButton = ({
   isPolling,
   onClick,
 }: SendLinkButtonProps) => {
-  const sendMethod = paymentMode === 'UPI' ? 'via WhatsApp' : 'via SMS';
-
   return (
     <Button
       onClick={onClick}
@@ -38,7 +35,7 @@ export const SendLinkButton = ({
       ) : (
         <>
           <MessageSquare className="mr-2 h-4 w-4" />
-          Send {sendMethod}
+          Send Payment Link
         </>
       )}
     </Button>

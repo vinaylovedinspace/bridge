@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import { checkSetuPaymentLinkStatusAction } from '@/server/action/payments';
+import { checkPhonePePaymentStatusAction } from '@/server/action/payments';
 
-const PAYMENT_POLL_INTERVAL = 5000; // 5 seconds
-const PAYMENT_POLL_MAX_ATTEMPTS = 120; // 10 minutes max
+const PAYMENT_POLL_INTERVAL = 30000; // 30 seconds (reduced from 5s - webhook is primary)
+const PAYMENT_POLL_MAX_ATTEMPTS = 20; // 10 minutes max (30s * 20 = 600s = 10min)
 
 type PaymentPollingProps = {
   onPaymentSuccess: () => Promise<void>;
@@ -24,8 +24,8 @@ export const usePaymentPolling = ({ onPaymentSuccess }: PaymentPollingProps) => 
   }, []);
 
   const checkPaymentStatus = async () => {
-    const referenceId = referenceIdRef.current;
-    if (!referenceId) return;
+    const merchantTransactionId = referenceIdRef.current;
+    if (!merchantTransactionId) return;
 
     pollAttemptRef.current += 1;
 
@@ -38,10 +38,10 @@ export const usePaymentPolling = ({ onPaymentSuccess }: PaymentPollingProps) => 
     }
 
     try {
-      const result = await checkSetuPaymentLinkStatusAction(referenceId);
+      const result = await checkPhonePePaymentStatusAction(merchantTransactionId);
 
-      // Check if payment is successful (Setu status should be 'PAID' or similar)
-      if (result.success && result.data && result.data.status === 'PAID') {
+      // Check if payment is successful (PhonePe state should be 'COMPLETED')
+      if (result.success && result.data && result.data.state === 'COMPLETED') {
         stop();
         toast.success('Payment received successfully! 🎉', {
           description: 'Completing enrollment...',
@@ -61,12 +61,12 @@ export const usePaymentPolling = ({ onPaymentSuccess }: PaymentPollingProps) => 
     }
   };
 
-  const start = (referenceId: string) => {
+  const start = (merchantTransactionId: string) => {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
     }
 
-    referenceIdRef.current = referenceId;
+    referenceIdRef.current = merchantTransactionId;
     setIsPolling(true);
     pollAttemptRef.current = 0;
 

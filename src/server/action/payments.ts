@@ -1,7 +1,6 @@
 'use server';
 
 import { z } from 'zod';
-import { unstable_cache } from 'next/cache';
 import { getBranchConfig } from '@/server/action/branch';
 import { paymentSchema } from '@/types/zod/payment';
 import { IMMEDIATE_PAYMENT_MODES } from '@/lib/constants/payment';
@@ -14,7 +13,7 @@ import {
   createTransactionRecord,
 } from '@/lib/payment/payment-link-helpers';
 import { env } from '@/env';
-import { SetuCreateDQRResponse, SetuGetDQRResponse } from '@/types/setu';
+import { StandardCheckoutClient, Env, StandardCheckoutPayRequest } from 'pg-sdk-node';
 
 export type PaymentLinkResult = {
   success: boolean;
@@ -133,40 +132,19 @@ export async function upsertPaymentWithOptionalTransaction({
   }
 }
 
-// Cached Setu access token fetcher with Next.js unstable_cache
-const _getCachedSetuAccessToken = async () => {
-  const authorizationResponse = await fetch('https://accountservice.setu.co/v1/users/login', {
-    method: 'POST',
-    headers: {
-      client: 'bridge',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      clientID: env.SETU_API_KEY,
-      secret: env.SETU_API_SECRET,
-      grant_type: 'client_credentials',
-    }),
-  });
+// Initialize PhonePe client (singleton)
+function getPhonePeClient() {
+  const phonepeEnv = env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX;
 
-  const { access_token } = (await authorizationResponse.json()) as {
-    access_token: string;
-  };
+  return StandardCheckoutClient.getInstance(
+    env.PHONEPE_CLIENT_ID,
+    env.PHONEPE_CLIENT_SECRET,
+    env.PHONEPE_CLIENT_VERSION,
+    phonepeEnv
+  );
+}
 
-  return access_token;
-};
-
-export const getSetuAccessTokenAction = unstable_cache(
-  _getCachedSetuAccessToken,
-  ['setu-access-token'],
-  {
-    tags: ['setu-access-token'],
-    revalidate: 280,
-  }
-);
-
-export const createSetuPaymentLinkAction = async (request: CreatePaymentLinkRequest) => {
-  const accessToken = await getSetuAccessTokenAction();
-
+export const createPhonePePaymentLinkAction = async (request: CreatePaymentLinkRequest) => {
   // Prepare payment reference (handles both full payment and installments)
   const { referenceId, installmentNumber } = await preparePaymentReference(
     request.paymentId,
@@ -177,65 +155,69 @@ export const createSetuPaymentLinkAction = async (request: CreatePaymentLinkRequ
   // Cancel existing pending transaction if any
   await cancelExistingPendingTransaction(referenceId);
 
-  const response = await fetch(`${env.SETU_URL}/api/v1/merchants/dqr`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-      Merchantid: '01K4VTE5HPZEB81F0CJ2B4NZ79',
-    },
-    body: JSON.stringify({
+  const phonepe = getPhonePeClient();
+
+  // Generate unique merchant transaction ID
+  const merchantTransactionId = `${referenceId}_${Date.now()}`;
+
+  try {
+    // Build payment request using official SDK
+    const paymentRequest = StandardCheckoutPayRequest.builder()
+      .merchantOrderId(merchantTransactionId)
+      .amount(request.amount * 100) // Convert rupees to paise
+      .redirectUrl(`${env.NEXT_PUBLIC_APP_URL}/payment/redirect`)
+      .build();
+
+    const response = await phonepe.pay(paymentRequest);
+
+    const paymentUrl = response.redirectUrl || '';
+
+    // Create transaction record to track the payment link
+    await createTransactionRecord({
+      paymentId: request.paymentId,
       amount: request.amount,
-      merchantVpa: 'setu.bridge24304@setuaxis',
       referenceId,
+      installmentNumber,
+      paymentLinkId: merchantTransactionId,
+      paymentLinkUrl: paymentUrl,
+      paymentLinkStatus: 'ACTIVE',
+      paymentLinkExpiresAt: null, // PhonePe doesn't provide explicit expiry
+      paymentLinkCreatedAt: new Date(),
       metadata: {
-        paymentId: request.paymentId,
+        merchantTransactionId,
         paymentType: request.paymentType,
         type: request.type,
       },
-      transactionNote: `Payment for ${request.type}`,
-    }),
-  });
+    });
 
-  const data = (await response.json()) as SetuCreateDQRResponse;
-
-  // Create transaction record to track the payment link
-  await createTransactionRecord({
-    paymentId: request.paymentId,
-    amount: request.amount,
-    referenceId,
-    installmentNumber,
-    paymentLinkId: data.id,
-    paymentLinkUrl: data.shortLink,
-    paymentLinkStatus: data.status,
-    paymentLinkExpiresAt: new Date(data.expiryDate),
-    paymentLinkCreatedAt: new Date(data.createdAt),
-    metadata: data,
-  });
-
-  return {
-    success: true,
-    data,
-    referenceId,
-  };
+    return {
+      success: true,
+      data: {
+        linkId: merchantTransactionId,
+        paymentUrl,
+        qrCode: '', // PhonePe SDK doesn't return QR in pay response
+        status: 'ACTIVE' as const,
+      },
+      referenceId,
+    };
+  } catch (error) {
+    console.error('Error creating PhonePe payment link:', error);
+    throw error;
+  }
 };
 
-export const checkSetuPaymentLinkStatusAction = async (referenceId: string) => {
-  const accessToken = await getSetuAccessTokenAction();
+export const checkPhonePePaymentStatusAction = async (merchantTransactionId: string) => {
+  const phonepe = getPhonePeClient();
 
-  const response = await fetch(`${env.SETU_URL}/api/v1/merchants/dqr/${referenceId}`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-      Merchantid: '01K4VTE5HPZEB81F0CJ2B4NZ79',
-    },
-  });
+  try {
+    const response = await phonepe.getOrderStatus(merchantTransactionId);
 
-  const data = (await response.json()) as SetuGetDQRResponse;
-
-  return {
-    success: true,
-    data,
-  };
+    return {
+      success: true,
+      data: response,
+    };
+  } catch (error) {
+    console.error('Error checking PhonePe payment status:', error);
+    throw error;
+  }
 };
