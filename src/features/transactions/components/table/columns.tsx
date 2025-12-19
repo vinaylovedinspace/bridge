@@ -1,8 +1,8 @@
 'use client';
 
-import { ColumnDef } from '@tanstack/react-table';
-import { Badge } from '@/components/ui/badge';
+import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 import type { Transaction } from '@/server/db/transactions';
 
 const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
@@ -40,6 +40,16 @@ export const columns: ColumnDef<Transaction>[] = [
     },
   },
   {
+    accessorKey: 'type',
+    header: 'Type',
+    cell: ({ row }) => {
+      const payment = row.original.payment;
+      if (!payment) return '-';
+      const type = payment.rtoService ? 'RTO Service' : payment.plan ? 'Enrollment' : '-';
+      return <Badge variant="secondary">{type}</Badge>;
+    },
+  },
+  {
     accessorKey: 'amount',
     header: 'Amount',
     cell: ({ row }) => formatCurrency(row.original.amount),
@@ -61,11 +71,6 @@ export const columns: ColumnDef<Transaction>[] = [
     ),
   },
   {
-    accessorKey: 'transactionReference',
-    header: 'Reference',
-    cell: ({ row }) => row.original.transactionReference || '-',
-  },
-  {
     accessorKey: 'paymentGateway',
     header: 'Gateway',
     cell: ({ row }) => row.original.paymentGateway || '-',
@@ -77,10 +82,5 @@ export const columns: ColumnDef<Transaction>[] = [
       const num = row.original.installmentNumber;
       return num ? `#${num}` : '-';
     },
-  },
-  {
-    accessorKey: 'notes',
-    header: 'Notes',
-    cell: ({ row }) => row.original.notes || '-',
   },
 ];

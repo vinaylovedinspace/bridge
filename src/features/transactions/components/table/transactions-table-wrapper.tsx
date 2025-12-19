@@ -17,6 +17,7 @@ export function TransactionsTableWrapper({ data }: TransactionsTableWrapperProps
         'Date',
         'Client Name',
         'Client Code',
+        'Type',
         'Amount',
         'Mode',
         'Status',
@@ -33,6 +34,7 @@ export function TransactionsTableWrapper({ data }: TransactionsTableWrapperProps
             ? `${txn.payment.client.firstName} ${txn.payment.client.lastName}`
             : '-',
           txn.payment.client ? `CS-${txn.payment.client.clientCode}` : '-',
+          txn.payment.rtoService ? 'RTO Service' : txn.payment.plan ? 'Enrollment' : '-',
           `₹${txn.amount.toLocaleString('en-IN')}`,
           txn.paymentMode.replace('_', ' '),
           txn.transactionStatus,

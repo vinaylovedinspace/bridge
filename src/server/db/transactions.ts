@@ -31,6 +31,8 @@ const _getTransactions = async (
       payment: {
         with: {
           client: true,
+          plan: true,
+          rtoService: true,
         },
       },
     },

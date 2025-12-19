@@ -1,34 +1,34 @@
 'use server';
 
-import { z } from 'zod';
-import {
-  LearningLicenseValues,
-  DrivingLicenseValues,
-  PlanValues,
-  planSchema,
-  PaymentValues,
-} from '../types';
-import { getBranchConfig } from '@/server/action/branch';
-import { ActionReturnType } from '@/types/actions';
-import {
-  upsertClientInDB,
-  upsertLearningLicenseInDB,
-  upsertDrivingLicenseInDB,
-  findExistingPlanInDB,
-  upsertPlanWithPaymentIdInDB,
-  getVehicleRentAmount,
-  deleteClientInDB,
-} from './db';
-import { formatDateToYYYYMMDD, formatTimeString } from '@/lib/date-time-utils';
-import { clientSchema } from '@/types/zod/client';
-import { calculateEnrollmentPaymentBreakdown } from '@/lib/payment/calculate';
-import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
-import { hasPlanChanged, handleSessionGeneration } from '../lib/plan-helpers';
-import { getNextPlanCode } from '@/db/utils/plan-code';
+import type { z } from 'zod';
 import { getNextClientCode } from '@/db/utils/client-code';
+import { getNextPlanCode } from '@/db/utils/plan-code';
+import { formatDateToYYYYMMDD, formatTimeString } from '@/lib/date-time-utils';
+import { calculateEnrollmentPaymentBreakdown } from '@/lib/payment/calculate';
+import { getBranchConfig } from '@/server/action/branch';
 import { upsertPaymentWithOptionalTransaction } from '@/server/action/payments';
-import { getAadhaarPdfUrlByPhoneNumber } from '@/server/db/digilocker-verifications';
 import { saveAadhaarDocument } from '@/server/db/client-documents';
+import { getAadhaarPdfUrlByPhoneNumber } from '@/server/db/digilocker-verifications';
+import type { ActionReturnType } from '@/types/actions';
+import { clientSchema } from '@/types/zod/client';
+import { drivingLicenseSchema, learningLicenseSchema } from '@/types/zod/license';
+import { handleSessionGeneration, hasPlanChanged } from '../lib/plan-helpers';
+import {
+  type DrivingLicenseValues,
+  type LearningLicenseValues,
+  type PaymentValues,
+  type PlanValues,
+  planSchema,
+} from '../types';
+import {
+  deleteClientInDB,
+  findExistingPlanInDB,
+  getVehicleRentAmount,
+  upsertClientInDB,
+  upsertDrivingLicenseInDB,
+  upsertLearningLicenseInDB,
+  upsertPlanWithPaymentIdInDB,
+} from './db';
 
 export const upsertClient = async (
   unsafeData: z.infer<typeof clientSchema>,
@@ -124,7 +124,10 @@ export const upsertLearningLicense = async (
     };
   } catch (error) {
     console.error('Error processing learning license data:', error);
-    return { error: true, message: 'Failed to save learning licence information' };
+    return {
+      error: true,
+      message: 'Failed to save learning licence information',
+    };
   }
 };
 
@@ -162,14 +165,25 @@ export const upsertDrivingLicense = async (unsafeData: DrivingLicenseValues): Ac
       message: 'Driving licence created successfully',
     };
   } catch {
-    return { error: true, message: 'Failed to save driving licence information' };
+    return {
+      error: true,
+      message: 'Failed to save driving licence information',
+    };
   }
 };
 
 export const upsertPlanWithPayment = async (
-  unsafePlanData: PlanValues & { joiningDateString?: string; joiningTimeString?: string },
+  unsafePlanData: PlanValues & {
+    joiningDateString?: string;
+    joiningTimeString?: string;
+  },
   unsafePaymentData: PaymentValues
-): Promise<{ error: boolean; message: string; planId?: string; paymentId?: string }> => {
+): Promise<{
+  error: boolean;
+  message: string;
+  planId?: string;
+  paymentId?: string;
+}> => {
   const branchConfig = await getBranchConfig();
   const { id: branchId } = branchConfig;
   try {
@@ -240,6 +254,7 @@ export const upsertPlanWithPayment = async (
         clientId: unsafePlanData.clientId,
         branchId,
         totalAmount: totalAmountAfterDiscount,
+        licenseServiceFee: unsafePaymentData.licenseServiceFee || 0,
       },
       processTransaction: false,
     });
