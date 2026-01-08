@@ -12,8 +12,8 @@ import {
   createTransactionRecord,
   createManualTransactionRecord,
 } from '@/lib/payment/payment-link-helpers';
+import { createPhonePePayment, getPhonePeOrderStatus } from '@/lib/payment/phonepe-client';
 import { env } from '@/env';
-import { StandardCheckoutClient, Env, StandardCheckoutPayRequest } from 'pg-sdk-node';
 
 export type PaymentLinkResult = {
   success: boolean;
@@ -206,18 +206,6 @@ export async function upsertPaymentWithOptionalTransaction({
   }
 }
 
-// Initialize PhonePe client (singleton)
-function getPhonePeClient() {
-  const phonepeEnv = env.PHONEPE_ENV === 'PRODUCTION' ? Env.PRODUCTION : Env.SANDBOX;
-
-  return StandardCheckoutClient.getInstance(
-    env.PHONEPE_CLIENT_ID,
-    env.PHONEPE_CLIENT_SECRET,
-    env.PHONEPE_CLIENT_VERSION,
-    phonepeEnv
-  );
-}
-
 export const createPhonePePaymentLinkAction = async (request: CreatePaymentLinkRequest) => {
   // Prepare payment reference (handles both full payment and installments)
   const { referenceId, installmentNumber } = await preparePaymentReference(
@@ -229,20 +217,16 @@ export const createPhonePePaymentLinkAction = async (request: CreatePaymentLinkR
   // Cancel existing pending transaction if any
   await cancelExistingPendingTransaction(referenceId);
 
-  const phonepe = getPhonePeClient();
-
   // Generate unique merchant transaction ID
   const merchantTransactionId = `${referenceId}_${Date.now()}`;
 
   try {
-    // Build payment request using official SDK
-    const paymentRequest = StandardCheckoutPayRequest.builder()
-      .merchantOrderId(merchantTransactionId)
-      .amount(request.amount * 100) // Convert rupees to paise
-      .redirectUrl(`${env.NEXT_PUBLIC_APP_URL}/payment/redirect`)
-      .build();
-
-    const response = await phonepe.pay(paymentRequest);
+    // Create payment using direct API
+    const response = await createPhonePePayment({
+      merchantOrderId: merchantTransactionId,
+      amount: request.amount, // Function handles conversion to paise
+      redirectUrl: `${env.NEXT_PUBLIC_APP_URL}/payment/redirect`,
+    });
 
     const paymentUrl = response.redirectUrl || '';
 
@@ -278,10 +262,8 @@ export const createPhonePePaymentLinkAction = async (request: CreatePaymentLinkR
 };
 
 export const checkPhonePePaymentStatusAction = async (merchantTransactionId: string) => {
-  const phonepe = getPhonePeClient();
-
   try {
-    const response = await phonepe.getOrderStatus(merchantTransactionId);
+    const response = await getPhonePeOrderStatus(merchantTransactionId);
 
     return {
       success: true,

@@ -1,12 +1,12 @@
+import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata } from 'next';
 import { Manrope, Space_Grotesk } from 'next/font/google';
-import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
-import { Toaster } from 'sonner';
-import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { NextStepProvider } from 'nextstepjs';
-import { OnboardingWrapper } from '@/providers/onboarding-wrapper';
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
+import { Toaster } from 'sonner';
 import { TourWrapper } from '@/components/tour-wrapper';
+import { OnboardingWrapper } from '@/providers/onboarding-wrapper';
 
 const manrope = Manrope({
   variable: '--font-manrope',

@@ -119,7 +119,7 @@ export async function cancelExistingPendingTransaction(referenceId: string) {
   // Find transaction by metadata.gateway.referenceId
   const existingTransaction = await db.query.TransactionTable.findFirst({
     where: and(
-      sql`${TransactionTable.metadata}->>'gateway'->>'referenceId' = ${referenceId}`,
+      sql`${TransactionTable.metadata}->'gateway'->>'referenceId' = ${referenceId}`,
       eq(TransactionTable.transactionStatus, 'PENDING')
     ),
   });
