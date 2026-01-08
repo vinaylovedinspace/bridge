@@ -78,6 +78,7 @@
     "nuqs": "^2.6.0",
     "pdf-lib": "^1.17.1",
     "pg": "^8.13.3",
+    "pg-sdk-node": "^2.0.2",
     "react": "^19.2.3",
     "react-day-picker": "8.10.1",
     "react-dom": "^19.2.3",

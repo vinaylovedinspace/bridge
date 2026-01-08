@@ -1,6 +1,12 @@
 'use client';
 
-import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import {
+  type ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  type Row,
+  useReactTable,
+} from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
 import {
   Table,
