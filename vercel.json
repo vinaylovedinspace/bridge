@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/workflows/reconcile-pending-payments",
-      "schedule": "*/15 * * * *"
-    }
-  ]
-}
