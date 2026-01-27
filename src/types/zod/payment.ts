@@ -24,7 +24,7 @@ export const paymentSchema = createInsertSchema(PaymentTable, {
   .extend({
     paymentMode: z
       .enum(PaymentModeEnum.enumValues, { required_error: 'Payment mode is required' })
-      .default('PAYMENT_LINK'),
+      .default('CASH'),
     // UI-only field to track discount checkbox state
     applyDiscount: z.boolean().default(false).optional(),
   });
@@ -33,7 +33,7 @@ export const fullPaymentSchema = createInsertSchema(FullPaymentTable, {
   paymentDate: z.string().nullable().optional(),
   paymentMode: z
     .enum(PaymentModeEnum.enumValues, { required_error: 'Payment mode is required' })
-    .default('PAYMENT_LINK'),
+    .default('CASH'),
   isPaid: z.boolean().default(false),
 }).omit({ createdAt: true, updatedAt: true });
 
@@ -43,6 +43,6 @@ export const installmentPaymentSchema = createInsertSchema(InstallmentPaymentTab
   paymentDate: z.string().nullable().optional(),
   paymentMode: z
     .enum(PaymentModeEnum.enumValues, { required_error: 'Payment mode is required' })
-    .default('PAYMENT_LINK'),
+    .default('CASH'),
   isPaid: z.boolean().default(false),
 }).omit({ createdAt: true, updatedAt: true });

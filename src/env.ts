@@ -13,10 +13,6 @@ export const env = createEnv({
     QSTASH_CURRENT_SIGNING_KEY: z.string().min(1),
     QSTASH_NEXT_SIGNING_KEY: z.string().min(1),
     BLOB_READ_WRITE_TOKEN: z.string().min(1),
-    PHONEPE_CLIENT_ID: z.string().min(1),
-    PHONEPE_CLIENT_SECRET: z.string().min(1),
-    PHONEPE_CLIENT_VERSION: z.coerce.number().default(1),
-    PHONEPE_ENV: z.enum(['PRODUCTION', 'SANDBOX']).default('SANDBOX'),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),

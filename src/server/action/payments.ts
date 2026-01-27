@@ -1,48 +1,13 @@
 'use server';
 
-import { z } from 'zod';
-import { getBranchConfig } from '@/server/action/branch';
-import { paymentSchema } from '@/types/zod/payment';
+import type { z } from 'zod';
+
 import { IMMEDIATE_PAYMENT_MODES } from '@/lib/constants/payment';
 import { formatDateToYYYYMMDD } from '@/lib/date-time-utils';
+import { createManualTransactionRecord } from '@/lib/payment/payment-link-helpers';
+import { getBranchConfig } from '@/server/action/branch';
 import { upsertPaymentInDB } from '@/server/db/payments';
-import {
-  preparePaymentReference,
-  cancelExistingPendingTransaction,
-  createTransactionRecord,
-  createManualTransactionRecord,
-} from '@/lib/payment/payment-link-helpers';
-import { createPhonePePayment, getPhonePeOrderStatus } from '@/lib/payment/phonepe-client';
-import { env } from '@/env';
-
-export type PaymentLinkResult = {
-  success: boolean;
-  data?: {
-    linkId: string;
-    paymentUrl: string;
-    qrCode: string;
-    expiryTime?: string;
-    status?: 'ACTIVE' | 'INACTIVE' | 'PAID' | 'EXPIRED';
-    amountPaid?: number;
-  };
-  referenceId?: string; // Reference ID for polling transactions
-  error?: string;
-};
-
-export type CreatePaymentLinkRequest = {
-  amount: number;
-  customerPhone: string;
-  customerName: string;
-  customerEmail?: string;
-  paymentId: string;
-  paymentType: 'FULL_PAYMENT' | 'INSTALLMENTS';
-  type: 'enrollment' | 'rto-service';
-  sendSms?: boolean;
-  sendEmail?: boolean;
-  expiryInDays?: number;
-  enablePartialPayments?: boolean;
-  minimumPartialAmount?: number;
-};
+import { paymentSchema } from '@/types/zod/payment';
 
 type UpsertPaymentOptions = {
   payment: z.infer<typeof paymentSchema>;
@@ -78,7 +43,7 @@ export async function upsertPaymentWithOptionalTransaction({
     // Persist payment to database
     const payment = await upsertPaymentInDB({
       ...data,
-      branchId: data.branchId!,
+      branchId: data.branchId ?? branchId,
     });
 
     // Process immediate payment transactions if requested
@@ -205,72 +170,3 @@ export async function upsertPaymentWithOptionalTransaction({
     return { error: true, message, payment: undefined };
   }
 }
-
-export const createPhonePePaymentLinkAction = async (request: CreatePaymentLinkRequest) => {
-  // Prepare payment reference (handles both full payment and installments)
-  const { referenceId, installmentNumber } = await preparePaymentReference(
-    request.paymentId,
-    request.paymentType,
-    request.amount
-  );
-
-  // Cancel existing pending transaction if any
-  await cancelExistingPendingTransaction(referenceId);
-
-  // Generate unique merchant transaction ID
-  const merchantTransactionId = `${referenceId}_${Date.now()}`;
-
-  try {
-    // Create payment using direct API
-    const response = await createPhonePePayment({
-      merchantOrderId: merchantTransactionId,
-      amount: request.amount, // Function handles conversion to paise
-      redirectUrl: `${env.NEXT_PUBLIC_APP_URL}/payment/redirect`,
-    });
-
-    const paymentUrl = response.redirectUrl || '';
-
-    // Create transaction record to track the payment link
-    await createTransactionRecord({
-      paymentId: request.paymentId,
-      amount: request.amount,
-      referenceId,
-      installmentNumber,
-      paymentLinkId: merchantTransactionId,
-      paymentLinkUrl: paymentUrl,
-      paymentLinkStatus: 'ACTIVE',
-      paymentLinkExpiresAt: null, // PhonePe doesn't provide explicit expiry
-      paymentLinkCreatedAt: new Date(),
-      paymentType: request.paymentType,
-      type: request.type,
-    });
-
-    return {
-      success: true,
-      data: {
-        linkId: merchantTransactionId,
-        paymentUrl,
-        qrCode: '', // PhonePe SDK doesn't return QR in pay response
-        status: 'ACTIVE' as const,
-      },
-      referenceId,
-    };
-  } catch (error) {
-    console.error('Error creating PhonePe payment link:', error);
-    throw error;
-  }
-};
-
-export const checkPhonePePaymentStatusAction = async (merchantTransactionId: string) => {
-  try {
-    const response = await getPhonePeOrderStatus(merchantTransactionId);
-
-    return {
-      success: true,
-      data: response,
-    };
-  } catch (error) {
-    console.error('Error checking PhonePe payment status:', error);
-    throw error;
-  }
-};

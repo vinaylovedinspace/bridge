@@ -31,7 +31,7 @@ export const mapPayment = (
       totalAmount: payment.totalAmount,
       clientId: payment.clientId,
       branchId: payment.branchId,
-      paymentMode: 'PAYMENT_LINK' as const,
+      paymentMode: 'CASH' as const,
       applyDiscount: payment.discount > 0,
     };
   }
@@ -44,7 +44,7 @@ export const mapPayment = (
     totalAmount: 0,
     clientId: fallbackClientId,
     branchId: fallbackBranchId,
-    paymentMode: 'PAYMENT_LINK' as const,
+    paymentMode: 'CASH' as const,
     applyDiscount: false,
   };
 };

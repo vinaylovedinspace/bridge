@@ -63,21 +63,12 @@ export const PaymentModeSelector = () => {
     }
   };
 
-  const formValues = getValues();
-  const customerName =
-    `${formValues.client?.firstName || ''} ${formValues.client?.lastName || ''}`.trim();
-
   const handlePaymentModeChange = (mode: PaymentMode) => {
     setValue('payment.paymentMode', mode);
   };
 
   return (
     <SharedPaymentModeSelector
-      phoneNumber={formValues.client?.phoneNumber}
-      customerName={customerName}
-      paymentId={formValues.payment?.id}
-      paymentType={formValues.payment?.paymentType || 'FULL_PAYMENT'}
-      amount={totalAmountAfterDiscount}
       buttonText="Accept Payment"
       onAcceptPayment={handleAcceptPayment}
       handlePaymentModeChange={handlePaymentModeChange}

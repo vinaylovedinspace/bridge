@@ -62,22 +62,12 @@ export const PaymentModeSelector = ({ payment }: { payment: EnrollmentPayment })
     }
   };
 
-  const formValues = getValues();
-  const customerName =
-    `${formValues.client?.firstName || ''} ${formValues.client?.lastName || ''}`.trim();
-  const amount = formValues.payment?.totalAmount || 0;
-
   const handlePaymentModeChange = (mode: PaymentMode) => {
     setValue('payment.paymentMode', mode);
   };
 
   return (
     <SharedPaymentModeSelector
-      phoneNumber={formValues.client?.phoneNumber}
-      paymentId={formValues.payment.id}
-      paymentType={formValues.payment.paymentType}
-      customerName={customerName}
-      amount={amount}
       buttonText={buttonText}
       onAcceptPayment={handleAcceptPayment}
       handlePaymentModeChange={handlePaymentModeChange}
