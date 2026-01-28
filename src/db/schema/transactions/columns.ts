@@ -1,6 +1,6 @@
 import { integer, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-export const PaymentModeEnum = pgEnum('payment_mode', ['QR', 'CASH']);
+export const PaymentModeEnum = pgEnum('payment_mode', ['QR', 'CASH', 'ONLINE']);
 export type PaymentMode = (typeof PaymentModeEnum.enumValues)[number];
 
 export const TransactionStatusEnum = pgEnum('transaction_status', [
