@@ -1,7 +1,8 @@
-import { AnimatedSignIn } from '@/components/animated-auth-component/animated-sign-in';
-import { TypographyH1 } from '@/components/ui/typography';
-import { type Metadata } from 'next';
+import type { Metadata } from 'next';
 import Image from 'next/image';
+import { AnimatedSignIn } from '@/components/animated-auth-component/animated-sign-in';
+import { AuthFooter } from '@/components/auth-footer';
+import { TypographyH1 } from '@/components/ui/typography';
 
 export const metadata: Metadata = {
   title: 'Sign In | Bridge',
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function SignInPage() {
   return (
-    <div className="flex min-h-screen" data-testid="signin-page">
+    <div className="flex min-h-screen relative" data-testid="signin-page">
       <div className="relative hidden w-1/2 bg-primary h-[calc(100vh-2rem)] lg:block rounded-3xl m-4">
         <div className="flex flex-col justify-between h-full">
           <TypographyH1 className="text-white pt-30 pl-16 max-w-2xl font-medium leading-14">
@@ -36,8 +37,9 @@ export default function SignInPage() {
           </div>
         </div>
       </div>
-      <div className="flex w-full items-center justify-center lg:w-1/2">
+      <div className="flex relative w-full items-center justify-center lg:w-1/2">
         <AnimatedSignIn />
+        <AuthFooter />
       </div>
     </div>
   );
