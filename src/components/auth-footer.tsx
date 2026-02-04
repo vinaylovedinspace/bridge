@@ -24,6 +24,13 @@ export function AuthFooter() {
         >
           Terms & Conditions
         </Link>
+        <span>•</span>
+        <Link
+          href="/pricing"
+          className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
+        >
+          Pricing
+        </Link>
       </div>
     </footer>
   );
